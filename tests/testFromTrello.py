@@ -1,5 +1,8 @@
 import unittest
-from pypl import *
+
+from poodle.poodle import *
+from object.networkObject import *
+from object.commonObject import *
 
 class ConsumePacketSelect(PlannedAction):
     cost = 1

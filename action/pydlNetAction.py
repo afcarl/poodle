@@ -1,4 +1,5 @@
-from pypl import *
+from poodle.poodle import *
+from object.networkObject import *
 
 class ConsumePacket(PlannedAction):
     cost = 1

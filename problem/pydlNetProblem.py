@@ -1,5 +1,6 @@
-from pypl import * 
-from pydlNetAction import *
+from poodle.poodle import * 
+from action.pydlNetAction import *
+from object.networkObject import *
 
 class IPFactory():
     def __init__(self):
