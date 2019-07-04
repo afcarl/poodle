@@ -36,7 +36,7 @@ class StumbProblem(Problem):
         return self.packet.is_consumed == True
 
 
-class TestFromTrello(unittest.TestCase):
+class TestEffectGenPredicate(unittest.TestCase):
     #bug #35 https://trello.com/c/cTbR2PEe/35-effect-dont-declare-predicates-for-declaration-collection
     def test_effectGenPredicate(self):
         p = StumbProblem()
