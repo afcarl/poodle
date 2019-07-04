@@ -1050,9 +1050,9 @@ class Problem:
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
         runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=folder_name, maxtime=max_time)
-        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE).stdout
+        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
         for line in std:
-            print(line)
+            print(line.rstrip("\n"))
 
         
     def compile_actions(self):
