@@ -1,5 +1,5 @@
 import unittest
-from pypl import *
+from ..pypl import *
 
 class ConsumePacketSelect(PlannedAction):
     cost = 1
@@ -44,5 +44,6 @@ class TestFromTrello(unittest.TestCase):
         lines = p.get_predicates()
         #Packet-is_consumed ?var1 - Packet
         self.assertTrue(lines.find('(Packet-is_consumed ?var1 - Packet)'))
+        
 if __name__ == '__main__':
     unittest.main()
