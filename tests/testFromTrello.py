@@ -1,5 +1,5 @@
 import unittest
-from ..pypl import *
+from pypl import *
 
 class ConsumePacketSelect(PlannedAction):
     cost = 1
@@ -38,12 +38,9 @@ class StumbProblem(Problem):
 
 class TestFromTrello(unittest.TestCase):
     #bug #35 https://trello.com/c/cTbR2PEe/35-effect-dont-declare-predicates-for-declaration-collection
-    def effectGenPredicate(self):
-        p = Problem1()
+    def test_effectGenPredicate(self):
+        p = StumbProblem()
         p.compile_domain()
         lines = p.get_predicates()
         #Packet-is_consumed ?var1 - Packet
-        self.assertTrue(lines.find('(Packet-is_consumed ?var1 - Packet)'))
-        
-if __name__ == '__main__':
-    unittest.main()
+        self.assertTrue(lines.find('(Packet-is_consumed ?var1 - Packet)') != -1)
