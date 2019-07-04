@@ -891,7 +891,9 @@ class Problem:
         # TODO: collect all predicates while generating
         self.actions_text = ""
         for act in self.actions():
+            act.problem = self
             self.actions_text += act.compile()
+            act.problem = None
         return self.actions_text
     
     def get_predicates(self):
