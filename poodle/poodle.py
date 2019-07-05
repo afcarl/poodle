@@ -996,11 +996,15 @@ class Problem:
 """.format(objects=txt_objects, facts='\n        '.join(self.collected_facts), goal='\n            '.join(self.collected_goal))
 
 class ActionClassLoader:
-    actionList = []
-    planList = []
+    actionList = [] #list of the ActionPlanned type
+    planList = [] #list instances of the ActionPlanned type
+
+    # put as argument for constructor list of the ActionPlanned type which got from Problem.actions()
     def __init__(self, actionList):
         self.actionList = actionList
-    # put here action step from planner output without "()"
+
+    # put here action step string line from out.plan without "()"
+    # please load action sequentially
     def load(self, planString):
         actionString = str(planString).split()[0]
         for action in self.actionList:
@@ -1008,3 +1012,9 @@ class ActionClassLoader:
                 plannedAction = action(str(planString).split()[1:])
                 self.planList.append(plannedAction)
                 print("loaded ", plannedAction)
+
+    def loadFromFile(self, outPlanFile):
+        with open(outPlanFile, "r") as fd:
+            for planLine in fd:
+              #  print("try to load", planLine)
+                self.load(planLine.replace("(", "").replace(")", ""))
