@@ -699,7 +699,7 @@ class Object(metaclass=BaseObjectMeta):
         self.value = value
         if name is None: # WARNING name must always be none
             frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
-            name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), frameinfo.filename, frameinfo.lineno)
+            name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
         self.name = self.gen_name(name) # object name when instantiating..
         global _problem_compilation
         global _collected_objects
