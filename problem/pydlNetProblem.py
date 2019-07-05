@@ -55,6 +55,16 @@ class Problem1(Problem):
 
     def goal(self):
         return self.packet.is_consumed == True
-        
+
+
 p = Problem1()
-p.run("consumePacket")
+if p.run("consumePacket") == 0 :
+    if p.getFolderName() != None:
+        actionClassLoader = ActionClassLoader(p.actions())
+        plan = None
+        with open("{0}/out.plan".format(p.getFolderName()), "r") as fd:
+            plan = int(fd.read())
+        if plan != None:
+            actionClassLoader.load()
+
+        

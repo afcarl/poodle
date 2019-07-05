@@ -847,6 +847,10 @@ class PlannedAction():
     
 # problem definition
 class Problem:
+    folder_name = None
+
+    def getFolderName(self):
+        return self.folder_name
     
     def addObject(self, obj):
         "Stub method for future Imaginary object support"
@@ -855,6 +859,12 @@ class Problem:
     
     def actions(self):
         raise NotImplementedError("Please implement .actions() method to return list of planned action classes")
+
+    def getActionByName(self):
+        strList = []
+        for action in self.action():
+            strList.append(action.__class__.__name__)
+        return strList
 
     def goal(self):
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
@@ -873,18 +883,19 @@ class Problem:
         
 
         rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-        folder_name = "./out/{0:05d}_{1}_{2}".format(counter, problemName,str(datetime.date.today()),rnd)
-        os.makedirs(folder_name, exist_ok=True)
-        with open("{0}/domain.pddl".format(folder_name), "w+") as fd:
+        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, problemName,str(datetime.date.today()),rnd)
+        os.makedirs(self.folder_name, exist_ok=True)
+        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_domain())
-        with open("{0}/problem.pddl".format(folder_name), "w+") as fd:
+        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_problem())
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
-        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=folder_name, maxtime=max_time)
-        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
-        for line in std:
+        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
+        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
+        for line in std.stdout:
             print(line.rstrip("\n"))
+        return std.returncode
 
         
     def compile_actions(self):
@@ -966,3 +977,15 @@ class Problem:
     ))
 )
 """.format(objects=txt_objects, facts='\n        '.join(self.collected_facts), goal='\n            '.join(self.collected_goal))
+
+class ActionClassLoader:
+    actionList = []
+    planList = []
+    def __init__(self, actionList):
+        self.actionList = actionList
+
+    def load(self, planString):
+        actionString = str(planString).split()[0]
+        for action in self.actionList:
+            if action.__class__.__name__.lower() == act.lower():
+                print(action.__class__.__name__)
