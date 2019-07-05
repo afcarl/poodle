@@ -797,7 +797,21 @@ class Digit(Object):
 #class PlannedAction(metaclass=ActionMeta):
 class PlannedAction():
     cost = 1
+    argumentList = []
+
+    def __init__(self, argumentList):
+        self.argumentList = argumentList
+#        print("argument list ",self.argumentList  )
     
+    def __str__(self):
+        args = ""
+        for a in self.argumentList:
+            args +=a +", "
+        print(self.__class__.__name__, "(",args[:-2],")")
+        ret = ""
+        ret +="{0}({1})".format(self.__class__.__name__,args[:-2])
+        return ret
+
     @classmethod
     def compile(cls):
         # TODO: acquire lock for multithreaded!!!
@@ -892,10 +906,13 @@ class Problem:
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
         runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
-        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
-        for line in std.stdout:
+        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
+        retcode = "-1"
+        for line in std:
+            if line.find('search exit code:') != -1:
+                retcode = line.rstrip("\n").split()[3]
             print(line.rstrip("\n"))
-        return std.returncode
+        return retcode
 
         
     def compile_actions(self):
@@ -983,9 +1000,11 @@ class ActionClassLoader:
     planList = []
     def __init__(self, actionList):
         self.actionList = actionList
-
+    # put here action step from planner output without "()"
     def load(self, planString):
         actionString = str(planString).split()[0]
         for action in self.actionList:
-            if action.__class__.__name__.lower() == act.lower():
-                print(action.__class__.__name__)
+            if action.__name__.lower() == actionString.lower():
+                plannedAction = action(str(planString).split()[1:])
+                self.planList.append(plannedAction)
+                print("loaded ", plannedAction)

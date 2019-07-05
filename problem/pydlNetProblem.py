@@ -58,13 +58,15 @@ class Problem1(Problem):
 
 
 p = Problem1()
-if p.run("consumePacket") == 0 :
+retCode = p.run("consumePacket")
+print("retcode ",retCode, p.actions())
+if retCode == "0" :
     if p.getFolderName() != None:
         actionClassLoader = ActionClassLoader(p.actions())
         plan = None
         with open("{0}/out.plan".format(p.getFolderName()), "r") as fd:
-            plan = int(fd.read())
-        if plan != None:
-            actionClassLoader.load()
+            for planLine in fd:
+              #  print("try to load", planLine)
+                actionClassLoader.load(planLine.replace("(", "").replace(")", ""))
 
         
