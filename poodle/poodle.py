@@ -219,7 +219,6 @@ class Property(object):
         global _collected_predicates
         global _collected_parameters
         global _collected_predicate_templates
-        global _collected_object_classes
         # TODO: multi-positional checks
         
         # PART 1.
@@ -693,13 +692,14 @@ class BaseObjectMeta(type):
 
 class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
+        if not hasattr(self, "__imaginary__"): __imaginary__ = False
         self.__unlock_setter = True
         name = None
         self._class_variable = None
         self.value = value
         if name is None: # WARNING name must always be none
             frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
-            name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), frameinfo.filename, frameinfo.lineno)
+            name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
         self.name = self.gen_name(name) # object name when instantiating..
         global _problem_compilation
         global _collected_objects
@@ -782,7 +782,9 @@ class StaticObject(Object):
     pass
 
 class Imaginary(Object):
-    pass
+    def __init__(self):
+        self.__imaginary__ = True
+        super().__init__()
 
 class Digit(Object):
     pass
@@ -797,7 +799,21 @@ class Digit(Object):
 #class PlannedAction(metaclass=ActionMeta):
 class PlannedAction():
     cost = 1
+    argumentList = []
+
+    def __init__(self, argumentList):
+        self.argumentList = argumentList
+#        print("argument list ",self.argumentList  )
     
+    def __str__(self):
+        args = ""
+        for a in self.argumentList:
+            args +=a +", "
+        print(self.__class__.__name__, "(",args[:-2],")")
+        ret = ""
+        ret +="{0}({1})".format(self.__class__.__name__,args[:-2])
+        return ret
+
     @classmethod
     def compile(cls):
         # TODO: acquire lock for multithreaded!!!
@@ -847,6 +863,10 @@ class PlannedAction():
     
 # problem definition
 class Problem:
+    folder_name = None
+
+    def getFolderName(self):
+        return self.folder_name
     
     def addObject(self, obj):
         "Stub method for future Imaginary object support"
@@ -855,6 +875,12 @@ class Problem:
     
     def actions(self):
         raise NotImplementedError("Please implement .actions() method to return list of planned action classes")
+
+    def getActionByName(self):
+        strList = []
+        for action in self.action():
+            strList.append(action.__class__.__name__)
+        return strList
 
     def goal(self):
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
@@ -873,18 +899,22 @@ class Problem:
         
 
         rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-        folder_name = "./out/{0:05d}_{1}_{2}".format(counter, problemName,str(datetime.date.today()),rnd)
-        os.makedirs(folder_name, exist_ok=True)
-        with open("{0}/domain.pddl".format(folder_name), "w+") as fd:
+        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, problemName,str(datetime.date.today()),rnd)
+        os.makedirs(self.folder_name, exist_ok=True)
+        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_domain())
-        with open("{0}/problem.pddl".format(folder_name), "w+") as fd:
+        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_problem())
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
-        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=folder_name, maxtime=max_time)
+        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
         std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
+        retcode = "-1"
         for line in std:
+            if line.find('search exit code:') != -1:
+                retcode = line.rstrip("\n").split()[3]
             print(line.rstrip("\n"))
+        return retcode
 
         
     def compile_actions(self):
@@ -966,3 +996,27 @@ class Problem:
     ))
 )
 """.format(objects=txt_objects, facts='\n        '.join(self.collected_facts), goal='\n            '.join(self.collected_goal))
+
+class ActionClassLoader:
+    actionList = [] #list of the ActionPlanned type
+    planList = [] #list instances of the ActionPlanned type
+
+    # put as argument for constructor list of the ActionPlanned type which got from Problem.actions()
+    def __init__(self, actionList):
+        self.actionList = actionList
+
+    # put here action step string line from out.plan without "()"
+    # please load action sequentially
+    def load(self, planString):
+        actionString = str(planString).split()[0]
+        for action in self.actionList:
+            if action.__name__.lower() == actionString.lower():
+                plannedAction = action(str(planString).split()[1:])
+                self.planList.append(plannedAction)
+                print("loaded ", plannedAction)
+
+    def loadFromFile(self, outPlanFile):
+        with open(outPlanFile, "r") as fd:
+            for planLine in fd:
+              #  print("try to load", planLine)
+                self.load(planLine.replace("(", "").replace(")", ""))
