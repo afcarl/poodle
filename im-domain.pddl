@@ -1,4 +1,4 @@
-(define (domain route)
+(define (domain poo-dom)
     (:requirements :strips :typing :equality :negative-preconditions :disjunctive-preconditions)
     (:types 
        hashnum - object
@@ -15,7 +15,7 @@
         :precondition (and
 	    (hash-number ?num1)
 	    (hash-number ?num2)
-	    (class1-object-exists ?num1 ?num2)
+	    (not (class1-object-exists ?num1 ?num2))
         )
         :effect (and
 	    (done ?num1 ?num2)
