@@ -219,7 +219,6 @@ class Property(object):
         global _collected_predicates
         global _collected_parameters
         global _collected_predicate_templates
-        global _collected_object_classes
         # TODO: multi-positional checks
         
         # PART 1.
@@ -693,6 +692,7 @@ class BaseObjectMeta(type):
 
 class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
+        if not hasattr(self, "__imaginary__"): __imaginary__ = False
         self.__unlock_setter = True
         name = None
         self._class_variable = None
@@ -782,7 +782,9 @@ class StaticObject(Object):
     pass
 
 class Imaginary(Object):
-    pass
+    def __init__(self):
+        self.__imaginary__ = True
+        super().__init__()
 
 class Digit(Object):
     pass
