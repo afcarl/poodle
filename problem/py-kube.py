@@ -413,7 +413,7 @@ class TerminatePod(PlannedAction):
     reducedMemConsumptionAtCurrentNode1 = Select( AddedNumber.result == currentNode.currentMemConsumption)
 
     def selector(self):
-        return Select( request1.status == self.problem.statusReqToBeTerminated and
+        return Select( request1.status == self.problem.statusReqRequestPIDToBeEnded and
         reducedCpuConsumptionAtCurrentNode1.operator2 == pod1.currentCpuConsumption and
         reducedMemConsumptionAtCurrentNode1.operator2 == pod1.currentMemConsumption)
 
@@ -634,8 +634,7 @@ class Problem1(Problem):
         self.statusReqRequestFinished = self.addObject(Status())
         self.statusReqResourcesReleased = self.addObject(Status())
         self.statusReqRequestFinished = self.addObject(Status())
-        self.statusReqToBeTerminated = self.addObject(Status())
-        
+
         self.statusPodAtConfig = self.addObject(Status())
         self.statusPodActive = self.addObject(Status())
         self.statusPodPending = self.addObject(Status())
@@ -767,3 +766,10 @@ class Problem1(Problem):
         self.kp2.selectionedPod = self.pod3
         self.kp3.selectionedService = self.service1 
         self.kp3.selectionedService = self.service2
+        
+    def goal(self):
+        return self.request1 == self.problem.statusReqRequestFinished and \ 
+        self.request2 == self.problem.statusReqRequestFinished and \
+        self.request3 == self.problem.statusReqRequestFinished and \
+        self.request4 == self.problem.statusReqRequestFinished 
+
