@@ -31,8 +31,8 @@ import sys
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout) # loggging driver
+handler.setLevel(logging.DEBUG) #loglevel ->> CRITICAL ERROR WARNING INFO DEBUG NOTSET
 log.addHandler(handler)
 
 _compilation = False
@@ -1022,7 +1022,7 @@ class ActionClassLoader:
             if action.__name__.lower() == actionString.lower():
                 plannedAction = action(str(planString).split()[1:])
                 self.planList.append(plannedAction)
-                log.debug(plannedAction)
+                log.info(plannedAction)
 
     def loadFromFile(self, outPlanFile):
         log.debug("load action from file {0}".format(outPlanFile))

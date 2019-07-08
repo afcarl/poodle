@@ -58,7 +58,7 @@ class Problem1(Problem):
 
 p = Problem1()
 retCode = p.run("consumePacket")
-log.info("fast downward retcode {0} {1}".format(retCode, p.actions()))
+log.info("fast downward retcode {0}".format(retCode))
 if retCode == "0" :
     if p.getFolderName() != None:
         actionClassLoader = ActionClassLoader(p.actions())
