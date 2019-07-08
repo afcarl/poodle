@@ -274,7 +274,7 @@ class ToPod(PlannedAction):
     pod1 = Select( Pod == request1.toPod)
 
     def selector(self):
-        return Select(self.pod1.status == self.problem.statusPodActive and \
+        return Select( self.pod1.status == self.problem.statusPodActive and \
         request1.status == self.problem.statusPodDirectedToNode) 
 
     def effect(self):
@@ -283,7 +283,6 @@ class ToPod(PlannedAction):
         self.request1.atPod = pod1
 
 
-print(ToPod.compile())
 
 class SwitchToNextPod(PlannedAction):
     cost = 1
@@ -768,8 +767,8 @@ class Problem1(Problem):
         self.kp3.selectionedService = self.service2
         
     def goal(self):
-        return self.request1 == self.problem.statusReqRequestFinished and \ 
+        return self.request1 == self.problem.statusReqRequestFinished and \
         self.request2 == self.problem.statusReqRequestFinished and \
         self.request3 == self.problem.statusReqRequestFinished and \
-        self.request4 == self.problem.statusReqRequestFinished 
+        self.request4 == self.problem.statusReqRequestFinished
 
