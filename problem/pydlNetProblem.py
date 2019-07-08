@@ -56,10 +56,9 @@ class Problem1(Problem):
     def goal(self):
         return self.packet.is_consumed == True
 
-
 p = Problem1()
 retCode = p.run("consumePacket")
-print("retcode ",retCode, p.actions())
+log.info("fast downward retcode {0} {1}".format(retCode, p.actions()))
 if retCode == "0" :
     if p.getFolderName() != None:
         actionClassLoader = ActionClassLoader(p.actions())
