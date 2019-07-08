@@ -92,8 +92,9 @@ class ConsumePacketSelect(PlannedAction):
         # (Packet-current_packet )
         self.packet.is_consumed.set() # = False
         self.packet.current_packet.unset()
+        print("!!!!!!!!!!!!!!!interface from problem is", self.problem.interface3.value)
 
-print('"'+ConsumePacketSelect.compile().strip()+'"')
+#print('"'+ConsumePacketSelect.compile().strip()+'"')
 
 class ForwardPacketToInterface(PlannedAction):
     interface1 = Interface()

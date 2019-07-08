@@ -800,6 +800,7 @@ class Digit(Object):
 class PlannedAction():
     cost = 1
     argumentList = []
+    problem = None
 
     def __init__(self, argumentList):
         self.argumentList = argumentList
@@ -809,7 +810,7 @@ class PlannedAction():
         args = ""
         for a in self.argumentList:
             args +=a +", "
-        print(self.__class__.__name__, "(",args[:-2],")")
+#        print(self.__class__.__name__, "(",args[:-2],")")
         ret = ""
         ret +="{0}({1})".format(self.__class__.__name__,args[:-2])
         return ret
@@ -901,10 +902,10 @@ class Problem:
         rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
         self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, problemName,str(datetime.date.today()),rnd)
         os.makedirs(self.folder_name, exist_ok=True)
-        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_domain())
         with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_problem())
+        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
+            fd.write(self.compile_domain())
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
         runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
@@ -923,7 +924,6 @@ class Problem:
         for act in self.actions():
             act.problem = self
             self.actions_text += act.compile()
-            act.problem = None
         return self.actions_text
     
     def get_predicates(self):
@@ -1013,9 +1013,10 @@ class ActionClassLoader:
             if action.__name__.lower() == actionString.lower():
                 plannedAction = action(str(planString).split()[1:])
                 self.planList.append(plannedAction)
-                print("loaded ", plannedAction)
+                print(plannedAction)
 
     def loadFromFile(self, outPlanFile):
+        print("load action from file ", outPlanFile)
         with open(outPlanFile, "r") as fd:
             for planLine in fd:
               #  print("try to load", planLine)
