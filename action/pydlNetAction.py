@@ -154,3 +154,46 @@ class ForwardPacketInSwitch(PlannedAction):
 #        )
 #    )
 
+class ForwardPacketToRouteInTable(PlannedAction):
+    host = Host()
+    table = Select(Table in host.has_table) # Table is imaginary?
+    packet = Select(Packet.at_table == table)
+    route = Select(Route in table.has_route) # Route is also imaginary
+    route_dot_network = Select(Network == route.network) # TODO: need just a dereference...
+    # Need static function: net_match(packet.dst_ipaddr, route.network))
+    interface_dest = Select(Interface.has_ipaddr == route.gw_ipaddr)
+
+    # TODO: not exists narrower...
+    # net_narrower = Select(route_dot_network in Network.narrower_than)
+    # route_narrower = Select(net_narrower == Route.network)
+                # and NotExists(packet.dst_ipaddr in net_narrower.match_ip and 
+                #                  route_narrower in table.routes )
+
+    interface = Select(Interface == route.interface) # TODO: remove when dot-prop effect is supported
+                        # https://trello.com/c/VhWF5MtJ/69-support-for-setting-of-dot-prop-in-effect
+    
+
+    def selector(self):
+        return Select(\
+                self.route.interface in self.interface_dest.adjacent_interface and \
+                self.packet.dst_ipaddr in self.route_dot_network.match_ip) 
+                                                # dst matches the net of this route
+                # TODO: fill in all the static matches to match_ip
+                # 
+
+    def effect(self):
+        # self.packet.at_table = None # TODO not supported yet
+        self.packet.at_table.unset(self.table)
+        # self.packet.at_interface_output = self.route.interface # TODO support this
+        self.packet.at_interface_output = self.interface # TODO remove when above is supported
+        self.packet.dst_macaddr = self.interface_dest
+
+print("Compiling imaginary test")
+print(ForwardPacketToRouteInTable.compile())
+print("End compiling imaginary test")
+
+
+
+
+
+
