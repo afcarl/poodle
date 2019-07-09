@@ -137,7 +137,7 @@ def get_property_class_name(prop):
     return my_class_name
 
 def gen_hashnum_templates(var, prefix="var"):
-    return " ".join(["%s%s - %s" % (prefix, i, HASHNUM_CLASS_NAME) for i, v in zip(range(len(var.split())), var.split())])
+    return " ".join(["?%s%s - %s" % (prefix, i, HASHNUM_CLASS_NAME) for i, v in zip(range(len(var.split())), var.split())])
 
 def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class, var2, var2_class):
     # return gen_text_predicate_globals(class_name+"-"+property_name, var1, var1_class, var2, var2_class)
@@ -156,7 +156,7 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
         _collected_predicate_templates.append("(" + predicate_name + " ?var1 - " + var1_class + " " + gen_hashnum_templates(var2) + ")")
         _collected_object_classes.update([class_name, var1_class, HASHNUM_CLASS_NAME])
     elif " " in var1 and " " in var2:
-        _collected_predicate_templates.append("(" + predicate_name + gen_hashnum_templates(var1) + " " + gen_hashnum_templates(var2, prefix="var2") + ")")
+        _collected_predicate_templates.append("(" + predicate_name + " " + gen_hashnum_templates(var1) + " " + gen_hashnum_templates(var2, prefix="var2") + ")")
         _collected_object_classes.update([class_name, HASHNUM_CLASS_NAME])
     else:
         _collected_predicate_templates.append("(" + predicate_name + " ?var1 - " + var1_class + " ?var2 - " + var2_class + ")")
