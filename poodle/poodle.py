@@ -959,7 +959,7 @@ class Problem:
     def goal(self):
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
 
-    def run(self, problemName=""):
+    def run(self):
         counter = 0
         try:
             with open("./.counter", "r") as fd:
@@ -973,7 +973,7 @@ class Problem:
         
 
         rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, problemName,str(datetime.date.today()),rnd)
+        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, self.__class__.__name__, str(datetime.date.today()),rnd)
         os.makedirs(self.folder_name, exist_ok=True)
         with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_problem())
@@ -988,6 +988,10 @@ class Problem:
             if line.find('search exit code:') != -1:
                 retcode = line.rstrip("\n").split()[3]
             log.info(line.rstrip("\n"))
+        if retcode == "0" :
+            if self.getFolderName() != None:
+                actionClassLoader = ActionClassLoader(self.actions())
+                actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
         return retcode
 
         

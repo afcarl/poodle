@@ -14,7 +14,7 @@ class IPFactory():
             self.ip_addresses[ipaddr_text] = new_ipaddr_object
             return new_ipaddr_object
 
-class Problem1(Problem):
+class SimpleTestProblem1(Problem):
 
     def actions(self):
         return [ ConsumePacketSelect, ForwardPacketToInterface ]
@@ -56,13 +56,10 @@ class Problem1(Problem):
     def goal(self):
         return self.packet.is_consumed == True
 
-p = Problem1()
-retCode = p.run("consumePacket")
+p = SimpleTestProblem1()
+retCode = p.run()
 log.info("fast downward retcode {0}".format(retCode))
-if retCode == "0" :
-    if p.getFolderName() != None:
-        actionClassLoader = ActionClassLoader(p.actions())
-        actionClassLoader.loadFromFile("{0}/out.plan".format(p.getFolderName()))
+
 
 
         
