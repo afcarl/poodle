@@ -192,7 +192,32 @@ print("Compiling imaginary test")
 print(ForwardPacketToRouteInTable.compile())
 print("End compiling imaginary test")
 
+class TestImaginaryCreate(PlannedAction):
+    host = Host()
+    packet = Packet()
+    interface = Select(Interface in host.has_interface)
 
+    def selector(self):
+        return Select(self.packet.at_interface_input in self.host.has_interface)
+
+    def effect(self):
+        table = Table()
+        # to create object:
+        # predicates:
+        # generate new variables for new objects, store smwhr
+        # (not (table-hashnum-exists ?num1 ?num2) ; hashnums
+        #    add this to predicate templates
+        # (hashnum ?num1)
+        #    add to predicates templates
+        #    generate this
+        # (hashnum ?num2) ; for all created - need these!!
+        # effects:
+        # (table-hashnum-exists ?num1 ?num2)
+        # (table-has-route ?num1 ?num2 ?num3 ?num4)
+        route = Route()
+        table.has_route = route
+        route.interface = self.interface
+        self.problem.addObject(table)
 
 
 
