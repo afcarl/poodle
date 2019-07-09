@@ -4,25 +4,20 @@ from object.commonObject import *
 class RequestState(StaticObject):
     static_values = ["request", "reply"]
 
+class IPAddr(Object): # -> ipaddr - object; ip-192.179.4.34 - ipaddr
+    
+    def gen_name(self, name):
+        return super(IPAddr, self).gen_name("IP-"+name)
+
 class Network(Object):
     is_default = StateFact()
+    match_ip = Relation(IPAddr) # all ipaddresses that match this network
     def gen_name(self, name):
         return super(Network, self).gen_name("NET-"+name)
 Network.is_narrower_than = Relation(Network)
 # TODO: define default behaviour with "default" net narrower-than
 
-class IPAddr(Object): # -> ipaddr - object; ip-192.179.4.34 - ipaddr
-    net_match = Relation(Network) # -> (net-match [self] ?net - network)
-    
-    def gen_name(self, name):
-        return super(IPAddr, self).gen_name("IP-"+name)
 
-
-class Table(Object):
-    # TODO: PredefinedObject? - initialize objects statically?
-    
-    has_route_to = Relation(Network) # TODO : this is heuristic relation!!! 
-    pass
 
 class Port(Object):
     is_any_port = StateFact()
@@ -42,6 +37,27 @@ Interface.adjacent_interface = Relation(Interface) # TODO: not with self?
 class Host_P(Object): # TODO REMOVE!!!!!!
     pass
 
+# Imaginary objects are identified by the predicate itself, 
+# or by combination of identified_by properties with any of its properties
+class Route(Imaginary): # there is no "self" in imaginary route, currently it is "has_route" predicate
+
+    # Properties 
+    network = Property(Network) # -> (route-id ?host ?table ?number )
+    ipaddr = Property(IPAddr)
+    gw_ipaddr = Property(IPAddr)
+    interface = Property(Interface)
+    
+    # Relations
+Route.is_higher_metric_than = Relation(Route) # TODO: complex relation??
+
+class Table(Object):
+    # TODO: PredefinedObject? - initialize objects statically?
+    
+    has_route_to = Relation(Network) # TODO : this is heuristic relation!!! 
+    has_route = Relation(Route)
+    pass
+
+ 
 class Host(Host_P):
     has_table = Relation(Table) # -> (has-table [self] ?table - table) [x many] (table in Host.has_table) 
     has_interface = Relation(Interface)
@@ -58,23 +74,7 @@ class Host(Host_P):
     has_host_rule_to_fwmark_dport = Property(ipto=IPAddr, dport=Port)
     has_host_rule_to_fwmark_sport_dport = Property(ipto=IPAddr, sport=Port, dport=Port)
 
-
-# Imaginary objects are identified by the predicate itself, 
-# or by combination of identified_by properties with any of its properties
-class Route(Imaginary): # there is no "self" in imaginary route, currently it is "has_route" predicate
-    # Identity
-    # TODO: complex identification?? Number4Bit as identified_by
-    identified_by = Property(host=Host, table=Table, number=Number)
-
-    # Properties 
-    network = Property(Network) # -> (route-id ?host ?table ?number )
-    ipaddr = Property(IPAddr)
-    target_ipaddr = Property(IPAddr)
-    interface = Property(Interface)
-    
-    # Relations
-Route.is_higher_metric_than = Relation(Route) # TODO: complex relation??
-    
+  
 
 class RuleTo(Imaginary):
     identified_by = [Host, Number]
@@ -124,6 +124,7 @@ class Packet(Object):
     packet_has_src_ip = StateFact()
     
     dst_ipaddr = Property(IPAddr)
+    dst_macaddr = Property(Interface)
     src_ipaddr = Property(IPAddr)
     has_src_port = Property(Port)
     has_dst_port = Property(Port)
@@ -138,7 +139,7 @@ class Packet(Object):
     
     origin = ProtectedProperty(Host)
     
-    at_table = StateRelation(Table)
+    at_table = Property(Table)
     at_host = StateRelation(Host) # TODO: this should be derived predicate!
     at_interface_input = StateProperty(Interface)
     at_interface_output = StateProperty(Interface)

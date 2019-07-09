@@ -90,6 +90,9 @@ def new_id():
 
 def gen_var(name):
     return "?%s-%s" % (name, new_id())
+
+def gen_var_imaginary(name):
+    return "?var1-%s ?var2-%s" % (new_id(), new_id())
     
 def get_property_class_name(prop):
     # PART 2.
@@ -107,14 +110,14 @@ def get_property_class_name(prop):
     #print("get_property_class: _property_of:", has_po, "_property_of_inst:", has_poi)
     
     if has_po and not has_poi:
-        my_class = prop._property_of.__name__
+        my_class_name = prop._property_of.__name__
     elif not has_po and has_poi:
-        my_class = type(prop._property_of_inst).__name__
+        my_class_name = type(prop._property_of_inst).__name__
     elif has_po and has_poi:
-        my_class = prop._property_of.__name__
+        my_class_name = prop._property_of.__name__
     else:
         raise ValueError("Can not detect who I am")
-    return my_class
+    return my_class_name
 
 def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class, var2, var2_class):
     # return gen_text_predicate_globals(class_name+"-"+property_name, var1, var1_class, var2, var2_class)
@@ -122,10 +125,17 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
     global _collected_predicate_templates
     global _collected_object_classes
     predicate_name = class_name+"-"+property_name
-    # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
+    #if not imaginary:
+        # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
+    # TODO HERE: looks like we can match the class by "id" which is N-hashnum variable
     text_predicate = "(" + predicate_name + " " + var1 + " " + var2 + ")"
     _collected_predicate_templates.append("(" + predicate_name + " ?var1 - " + var1_class + " ?var2 - " + var2_class + ")")
     _collected_object_classes.update([class_name, var1_class, var2_class])
+    #else:
+        #TODO HERE
+    #    obj_predicate_id = get_imaginary_object_id()
+    #    text_predicate = "(" + predicate_name + " " + obj_predicate_id + " " + var1 + " " + var2 + ")"
+
     return text_predicate
 
 def gen_one_predicate(predicate_name, var, var_class_name):
@@ -163,8 +173,11 @@ class Property(object):
     def __set_name__(self, owner, name):
         if not hasattr(self, "_property_name"):
             self._property_name = name
-            
-    def get_property_class_name(prop):
+
+    def get_property_class_name(self):
+        return self.get_parent_class().__name__
+
+    def get_parent_class(self):
         # PART 2.
         # We can have either of the following:
         #    _property_of, no _property_of_inst - means that we are direct clas-property of some class Object
@@ -173,18 +186,18 @@ class Property(object):
         #                                         operator instantiates returning object to allow attributes modification
         has_po = False
         has_poi = False
-        if hasattr(prop, "_property_of_inst"): 
-            has_poi = prop._property_of_inst
-        if hasattr(prop, "_property_of"):
-            has_po = prop._property_of
+        if hasattr(self, "_property_of_inst"): 
+            has_poi = self._property_of_inst
+        if hasattr(self, "_property_of"):
+            has_po = self._property_of
         #print("get_property_class: _property_of:", has_po, "_property_of_inst:", has_poi) # nosiy!
         
         if has_po and not has_poi:
-            my_class = prop._property_of.__name__
+            my_class = self._property_of
         elif not has_po and has_poi:
-            my_class = type(prop._property_of_inst).__name__
+            my_class = type(self._property_of_inst)
         elif has_po and has_poi:
-            my_class = prop._property_of.__name__
+            my_class = self._property_of
         else:
             raise ValueError("Can not detect who I am")
         return my_class
@@ -194,22 +207,22 @@ class Property(object):
         
     def find_parameter_variable(self):
         "finds the variable that holds the class"
-        my_class = self._value.__name__ # _value is always a class
+        my_class_name = self._value.__name__ # _value is always a class
         myclass_genvar = None
-        for ph in reversed(self._property_of_inst.parse_history):
-            if my_class in ph["variables"]:
-                myclass_genvar = ph["variables"][my_class]
+        for ph in reversed(self._property_of_inst._parse_history):
+            if my_class_name in ph["variables"]:
+                myclass_genvar = ph["variables"][my_class_name]
                 break
         return myclass_genvar
     
     
     def find_class_variable(self):
         "finds the variable that holds the class"
-        my_class = self.get_property_class_name()
+        my_class_name = self.get_property_class_name()
         myclass_genvar = None
-        for ph in reversed(self._property_of_inst.parse_history):
-            if my_class in ph["variables"]:
-                myclass_genvar = ph["variables"][my_class]
+        for ph in reversed(self._property_of_inst._parse_history):
+            if my_class_name in ph["variables"]:
+                myclass_genvar = ph["variables"][my_class_name]
                 break
         return myclass_genvar
     
@@ -257,14 +270,15 @@ class Property(object):
         # print("OPERATOR: _property_of:", has_po, "_property_of_inst:", has_poi) # nosiy!
         
         # if has_po and not has_poi:
-        #     my_class = self._property_of.__name__
+        #     my_class_name = self._property_of.__name__
         # elif not has_po and has_poi:
-        #     my_class = type(self._property_of_inst).__name__
+        #     my_class_name = type(self._property_of_inst).__name__
         # elif has_po and has_poi:
-        #     my_class = self._property_of.__name__
+        #     my_class_name = self._property_of.__name__
         # else:
         #     raise ValueError("Can not detect who I am")
-        my_class = self.get_property_class_name()
+        my_class_name = self.get_property_class_name()
+        my_class = self.get_parent_class()
         
         # PART 3.
         # We need to understand what are we going to return:
@@ -299,94 +313,108 @@ class Property(object):
                 raise ValueError("No class to select is present in selector expression. Both LHS and RHS are instances.")
             
         if isinstance(subjObjectClass, Object):
-            other_class = type(subjObjectClass).__name__
+            other_class_name = type(subjObjectClass).__name__
+            other_class = type(subjObjectClass)
         else:
-            other_class = subjObjectClass.__name__
+            other_class_name = subjObjectClass.__name__
+            other_class = subjObjectClass
         
         # Part 5. Get history of generated variables
         # Variants:
-        # 1. we are property of instance, thus self._property_of_inst.parse_history
-        # 2. the other is instance, thus other.parse_history
-        # 3. the other is property of instance, thus other._property_of_inst.parse_history
+        # 1. we are property of instance, thus self._property_of_inst._parse_history
+        # 2. the other is instance, thus other._parse_history
+        # 3. the other is property of instance, thus other._property_of_inst._parse_history
         #    TODO XXX NOTE: need to look for toplevel object always, as we may be property-of-property
-        parse_history = []
-        if has_poi and hasattr(self._property_of_inst, "parse_history"):
+        _parse_history = []
+        if has_poi and hasattr(self._property_of_inst, "_parse_history"):
             #print("OPERATOR HIST:", "1. we are property of instance")
-            if not _compilation: assert parse_history == []
-            parse_history += self._property_of_inst.parse_history
-        if isinstance(other, Object) and hasattr(other, "parse_history"):
+            if not _compilation: assert _parse_history == []
+            _parse_history += self._property_of_inst._parse_history
+        if isinstance(other, Object) and hasattr(other, "_parse_history"):
             #print("OPERATOR HIST:", "2. the other is instance")
-            if not _compilation: assert parse_history == []
-            parse_history += other.parse_history
-        if isinstance(other, Property) and hasattr(other, "_property_of_inst") and hasattr(other._property_of_inst, "parse_history"):
+            if not _compilation: assert _parse_history == []
+            _parse_history += other._parse_history
+        if isinstance(other, Property) and hasattr(other, "_property_of_inst") and hasattr(other._property_of_inst, "_parse_history"):
             #print("OPERATOR HIST:", "3. the other is property of instance")
-            if not _compilation: assert parse_history == []
-            parse_history += other._property_of_inst.parse_history
-        #print("OPERATOR-HIST-1", parse_history)
+            if not _compilation: assert _parse_history == []
+            _parse_history += other._property_of_inst._parse_history
+        #print("OPERATOR-HIST-1", _parse_history)
         other_genvar = None
         myclass_genvar = None
         
         # no need to generate other_genvar if other is an instance and already has a variable
         if who_instantiating != "other": # means that other is already an instance, both in regular and compilatioin mode
             # it is either an instance itself or is a property of instance
-            if hasattr(other, "_property_of_inst") and other_class == other._property_of_inst.__class__.__name__: # weird check to figure out if this is applicable scenario...
+            if hasattr(other, "_property_of_inst") and other_class_name == other._property_of_inst.__class__.__name__: # weird check to figure out if this is applicable scenario...
                 if other._property_of_inst._class_variable:
-                    print("OPERATOR: Found other porperty variable", other._property_of_inst._class_variable, other_class, other._property_of_inst)
+                    print("OPERATOR: Found other porperty variable", other._property_of_inst._class_variable, other_class_name, other._property_of_inst)
                     other_genvar = other._property_of_inst._class_variable
             elif not hasattr(other, "_property_of_inst"):
                 if other._class_variable:
-                    print("OPERATOR: Found other instance variable", other._class_variable, other_class)
+                    print("OPERATOR: Found other instance variable", other._class_variable, other_class_name)
                     other_genvar = other._class_variable
             else:
                 print("OPERATOR Skipping getting variable from instances")
                 pass
                 
         # WARNING@!!!! finding variables in history is obsolete and UNSAFE!!!
-        if parse_history:
+        if _parse_history:
             if not other_genvar:
-                for ph in reversed(parse_history):
-                    if other_class in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
-                        other_genvar = ph["variables"][other_class]
+                for ph in reversed(_parse_history):
+                    if other_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
+                        other_genvar = ph["variables"][other_class_name]
                         print("WARNING! Variable found in history - resulted PDDL may be wrong")
                         break
-            for ph in reversed(parse_history):
+            for ph in reversed(_parse_history):
                 if has_poi and self._property_of_inst._class_variable:
                     myclass_genvar = self._property_of_inst._class_variable
                 else:
-                    if my_class in ph["variables"] and who_instantiating != "self":
-                        myclass_genvar = ph["variables"][my_class]
+                    if my_class_name in ph["variables"] and who_instantiating != "self":
+                        myclass_genvar = ph["variables"][my_class_name]
                         break
                     
-        if myclass_genvar is None: myclass_genvar = gen_var(my_class)
+        if myclass_genvar is None: 
+            if isinstance(my_class, Imaginary):
+                myclass_genvar = gen_var_imaginary(my_class_name)
+            else:
+                myclass_genvar = gen_var(my_class_name)
         if other_genvar is None: 
-            other_genvar = gen_var(other_class)
+            if isinstance(other_class, Imaginary):
+                other_genvar = gen_var_imaginary(other_class_name)
+            else:
+                other_genvar = gen_var(other_class_name)
             print("OPERATOR: generating new var for other!", other_genvar)
         
-        collected_parameters = {other_genvar: other_class, myclass_genvar: my_class}
+        collected_parameters = {other_genvar: other_class_name, myclass_genvar: my_class_name}
         
         if property_property_comparison:
-            other_property_class = get_property_class_name(other)
+            other_property_class_name = get_property_class_name(other)
+            other_property_class = other.get_parent_class()
             other_property_genvar = None
-            if parse_history:
-                for ph in reversed(parse_history):
-                    if other_property_class in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
-                        other_property_genvar = ph["variables"][other_property_class]
+            if _parse_history:
+                for ph in reversed(_parse_history):
+                    if other_property_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
+                        other_property_genvar = ph["variables"][other_property_class_name]
                         break
-            if other_property_genvar is None: other_property_genvar = gen_var(other_property_class)
-            collected_parameters[other_property_genvar] = other_property_class
-            text_predicate = gen_text_predicate_push_globals(my_class, self._property_name, myclass_genvar, my_class, other_genvar, other_class)
-            text_predicate_2 = gen_text_predicate_push_globals(other_property_class, other._property_name, other_property_genvar, other_property_class, other_genvar, other_class)
+            if other_property_genvar is None: 
+                if isinstance(other_property_class, Imaginary):
+                    other_property_genvar = gen_var_imaginary(other_property_class_name)
+                else:
+                    other_property_genvar = gen_var(other_property_class_name)
+            collected_parameters[other_property_genvar] = other_property_class_name
+            text_predicate = gen_text_predicate_push_globals(my_class_name, self._property_name, myclass_genvar, my_class_name, other_genvar, other_class_name)
+            text_predicate_2 = gen_text_predicate_push_globals(other_property_class_name, other._property_name, other_property_genvar, other_property_class_name, other_genvar, other_class_name)
             print("OPERATOR-PRECOND-PDDL1: ", text_predicate)
             print("OPERATOR-PRECOND-PDDL2: ", text_predicate_2)
         else:
-            text_predicate = gen_text_predicate_push_globals(my_class, self._property_name, myclass_genvar, my_class, other_genvar, other_class)
+            text_predicate = gen_text_predicate_push_globals(my_class_name, self._property_name, myclass_genvar, my_class_name, other_genvar, other_class_name)
             text_predicate_2 = None
             print("OPERATOR-PRECOND-PDDL:  ", text_predicate)
         
         # print("OPERATOR-PARAM-PDDL:", collected_parameters)
         
-        if not hasattr(obj, "parse_history"):
-            obj.parse_history = parse_history
+        if not hasattr(obj, "_parse_history"):
+            obj._parse_history = _parse_history
         
         # TODO: what if we have two same classes?
         
@@ -395,10 +423,10 @@ class Property(object):
 
         # store variable that we created for the returning object
         if who_instantiating == "self": # returning object is our class, and we just invented a new variable name for us
-            print("OPERATOR setting class variable myclass genvar to ", myclass_genvar, my_class)
+            print("OPERATOR setting class variable myclass genvar to ", myclass_genvar, my_class_name)
             obj._class_variable = myclass_genvar
         if who_instantiating == "other": # returning object is who we are being compared to, and we invented variable for that
-            print("OPERATOR setting class variable ohter genvar to ", other_genvar, other_class)
+            print("OPERATOR setting class variable ohter genvar to ", other_genvar, other_class_name)
             obj._class_variable = other_genvar
             
         # also store variable for the instantiated object that we are comparing with, if not created before
@@ -419,27 +447,27 @@ class Property(object):
                     print("WARNING! Not setting other variable to %s as it already has %s" % (other_genvar, other._class_variable))
 
         
-        obj.parse_history.append({
+        obj._parse_history.append({
             "operator": operator, 
             "self": self, 
             "other": subjObjectClass, 
             "self-prop": self._value, 
-            #"variables": { other_class: other_genvar , my_class: myclass_genvar }, # TODO: what if we have two same classes?
-            "variables": {my_class: myclass_genvar, other_class: other_genvar }, # TODO: what if we have two same classes?
-            "class_variables": { my_class: myclass_genvar },
+            #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+            "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
+            "class_variables": { my_class_name: myclass_genvar },
             "text_predicates": [text_predicate, text_predicate_2],
             "parameters": collected_parameters
         })
-        #print("OPERATOR-HIST-2", parse_history)
+        #print("OPERATOR-HIST-2", _parse_history)
 
         # this is required for the variables to become available at selector compilation
-        # if has_poi and _compilation and not hasattr(self._property_of_inst, "parse_history"): self._property_of_inst.parse_history = parse_history
-        if has_poi and not hasattr(self._property_of_inst, "parse_history"): self._property_of_inst.parse_history = parse_history
-        if has_poi and hasattr(self._property_of_inst, "parse_history"): self._property_of_inst.parse_history += parse_history
+        # if has_poi and _compilation and not hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history = _parse_history
+        if has_poi and not hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history = _parse_history
+        if has_poi and hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history += _parse_history
         
         if _compilation:
-            # because in compilation mode our parse_history now contains merged history ->>>
-            for ph in obj.parse_history + parse_history: # WARNING! why do we need to add ph here??
+            # because in compilation mode our _parse_history now contains merged history ->>>
+            for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
         return obj
@@ -465,11 +493,11 @@ class Property(object):
         # TODO: also detect that we are outside of effect block!
         global _collected_predicates
         global _collected_parameters
-        for ph in self._property_of_inst.parse_history:
+        for ph in self._property_of_inst._parse_history:
             _collected_predicates += ph["text_predicates"]
             _collected_parameters.update(ph["parameters"])
         if valueObjectObject:
-            for ph in valueObjectObject.parse_history:
+            for ph in valueObjectObject._parse_history:
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
         
@@ -585,7 +613,7 @@ class StateFact(Property):
         # TODO: also detect that we are outside of effect block!
         global _collected_predicates
         global _collected_parameters
-        for ph in self._property_of_inst.parse_history:
+        for ph in self._property_of_inst._parse_history:
             _collected_predicates += ph["text_predicates"]
             _collected_parameters.update(ph["parameters"])
         
@@ -594,8 +622,8 @@ class StateFact(Property):
         global _collected_facts
         global _problem_compilation
         # print("EFFECT-PDDL: TODO", self._property_of_inst.__class__.__name__)
-        # print("EFFECT-PDDL: TODO", self._property_of_inst.parse_history)
-        # now find in our instance's parse_history our instance's class name variable
+        # print("EFFECT-PDDL: TODO", self._property_of_inst._parse_history)
+        # now find in our instance's _parse_history our instance's class name variable
         
         if _problem_compilation:
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
@@ -731,11 +759,11 @@ class Object(metaclass=BaseObjectMeta):
         if self._class_variable == None:
             raise ValueError("Trying to get class variable from unknown instance %s" % self)
         return self._class_variable
-        #my_class = self.__class__.__name__
+        #my_class_name = self.__class__.__name__
         #myclass_genvar = None
-        #for ph in reversed(self.parse_history):
-        #    if my_class in ph["variables"]:
-        #        myclass_genvar = ph["variables"][my_class]
+        #for ph in reversed(self._parse_history):
+        #    if my_class_name in ph["variables"]:
+        #        myclass_genvar = ph["variables"][my_class_name]
         #        break
         #return myclass_genvar
     
@@ -750,7 +778,7 @@ class Object(metaclass=BaseObjectMeta):
         # if _problem_compilation and isinstance(value, Object):
         #     print("EXEC PC TRYING TO SET ---------------------------------------", name, value)
             
-        if _problem_compilation and isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+        if (_compilation or _problem_compilation) and isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             # print("EXEC SET ---------------------------------------", name, value)
             getattr(self, name).set(value)
         elif _problem_compilation and isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
@@ -759,9 +787,13 @@ class Object(metaclass=BaseObjectMeta):
             else:
                 raise NotImplementedError("Boolean False is not supported")
         else:
-            # TODO: check if we need this - we may just throw an error???
-            if _problem_compilation and hasattr(self, name) and not self.__unlock_setter:
-                raise AssertionError("Do not support setting of type %s to property %s (in compilation mode)" % (str(type(value)), name))
+            # WARNING! please check the proper usage of __unlock_setter
+            # setter must probably unlock only for non-existent class attributes or only for existing properties
+            if ( _problem_compilation or _compilation) and hasattr(self, name) and not self.__unlock_setter and isinstance(getattr(self, name), Property):
+                raise AssertionError("No support for setting of type %s to property %s (in compilation mode)" % (str(type(value)), name))
+            if _compilation and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter and name[0] != "_": # all system properties must start with _
+            #if _compilation and not hasattr(self, name) and not "__unlock_setter" in name:
+                raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
             super().__setattr__(name, value)
 
 
