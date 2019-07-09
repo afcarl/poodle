@@ -869,19 +869,22 @@ class PlannedAction():
     cost = 1
     argumentList = []
     problem = None
+    template = None
 
     def __init__(self, argumentList):
         self.argumentList = argumentList
 #        print("argument list ",self.argumentList  )
     
     def __str__(self):
-        args = ""
-        for a in self.argumentList:
-            args +=a +", "
-#        print(self.__class__.__name__, "(",args[:-2],")")
-        ret = ""
-        ret +="{0}({1})".format(self.__class__.__name__,args[:-2])
+        ret = "{0}".format(self.__class__.__name__)
+        for arg in self.argumentList:
+            ret +=" {0}({1})".format(arg.name, arg.value)
         return ret
+
+    def getTemplate(self):
+        if self.template == None:
+            return "./template/{0}.j2".format(self.__class__.__name__)
+        return selt.template
 
     @classmethod
     def compile(cls):
@@ -938,15 +941,17 @@ class PlannedAction():
 # problem definition
 class Problem:
     folder_name = None
-
+    objectList = []
     def getFolderName(self):
         return self.folder_name
     
     def addObject(self, obj):
-        "Stub method for future Imaginary object support"
-        # TODO HERE: add global trigger to protect from objects not added
+        self.objectList.append(obj)
         return obj
     
+    def getObjectList(self):
+        return self.objectList
+
     def actions(self):
         raise NotImplementedError("Please implement .actions() method to return list of planned action classes")
 
@@ -990,7 +995,7 @@ class Problem:
             log.info(line.rstrip("\n"))
         if retcode == "0" :
             if self.getFolderName() != None:
-                actionClassLoader = ActionClassLoader(self.actions())
+                actionClassLoader = ActionClassLoader(self.actions(), self)
                 actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
         return retcode
 
@@ -1077,10 +1082,14 @@ class Problem:
 class ActionClassLoader:
     actionList = [] #list of the ActionPlanned type
     planList = [] #list instances of the ActionPlanned type
-
+    problem = None
     # put as argument for constructor list of the ActionPlanned type which got from Problem.actions()
     def __init__(self, actionList):
         self.actionList = actionList
+
+    def __init__(self, actionList, problem):
+        self.actionList = actionList
+        self.problem = problem
 
     # put here action step string line from out.plan without "()"
     # please load action sequentially
@@ -1088,7 +1097,16 @@ class ActionClassLoader:
         actionString = str(planString).split()[0]
         for action in self.actionList:
             if action.__name__.lower() == actionString.lower():
-                plannedAction = action(str(planString).split()[1:])
+                argumentList = []
+                for argStr in str(planString).split()[1:]:
+                    for obj in self.problem.getObjectList():
+#                        print("test",obj)
+                        if isinstance(obj, Object):
+#                            print("test again",obj," ", obj.name )
+                            if argStr.lower() == obj.name.lower():
+                                argumentList.append(obj)
+                                log.debug("got {0}".format(obj.name))
+                plannedAction = action(argumentList)
                 self.planList.append(plannedAction)
                 log.info(plannedAction)
 
@@ -1097,3 +1115,6 @@ class ActionClassLoader:
         with open(outPlanFile, "r") as fd:
             for planLine in fd:
                 self.load(planLine.replace("(", "").replace(")", ""))
+
+    def templateMe(self):
+        pass
