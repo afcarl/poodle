@@ -37,6 +37,8 @@ log.addHandler(handler)
 
 _compilation = False
 _problem_compilation = False
+_effect_compilation = False
+
 _collected_predicates = []
 _collected_effects = []
 _collected_parameters = {}
@@ -47,7 +49,9 @@ _collected_objects = {} # format: { "class": [ ... objects ... ] }
 _collected_facts = []
 
 HASHNUM_VAR_NAME = "hashnum"
+HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
 HASHNUM_CLASS_NAME = "PoodleHashnum"
+HASHNUM_EXISTS_PFX = "-hashnum-exists" # predicate postfix to indicate existence of imaginary object
 
 from functools import partial
 
@@ -253,6 +257,7 @@ class Property(object):
         "finds the variable that holds the class"
         my_class_name = self.get_property_class_name()
         myclass_genvar = None
+        if self._property_of_inst._class_variable: return self._property_of_inst._class_variable
         for ph in reversed(self._property_of_inst._parse_history):
             if my_class_name in ph["variables"]:
                 myclass_genvar = ph["variables"][my_class_name]
@@ -827,7 +832,7 @@ class Object(metaclass=BaseObjectMeta):
             # setter must probably unlock only for non-existent class attributes or only for existing properties
             if ( _problem_compilation or _compilation) and hasattr(self, name) and not self.__unlock_setter and isinstance(getattr(self, name), Property):
                 raise AssertionError("No support for setting of type %s to property %s (in compilation mode)" % (str(type(value)), name))
-            if _compilation and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter and name[0] != "_": # all system properties must start with _
+            if _compilation and name[0] != "_" and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter: # all system properties must start with _
             #if _compilation and not hasattr(self, name) and not "__unlock_setter" in name:
                 raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
             super().__setattr__(name, value)
@@ -851,8 +856,23 @@ class StaticObject(Object):
 
 class Imaginary(Object):
     def __init__(self):
-        self.__imaginary__ = True
         super().__init__()
+        self.__imaginary__ = True
+        global _effect_compilation
+        global _collected_predicates
+        global _collected_effects
+        if _effect_compilation:
+            self._parse_history = []
+            self._class_variable = gen_var_imaginary(self.__class__.__name__)
+            exists_predicate = gen_one_predicate(self.__class__.__name__+HASHNUM_EXISTS_PFX, self._class_variable, self.__class__.__name__)
+            _collected_predicates.append("(not %s)" % exists_predicate)
+            for v in self._class_variable.split():
+                _collected_predicates.append("("+HASHNUM_ID_PREDICATE + " " + v + ")")
+            _collected_predicate_templates.append("("+HASHNUM_ID_PREDICATE+" ?var - "+HASHNUM_CLASS_NAME+")")
+            _collected_predicate_templates.append("({pred} ?var - {cls})".format(pred=HASHNUM_ID_PREDICATE, cls=HASHNUM_CLASS_NAME))
+            _collected_effects.append(exists_predicate)
+
+
 
 class Digit(Object):
     pass
@@ -891,13 +911,16 @@ class PlannedAction():
         global _collected_parameters
         global _collected_effects
         global _selector_out
+        global _effect_compilation
         assert _selector_out is None, "Selector operators used outside of Select() decorator"
         _collected_predicates = []
         _collected_parameters = {}
         _collected_effects = []
         _compilation = True
         log.info("{0}".format(cls.selector(cls))) # this fills globals above
+        _effect_compilation = True
         log.info("{0}".format(cls.effect(cls)))
+        _effect_compilation = False
         _compilation = False
         
         # _collected_predicates = filter(None, list(set(_collected_predicates)))

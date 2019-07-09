@@ -215,10 +215,9 @@ class TestImaginaryCreate(PlannedAction):
         # (table-hashnum-exists ?num1 ?num2)
         # (table-has-route ?num1 ?num2 ?num3 ?num4)
         route = Route()
-        table.has_route = route
+        table.has_route.add(route)
         route.interface = self.interface
         self.problem.addObject(table)
 
 
-
-
+print(TestImaginaryCreate.compile())
