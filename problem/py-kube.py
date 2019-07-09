@@ -5,7 +5,7 @@ from object.networkObject import *
 class NumberFactory():
     numberCollection = {}
 
-    def init(self, num=100):
+    def init(self, num=1001):
         for i in range(0, num) :
             self.addNumber(i)
     def addNumber(self, num):
@@ -645,7 +645,8 @@ class Problem1(Problem):
         return [globals()[x] for x in globals() if isinstance(globals()[x], PlannedAction)]
 
     def problem(self):
-        numberFactory = NumberFactory(500)
+        self.numberFactory = NumberFactory()
+        self.numberFactoryinitialized = self.numberFactory.init()
         
         self.statusReqAtStart = self.addObject(Status())
         self.statusReqAtLoadbalanser = self.addObject(Status())
@@ -674,7 +675,7 @@ class Problem1(Problem):
         self.statusNodeActive = self.addObject(Status())
         self.statusNodeInactive = self.addObject(Status())
         
-        self.problem.typeTemporary = addObject(Type)
+        self.typeTemporary = self.addObject(Type())
         
 
         self.period1 = self.addObject(Period()) 
@@ -684,7 +685,7 @@ class Problem1(Problem):
         self.сontainerConfig3 = self.addObject(ContainerConfig())
         
         self.node1 = self.addObject(Node())
-        self.node1.cpuCapacity = self.numberFactory.getNumber(1000)
+        self.node1.cpuCapacity = self.numberFactory.getNumber(500)
         self.node1.memCapacity = self.numberFactory.getNumber(100)
         self.node1.currentFormalCpuConsumption = self.numberFactory.getNumber(0)
         self.node1.currentFormalMemConsumption = self.numberFactory.getNumber(0)
@@ -774,30 +775,30 @@ class Problem1(Problem):
         self.kp1 = self.addObject(Kubeproxy())
         self.kp1.mode = self.modeUsermode
         self.kp1.atNode = self.node1
-        self.kp1.selectionedPod = self.pod1
-        self.kp1.selectionedService = self.service1 
+        self.kp1.selectionedPod.add(self.pod1)
+        self.kp1.selectionedService.add(self.service1) 
         ## how to create relations??? 
         
         self.kp2 = self.addObject(Kubeproxy())
         self.kp2.mode = self.modeUsermode
         self.kp2.atNode = self.node2
-        self.kp2.selectionedPod.add(pod1)
-        self.kp2.selectionedPod = self.pod2
-        self.kp2.selectionedService = self.service2
+        self.kp2.selectionedPod.add(self.pod1)
+        self.kp2.selectionedPod.add(self.pod2)
+        self.kp2.selectionedService.add(self.service2)
 
         self.kp3 = self.addObject(Kubeproxy())
         self.kp3.mode = self.modeUsermode
         self.kp3.atNode = self.node3
-        self.kp3.selectionedPod = self.pod1
-        self.kp2.selectionedPod = self.pod3
-        self.kp3.selectionedService = self.service1 
-        self.kp3.selectionedService = self.service2
+        self.kp3.selectionedPod.add(self.pod1)
+        self.kp2.selectionedPod.add(self.pod3)
+        self.kp3.selectionedService.add(self.service1)
+        self.kp3.selectionedService.add(self.service2)
         
     def goal(self):
-        return self.request1 == self.problem.statusReqRequestFinished and \
-        self.request2 == self.problem.statusReqRequestFinished and \
-        self.request3 == self.problem.statusReqRequestFinished and \
-        self.request4 == self.problem.statusReqRequestFinished
+        return self.request1 == self.statusReqRequestFinished and \
+        self.request2 == self.statusReqRequestFinished and \
+        self.request3 == self.statusReqRequestFinished and \
+        self.request4 == self.statusReqRequestFinished
 
 p = Problem1()
 retCode = p.run()
