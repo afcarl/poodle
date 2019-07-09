@@ -38,7 +38,7 @@ class ConsumePacket(PlannedAction):
         self.packet.is_consumed.set() # = False
         self.packet.current_packet.unset()
 
-print('"'+ConsumePacket.compile().strip()+'"')
+print('"'+ConsumePacket.compile(None).strip()+'"')
 
 class ConsumePacketSelectInv(PlannedAction):
     cost = 1
@@ -66,7 +66,7 @@ class ConsumePacketSelectInv(PlannedAction):
         self.packet.is_consumed.set() # = False
         self.packet.current_packet.unset()
 
-print('"'+ConsumePacketSelectInv.compile().strip()+'"')
+print('"'+ConsumePacketSelectInv.compile(None).strip()+'"')
 
 class ConsumePacketSelect(PlannedAction):
     cost = 1
@@ -117,7 +117,7 @@ class ForwardPacketToInterface(PlannedAction):
         # TODO: set() could automatically issue an unset()
         self.packet.at_interface_input.set(self.interface2)
 
-print(ForwardPacketToInterface.compile())
+print(ForwardPacketToInterface.compile(None))
         
 class ForwardPacketInSwitch(PlannedAction):
 
@@ -193,7 +193,7 @@ class ForwardPacketToRouteInTable(PlannedAction):
         self.packet.dst_macaddr = self.interface_dest
 
 print("Compiling imaginary test")
-print(ForwardPacketToRouteInTable.compile())
+print(ForwardPacketToRouteInTable.compile(None))
 print("End compiling imaginary test")
 
 class TestImaginaryCreate(PlannedAction):
@@ -223,5 +223,4 @@ class TestImaginaryCreate(PlannedAction):
         route.interface = self.interface
         self.problem.addObject(table)
 
-
-print(TestImaginaryCreate.compile())
+print(TestImaginaryCreate.compile(Problem()))

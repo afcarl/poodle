@@ -861,22 +861,27 @@ class Imaginary(Object):
         global _effect_compilation
         global _collected_predicates
         global _collected_effects
+        global _collected_parameters
         if _effect_compilation:
             self._parse_history = []
             self._class_variable = gen_var_imaginary(self.__class__.__name__)
             exists_predicate = gen_one_predicate(self.__class__.__name__+HASHNUM_EXISTS_PFX, self._class_variable, self.__class__.__name__)
-            _collected_predicates.append("(not %s)" % exists_predicate)
             for v in self._class_variable.split():
                 _collected_predicates.append("("+HASHNUM_ID_PREDICATE + " " + v + ")")
+            _collected_predicates.append("(not %s)" % exists_predicate)
             _collected_predicate_templates.append("("+HASHNUM_ID_PREDICATE+" ?var - "+HASHNUM_CLASS_NAME+")")
             _collected_predicate_templates.append("({pred} ?var - {cls})".format(pred=HASHNUM_ID_PREDICATE, cls=HASHNUM_CLASS_NAME))
             _collected_effects.append(exists_predicate)
+            _collected_parameters[self._class_variable] = HASHNUM_CLASS_NAME
 
 
 
 class Digit(Object):
     pass
 
+class PoodleHashnum(Object):
+    "hashnum is used in imaginary object identification"
+    pass # unsorted, unopimized
 
 #########################################################################
 ##
@@ -907,7 +912,7 @@ class PlannedAction():
         return selt.template
 
     @classmethod
-    def compile(cls):
+    def compile(cls, problem):
         # TODO: acquire lock for multithreaded!!!
         global _compilation
         global _collected_predicates
@@ -920,6 +925,7 @@ class PlannedAction():
         _collected_parameters = {}
         _collected_effects = []
         _compilation = True
+        cls.problem = problem
         log.info("{0}".format(cls.selector(cls))) # this fills globals above
         _effect_compilation = True
         log.info("{0}".format(cls.effect(cls)))
@@ -963,8 +969,12 @@ class PlannedAction():
     
 # problem definition
 class Problem:
+    HASHNUM_COUNT = 10 # amount of hashnums generated for imaginary object
+    HASHNUM_DEPTH = 2 # only 2 is currently supported
     folder_name = None
     objectList = []
+    def __init__(self):
+        self._has_imaginary = False
     def getFolderName(self):
         return self.folder_name
     
@@ -1003,10 +1013,10 @@ class Problem:
         rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
         self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, self.__class__.__name__, str(datetime.date.today()),rnd)
         os.makedirs(self.folder_name, exist_ok=True)
-        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_problem())
         with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_domain())
+        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
+            fd.write(self.compile_problem())
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
         runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
@@ -1028,7 +1038,7 @@ class Problem:
         self.actions_text = ""
         for act in self.actions():
             act.problem = self
-            self.actions_text += act.compile()
+            self.actions_text += act.compile(self)
         return self.actions_text
     
     def get_predicates(self):
@@ -1048,6 +1058,8 @@ class Problem:
     def compile_domain(self):
         actions = self.get_actions()
         predicates = self.get_predicates()
+        if HASHNUM_ID_PREDICATE in predicates:
+            self._has_imaginary = True
         types = self.get_types()
         return """
 (define (domain poodle-generated)
@@ -1063,6 +1075,14 @@ class Problem:
     {actions}
 )""".format(types=types, predicates=predicates, actions=actions)
 
+    def has_imaginary(self):
+        return self._has_imaginary
+
+    def gen_hashnums(self):
+        for i in range(self.HASHNUM_COUNT): 
+            self.addObject(PoodleHashnum())
+
+
     def compile_problem(self):
         global _problem_compilation
         global _compilation
@@ -1075,6 +1095,7 @@ class Problem:
         _collected_objects = {}
         _collected_facts = []
         self.problem()
+        if self.has_imaginary(): self.gen_hashnums()
         self.collected_objects = _collected_objects
         self.collected_object_classes = _collected_object_classes
         self.collected_facts = _collected_facts
