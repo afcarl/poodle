@@ -5,7 +5,7 @@ from object.networkObject import *
 class NumberFactory():
     numberCollection = {}
 
-    def init(self, num=1001):
+    def __init__(self, num=1001):
         for i in range(0, num) :
             self.addNumber(i)
     def addNumber(self, num):
@@ -646,7 +646,6 @@ class Problem1(Problem):
 
     def problem(self):
         self.numberFactory = NumberFactory()
-        self.numberFactoryinitialized = self.numberFactory.init()
         
         self.statusReqAtStart = self.addObject(Status())
         self.statusReqAtLoadbalanser = self.addObject(Status())
