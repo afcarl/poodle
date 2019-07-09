@@ -869,6 +869,7 @@ class PlannedAction():
     cost = 1
     argumentList = []
     problem = None
+    template = None
 
     def __init__(self, argumentList):
         self.argumentList = argumentList
@@ -879,6 +880,11 @@ class PlannedAction():
         for arg in self.argumentList:
             ret +=" {0}({1})".format(arg.name, arg.value)
         return ret
+
+    def getTemplate(self):
+        if self.template == None:
+            return "./template/{0}.j2".format(self.__class__.__name__)
+        return selt.template
 
     @classmethod
     def compile(cls):
@@ -1109,3 +1115,6 @@ class ActionClassLoader:
         with open(outPlanFile, "r") as fd:
             for planLine in fd:
                 self.load(planLine.replace("(", "").replace(")", ""))
+
+    def templateMe(self):
+        pass
