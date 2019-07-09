@@ -37,6 +37,9 @@ _collected_object_classes = set()
 _collected_objects = {} # format: { "class": [ ... objects ... ] }
 _collected_facts = []
 
+HASHNUM_VAR_NAME = "hashnum"
+HASHNUM_CLASS_NAME = "PoodleHashnum"
+
 from functools import partial
 
 # class Prox(wrapt.ObjectProxy):
@@ -92,7 +95,12 @@ def gen_var(name):
     return "?%s-%s" % (name, new_id())
 
 def gen_var_imaginary(name):
-    return "?var1-%s ?var2-%s" % (new_id(), new_id())
+    return "?%s1-%s ?%s2-%s" % (HASHNUM_VAR_NAME, new_id(), HASHNUM_VAR_NAME, new_id())
+
+def class_or_hash(var_name, class_name):
+    if HASHNUM_VAR_NAME in var_name:
+        return HASHNUM_CLASS_NAME
+    return class_name
     
 def get_property_class_name(prop):
     # PART 2.
@@ -119,6 +127,9 @@ def get_property_class_name(prop):
         raise ValueError("Can not detect who I am")
     return my_class_name
 
+def gen_hashnum_templates(var, prefix="var"):
+    return " ".join(["%s%s - %s" % (prefix, i, HASHNUM_CLASS_NAME) for i, v in zip(range(len(var.split())), var.split())])
+
 def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class, var2, var2_class):
     # return gen_text_predicate_globals(class_name+"-"+property_name, var1, var1_class, var2, var2_class)
 # def gen_text_predicate_globals(predicate_name, var1, var1_class, var2, var2_class):
@@ -129,8 +140,18 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
         # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
     # TODO HERE: looks like we can match the class by "id" which is N-hashnum variable
     text_predicate = "(" + predicate_name + " " + var1 + " " + var2 + ")"
-    _collected_predicate_templates.append("(" + predicate_name + " ?var1 - " + var1_class + " ?var2 - " + var2_class + ")")
-    _collected_object_classes.update([class_name, var1_class, var2_class])
+    if " " in var1 and not " " in var2:
+        _collected_predicate_templates.append("(" + predicate_name + " " + gen_hashnum_templates(var1) + " ?var2 - " + var2_class + ")")
+        _collected_object_classes.update([class_name, HASHNUM_CLASS_NAME, var2_class])
+    elif not " " in var1 and " " in var2:
+        _collected_predicate_templates.append("(" + predicate_name + " ?var1 - " + var1_class + " " + gen_hashnum_templates(var2) + ")")
+        _collected_object_classes.update([class_name, var1_class, HASHNUM_CLASS_NAME])
+    elif " " in var1 and " " in var2:
+        _collected_predicate_templates.append("(" + predicate_name + gen_hashnum_templates(var1) + " " + gen_hashnum_templates(var2, prefix="var2") + ")")
+        _collected_object_classes.update([class_name, HASHNUM_CLASS_NAME])
+    else:
+        _collected_predicate_templates.append("(" + predicate_name + " ?var1 - " + var1_class + " ?var2 - " + var2_class + ")")
+        _collected_object_classes.update([class_name, var1_class, var2_class])
     #else:
         #TODO HERE
     #    obj_predicate_id = get_imaginary_object_id()
@@ -142,8 +163,11 @@ def gen_one_predicate(predicate_name, var, var_class_name):
     global _collected_predicate_templates
     global _collected_object_classes
     text_predicate = "("+predicate_name+" "+var+")"
-    _collected_predicate_templates.append("(" + predicate_name + " ?var1 - "+var_class_name+")")
-    #_collected_object_classes.update([class_name, var1_class, var2_class])
+    if " " in var:
+        _collected_predicate_templates.append("(" + predicate_name + " " + gen_hashnum_templates(var) + ")")
+    else:
+        _collected_predicate_templates.append("(" + predicate_name + " ?var1 - "+var_class_name+")")
+        #_collected_object_classes.update([class_name, var1_class, var2_class])
     return text_predicate
     
 
@@ -374,18 +398,20 @@ class Property(object):
                         break
                     
         if myclass_genvar is None: 
-            if isinstance(my_class, Imaginary):
+            if issubclass(my_class, Imaginary):
                 myclass_genvar = gen_var_imaginary(my_class_name)
+                my_class_name = HASHNUM_CLASS_NAME
             else:
                 myclass_genvar = gen_var(my_class_name)
         if other_genvar is None: 
-            if isinstance(other_class, Imaginary):
+            if issubclass(other_class, Imaginary):
                 other_genvar = gen_var_imaginary(other_class_name)
+                other_class_name = HASHNUM_CLASS_NAME
             else:
                 other_genvar = gen_var(other_class_name)
             print("OPERATOR: generating new var for other!", other_genvar)
         
-        collected_parameters = {other_genvar: other_class_name, myclass_genvar: my_class_name}
+        collected_parameters = {other_genvar: class_or_hash(other_genvar, other_class_name), myclass_genvar: class_or_hash(myclass_genvar, my_class_name)}
         
         if property_property_comparison:
             other_property_class_name = get_property_class_name(other)
@@ -397,11 +423,12 @@ class Property(object):
                         other_property_genvar = ph["variables"][other_property_class_name]
                         break
             if other_property_genvar is None: 
-                if isinstance(other_property_class, Imaginary):
+                if issubclass(other_property_class, Imaginary):
                     other_property_genvar = gen_var_imaginary(other_property_class_name)
+                    other_property_class_name = HASHNUM_CLASS_NAME
                 else:
                     other_property_genvar = gen_var(other_property_class_name)
-            collected_parameters[other_property_genvar] = other_property_class_name
+            collected_parameters[other_property_genvar] = class_or_hash(other_property_genvar, other_property_class_name)
             text_predicate = gen_text_predicate_push_globals(my_class_name, self._property_name, myclass_genvar, my_class_name, other_genvar, other_class_name)
             text_predicate_2 = gen_text_predicate_push_globals(other_property_class_name, other._property_name, other_property_genvar, other_property_class_name, other_genvar, other_class_name)
             print("OPERATOR-PRECOND-PDDL1: ", text_predicate)
@@ -869,7 +896,12 @@ class PlannedAction():
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has no precondition" % cls.__name__
         for ob in _collected_parameters:
-            collected_parameters += "%s - %s " % (ob, _collected_parameters[ob])
+            if " " in ob:
+                # WARNING! this is because of how imaginary variables are implemented
+                collected_parameters += "%s - %s " % (ob.split()[0], _collected_parameters[ob])
+                collected_parameters += "%s - %s " % (ob.split()[1], _collected_parameters[ob])
+            else:
+                collected_parameters += "%s - %s " % (ob, _collected_parameters[ob])
         
         return """
     (:action {action_name}

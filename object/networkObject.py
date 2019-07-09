@@ -50,7 +50,7 @@ class Route(Imaginary): # there is no "self" in imaginary route, currently it is
     # Relations
 Route.is_higher_metric_than = Relation(Route) # TODO: complex relation??
 
-class Table(Object):
+class Table(Imaginary):
     # TODO: PredefinedObject? - initialize objects statically?
     
     has_route_to = Relation(Network) # TODO : this is heuristic relation!!! 
