@@ -93,7 +93,7 @@ class ConsumePacketSelect(PlannedAction):
         self.packet.is_consumed.set() # = False
         self.packet.current_packet.unset()
 
-print('"'+ConsumePacketSelect.compile().strip()+'"')
+#print('"'+ConsumePacketSelect.compile().strip()+'"')
 
 class ForwardPacketToInterface(PlannedAction):
     interface1 = Interface()

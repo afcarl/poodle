@@ -31,6 +31,9 @@ class Interface(Object):
     has_net = Property(Network)
     
     internet_connected = StateFact()
+
+#    def __str__(self):
+#        return str(self.value)
 # Interface.adjacent_interface = BidirectionalRelation(Interface) # TODO: not with self?
 Interface.adjacent_interface = Relation(Interface) # TODO: not with self?
 

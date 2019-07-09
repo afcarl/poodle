@@ -22,9 +22,18 @@ import copy, subprocess
 from collections import OrderedDict
 import os
 import datetime
+import logging
+import sys
 
 # import wrapt
 # import infix
+
+log = logging.getLogger()
+log.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler(sys.stdout) # loggging driver
+handler.setLevel(logging.DEBUG) #loglevel ->> CRITICAL ERROR WARNING INFO DEBUG NOTSET
+log.addHandler(handler)
 
 _compilation = False
 _problem_compilation = False
@@ -277,7 +286,7 @@ class Property(object):
             subjObjectClass = other # this object may not have any _property_of
             property_property_comparison = False
         
-        print("OPERATOR-1:", self._property_name, operator, subjObjectClass, self._property_of, type(self._property_of))
+        log.debug("OPERATOR-1: {0}{1}{2}{3}{4}".format(self._property_name, operator, subjObjectClass, self._property_of, type(self._property_of)))
         
         # PART 2.
         # We can have either of the following:
@@ -317,20 +326,20 @@ class Property(object):
         # If we are property of an Object and this Object is not an instance
         #     then someone requested us to return our parent Object type when matched
         if type(self._property_of) is BaseObjectMeta and not hasattr(self, "_property_of_inst"):
-            print("OPERATOR: Decided to return SELF.property_of()")
+            log.debug("OPERATOR: Decided to return SELF.property_of()")
             obj=self._property_of() # contains who am I the property of.. (meta)
             who_instantiating = "self"
         # Else, if the thing we are comparing ourself to (subj) is class and not instance
         #    vvv---always-true--------------vvv         vvv----check-if-subj-is-instance--vvv
         elif type(subjObjectClass) is BaseObjectMeta and not isinstance(subjObjectClass, Object) and not hasattr(other, "_property_of_inst"):
-            print("OPERATOR: Decided to return subj() objecs")
+            log.debug("OPERATOR: Decided to return subj() objecs")
             obj = subjObjectClass()
             who_instantiating = "other"
         else:
             if _compilation: # actually means "running selector" and would be better renamed as `_selector_mode`
                 # PART 3.1.
                 # in compilation mode, we can return anything we want as result is not being used in later computations
-                print("OPERATOR IN COMPILATION/SELECTOR MODE")
+                log.debug("OPERATOR IN COMPILATION/SELECTOR MODE")
                 obj = self._value()
                 who_instantiating = None
             else:
@@ -371,14 +380,14 @@ class Property(object):
             # it is either an instance itself or is a property of instance
             if hasattr(other, "_property_of_inst") and other_class_name == other._property_of_inst.__class__.__name__: # weird check to figure out if this is applicable scenario...
                 if other._property_of_inst._class_variable:
-                    print("OPERATOR: Found other porperty variable", other._property_of_inst._class_variable, other_class_name, other._property_of_inst)
+                    log.debug("OPERATOR: Found other porperty variable {0} {1} {2}".format(other._property_of_inst._class_variable, other_class_name, other._property_of_inst))
                     other_genvar = other._property_of_inst._class_variable
             elif not hasattr(other, "_property_of_inst"):
                 if other._class_variable:
-                    print("OPERATOR: Found other instance variable", other._class_variable, other_class_name)
+                    log.debug("OPERATOR: Found other instance variable {0} {1}".format(other._class_variable, other_class_name))
                     other_genvar = other._class_variable
             else:
-                print("OPERATOR Skipping getting variable from instances")
+                log.debug("OPERATOR Skipping getting variable from instances")
                 pass
                 
         # WARNING@!!!! finding variables in history is obsolete and UNSAFE!!!
@@ -387,7 +396,7 @@ class Property(object):
                 for ph in reversed(_parse_history):
                     if other_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
                         other_genvar = ph["variables"][other_class_name]
-                        print("WARNING! Variable found in history - resulted PDDL may be wrong")
+                        log.debug("WARNING! Variable found in history - resulted PDDL may be wrong")
                         break
             for ph in reversed(_parse_history):
                 if has_poi and self._property_of_inst._class_variable:
@@ -409,7 +418,7 @@ class Property(object):
                 other_class_name = HASHNUM_CLASS_NAME
             else:
                 other_genvar = gen_var(other_class_name)
-            print("OPERATOR: generating new var for other!", other_genvar)
+            log.debug("OPERATOR: generating new var for other! {0}".format(other_genvar))
         
         collected_parameters = {other_genvar: class_or_hash(other_genvar, other_class_name), myclass_genvar: class_or_hash(myclass_genvar, my_class_name)}
         
@@ -431,12 +440,12 @@ class Property(object):
             collected_parameters[other_property_genvar] = class_or_hash(other_property_genvar, other_property_class_name)
             text_predicate = gen_text_predicate_push_globals(my_class_name, self._property_name, myclass_genvar, my_class_name, other_genvar, other_class_name)
             text_predicate_2 = gen_text_predicate_push_globals(other_property_class_name, other._property_name, other_property_genvar, other_property_class_name, other_genvar, other_class_name)
-            print("OPERATOR-PRECOND-PDDL1: ", text_predicate)
-            print("OPERATOR-PRECOND-PDDL2: ", text_predicate_2)
+            log.debug("OPERATOR-PRECOND-PDDL1: {0}".format(text_predicate))
+            log.debug("OPERATOR-PRECOND-PDDL2: {0}".format(text_predicate_2))
         else:
             text_predicate = gen_text_predicate_push_globals(my_class_name, self._property_name, myclass_genvar, my_class_name, other_genvar, other_class_name)
             text_predicate_2 = None
-            print("OPERATOR-PRECOND-PDDL:  ", text_predicate)
+            log.debug("OPERATOR-PRECOND-PDDL: {0}".format(text_predicate))
         
         # print("OPERATOR-PARAM-PDDL:", collected_parameters)
         
@@ -450,16 +459,16 @@ class Property(object):
 
         # store variable that we created for the returning object
         if who_instantiating == "self": # returning object is our class, and we just invented a new variable name for us
-            print("OPERATOR setting class variable myclass genvar to ", myclass_genvar, my_class_name)
+            log.debug("OPERATOR setting class variable myclass genvar to {0} {1}".format(myclass_genvar, my_class_name))
             obj._class_variable = myclass_genvar
         if who_instantiating == "other": # returning object is who we are being compared to, and we invented variable for that
-            print("OPERATOR setting class variable ohter genvar to ", other_genvar, other_class_name)
+            log.debug("OPERATOR setting class variable ohter genvar to {0} {1}".format(other_genvar, other_class_name))
             obj._class_variable = other_genvar
             
         # also store variable for the instantiated object that we are comparing with, if not created before
         if has_poi: # is exactly equivalent to who_instantiating == other, means that we(who we property of) are not a class
             if not self._property_of_inst._class_variable is None:
-                print("WARNING! _class_variable is ", self._property_of_inst._class_variable, "but we are generating", myclass_genvar)
+                log.warning("WARNING! _class_variable is  {0} but we are generating {1}".format(self._property_of_inst._class_variable, myclass_genvar))
                 pass
             else:
                 self._property_of_inst._class_variable = myclass_genvar
@@ -471,7 +480,7 @@ class Property(object):
                 if other._class_variable is None:
                     other._class_variable = other_genvar
                 else:
-                    print("WARNING! Not setting other variable to %s as it already has %s" % (other_genvar, other._class_variable))
+                    log.warning("WARNING! Not setting other variable to {0} as it already has {1}".format(other_genvar, other._class_variable))
 
         
         obj._parse_history.append({
@@ -505,7 +514,7 @@ class Property(object):
     def __eq__(self, other):
         global _selector_out
         if hasattr(self, "_property_of_inst") and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
-            print("!!!!!! ALT BEH 1 - me is ", self, self._property_of_inst, "other is", other)
+            log.warning("!!!!!! ALT BEH 1 - me is {0} {1} other is {2} ".format(self, self._property_of_inst, other))
             _selector_out = other.equals(self)
         else:
             _selector_out = self.equals(other)
@@ -545,7 +554,7 @@ class Property(object):
         self._prepare()
         global _collected_effects
         if what is None: 
-            print("WARNING! Using experimental support for what=None")
+            log.warning("WARNING! Using experimental support for what=None")
             _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable()+"))")
         else:
             _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
@@ -579,7 +588,7 @@ class Property(object):
                     ob._orig_object = getattr(self._value, attr)
                     ob._property_of_inst = self._value # WARNING! property_of_inst is a PROPERTY!! i.e. TYPE of PROP
                     ob._type_of_property = self
-                    print("%s is returning copy of val %s %s which is %s" % (self, attr, ob, self._value))
+                    log.debug("%s is returning copy of val %s %s which is %s" % (self, attr, ob, self._value))
                     return ob
                 else:
                     raise AttributeError("Property type `%s` does not have `%s`" % (self._value, attr)) 
@@ -717,7 +726,7 @@ class BaseObjectMeta(type):
         #     print("No such attribute", what)
             # return super().__getattribute__(what)
         if hasattr(self, "_type_of_property"):
-            print("GOP returning", what, self._type_of_property)
+            log.debug("GOP returning {0} {1}".format(what, self._type_of_property))
             #return self._type_of_property
             # print(self._type_of_property.set, self._type_of_property.__dict__)
             
@@ -739,7 +748,7 @@ class BaseObjectMeta(type):
 
     def __eq__(self, other):
         if isinstance(other, Property):
-            print("!!!!!! ALT BEH 2")
+            log.warning("!!!!!! ALT BEH 2")
             return other.__eq__(self)
         else:
             return super().__eq__(other)
@@ -859,6 +868,7 @@ class Digit(Object):
 class PlannedAction():
     cost = 1
     argumentList = []
+    problem = None
 
     def __init__(self, argumentList):
         self.argumentList = argumentList
@@ -868,7 +878,7 @@ class PlannedAction():
         args = ""
         for a in self.argumentList:
             args +=a +", "
-        print(self.__class__.__name__, "(",args[:-2],")")
+#        print(self.__class__.__name__, "(",args[:-2],")")
         ret = ""
         ret +="{0}({1})".format(self.__class__.__name__,args[:-2])
         return ret
@@ -886,8 +896,8 @@ class PlannedAction():
         _collected_parameters = {}
         _collected_effects = []
         _compilation = True
-        print(cls.selector(cls)) # this fills globals above
-        print(cls.effect(cls))
+        log.info("{0}".format(cls.selector(cls))) # this fills globals above
+        log.info("{0}".format(cls.effect(cls)))
         _compilation = False
         
         # _collected_predicates = filter(None, list(set(_collected_predicates)))
@@ -965,10 +975,10 @@ class Problem:
         rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
         self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, problemName,str(datetime.date.today()),rnd)
         os.makedirs(self.folder_name, exist_ok=True)
-        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_domain())
         with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_problem())
+        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
+            fd.write(self.compile_domain())
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
         runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
@@ -977,7 +987,7 @@ class Problem:
         for line in std:
             if line.find('search exit code:') != -1:
                 retcode = line.rstrip("\n").split()[3]
-            print(line.rstrip("\n"))
+            log.info(line.rstrip("\n"))
         return retcode
 
         
@@ -987,7 +997,6 @@ class Problem:
         for act in self.actions():
             act.problem = self
             self.actions_text += act.compile()
-            act.problem = None
         return self.actions_text
     
     def get_predicates(self):
@@ -1077,10 +1086,10 @@ class ActionClassLoader:
             if action.__name__.lower() == actionString.lower():
                 plannedAction = action(str(planString).split()[1:])
                 self.planList.append(plannedAction)
-                print("loaded ", plannedAction)
+                log.info(plannedAction)
 
     def loadFromFile(self, outPlanFile):
+        log.debug("load action from file {0}".format(outPlanFile))
         with open(outPlanFile, "r") as fd:
             for planLine in fd:
-              #  print("try to load", planLine)
                 self.load(planLine.replace("(", "").replace(")", ""))
