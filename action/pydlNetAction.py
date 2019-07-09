@@ -132,7 +132,7 @@ class ForwardPacketInSwitch(PlannedAction):
         and self.interface_from != self.interface_to)
 
     def effect(self):
-        pass
+        self.packet.at_interface_input.unset(self.interface_from)
 
 # print(ForwardPacketInSwitch.compile())
 
