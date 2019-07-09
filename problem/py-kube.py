@@ -181,7 +181,7 @@ class ToLoadbalancer(PlannedAction):
     request1 = Request()
     serviceTarget = Select(request1.targetService ==  Service)
     lb = Loadbalancer()
-    lbServedServices = Select( Service in lb.selectionedService)
+    lbServedService = Select( Service in lb.selectionedService)
 
     def selector(self):
         return Select( self.serviceTarget == self.lbServedService and request1.status == self.problem.statusReqAtStart)
@@ -642,7 +642,7 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
             
 class Problem1(Problem):
     def actions(self):
-        return [globals()[x] for x in globals() if isinstance(globals()[x], PlannedAction)]
+        return [ToLoadbalancer, DirectToNode, ToNode, SwitchToNextNode, DirectToPod, ToPod, SwitchToNextPod, ConsumeResource, ProcessTempRequest, ProcessPersistentRequest, ReleaseResource, FinishRequest, TerminatePodAfterFinish, TerminatePod, ReadDeploymentConfig, CreatePodManually, SchedulerNofityUnboundedPod, KubectlStartsNode, MarkPodAsOverwhelmingMemLimits, MarkPodAsNonoverwhelmingMemLimits, MemoryErrorKillPodOverwhelmingLimits, MemoryErrorKillPodNotOverwhelmingLimits, PodFailsBecauseOfKilling, PodSucceds, KubectlRecoverPod, PodGarbageCollectedFailedPod, PodGarbageCollectedSuccededPod]
 
     def problem(self):
         self.numberFactory = NumberFactory()
