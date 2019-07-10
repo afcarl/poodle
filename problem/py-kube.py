@@ -225,7 +225,7 @@ class ToNode(PlannedAction):
 
     def effect(self):
         self.request1.status = self.problem.statusReqAtKubeproxy
-        self.request1.toNode.unset()
+        self.request1.toNode.unset(node1)
         self.request1.atNode = self.node1
 
 
@@ -268,7 +268,7 @@ class ToPod(PlannedAction):
 
     def effect(self):
         self.request1.status = self.problem.statusReqAtPodInput
-        self.request1.toPod.unset() 
+        self.request1.toPod.unset(pod1) 
         self.request1.atPod = self.pod1
 
 
@@ -369,7 +369,8 @@ class ReleaseResource(PlannedAction):
 class FinishRequest(PlannedAction):
     cost = 1
     request1 = Request()
-    pod1 = Select(Pod == request1.atPod)
+    pod1 = Select( Pod == request1.atPod)
+    node1 = Select( Node == request1.atNode)
     
     
     def selector(self):
@@ -378,13 +379,14 @@ class FinishRequest(PlannedAction):
     
     def effect(self):
         self.request1.status.set( self.problem.statusReqRequestFinished)
-        self.request1.atPod.unset()
-        self.request1.atNode.unset()
+        self.request1.atPod.unset(pod1)
+        self.request1.atNode.unset(node1)
 
 class TerminatePodAfterFinish(PlannedAction):
     cost = 1
     request1 = Request()
     pod1 = Select(Pod == request1.atPod)
+    node1 = Select( Node == request1.atNode)
 
     def selector(self):
         return Select( request1.status == self.problem.statusReqResourcesReleased and \
@@ -392,8 +394,8 @@ class TerminatePodAfterFinish(PlannedAction):
         
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
-        self.request1.atPod.unset()
-        self.request1.atNode.unset()
+        self.request1.atPod.unset(pod1)
+        self.request1.atNode.unset(node1)
         self.pod1.status.set(self.problem.statusReqRequestTerminated)
 
 class TerminatePod(PlannedAction):

@@ -573,7 +573,7 @@ class Property(object):
         global _collected_effects
         if what is None: 
             log.warning("WARNING! Using experimental support for what=None")
-            _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+"selffindparametervariable"+"))")
+            _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable+"))")
         else:
             _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
         self._unset = True
