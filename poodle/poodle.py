@@ -872,6 +872,7 @@ class PlannedAction():
     parameterList = []
     problem = None
     template = None
+    collected_parameters = {}
 
     def __init__(self, argumentList):
         self.argumentList = argumentList
@@ -895,6 +896,7 @@ class PlannedAction():
         global _collected_effects
         global _selector_out
         assert _selector_out is None, "Selector operators used outside of Select() decorator"
+        cls.collected_parameters = _collected_parameters
         _collected_predicates = []
         _collected_parameters = {}
         _collected_effects = []
