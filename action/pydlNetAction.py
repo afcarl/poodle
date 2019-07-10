@@ -38,7 +38,7 @@ class ConsumePacket(PlannedAction):
         self.packet.is_consumed.set() # = False
         self.packet.current_packet.unset()
 
-print('"'+ConsumePacket.compile().strip()+'"')
+#print('"'+ConsumePacket.compile(None).strip()+'"')
 
 class ConsumePacketSelectInv(PlannedAction):
     cost = 1
@@ -66,7 +66,7 @@ class ConsumePacketSelectInv(PlannedAction):
         self.packet.is_consumed.set() # = False
         self.packet.current_packet.unset()
 
-print('"'+ConsumePacketSelectInv.compile().strip()+'"')
+#print('"'+ConsumePacketSelectInv.compile(None).strip()+'"')
 
 class ConsumePacketSelect(PlannedAction):
     cost = 1
@@ -117,7 +117,7 @@ class ForwardPacketToInterface(PlannedAction):
         # TODO: set() could automatically issue an unset()
         self.packet.at_interface_input.set(self.interface2)
 
-print(ForwardPacketToInterface.compile())
+#print(ForwardPacketToInterface.compile(None))
         
 class ForwardPacketInSwitch(PlannedAction):
 
@@ -165,7 +165,10 @@ class ForwardPacketToRouteInTable(PlannedAction):
     route = Select(Route in table.has_route) # Route is also imaginary
     route_dot_network = Select(Network == route.network) # TODO: need just a dereference...
     # Need static function: net_match(packet.dst_ipaddr, route.network))
+    print("VAR 1 ------------------------------------")
     interface_dest = Select(Interface.has_ipaddr == route.gw_ipaddr)
+    #interface_dest = Select(Interface.has_ipaddr == route.gw_ipaddr)
+    #packet         = Select(Packet.at_interface_input in host.has_interface)
 
     # TODO: not exists narrower...
     # net_narrower = Select(route_dot_network in Network.narrower_than)
@@ -192,12 +195,114 @@ class ForwardPacketToRouteInTable(PlannedAction):
         self.packet.at_interface_output = self.interface # TODO remove when above is supported
         self.packet.dst_macaddr = self.interface_dest
 
-print("Compiling imaginary test")
-print(ForwardPacketToRouteInTable.compile())
-print("End compiling imaginary test")
+print(ForwardPacketToRouteInTable.compile(Problem()))
+
+class TestImaginaryCreate(PlannedAction):
+    host = Host()
+    packet = Packet()
+    interface = Select(Interface in host.has_interface)
+
+    def selector(self):
+        return Select(self.packet.at_interface_input in self.host.has_interface)
+
+    def effect(self):
+        table = Table()
+        # to create object:
+        # predicates:
+        # generate new variables for new objects, store smwhr
+        # (not (table-hashnum-exists ?num1 ?num2) ; hashnums
+        #    add this to predicate templates
+        # (hashnum ?num1)
+        #    add to predicates templates
+        #    generate this
+        # (hashnum ?num2) ; for all created - need these!!
+        # effects:
+        # (table-hashnum-exists ?num1 ?num2)
+        # (table-has-route ?num1 ?num2 ?num3 ?num4)
+        route = Route()
+        table.has_route.add(route)
+        route.interface = self.interface
+        self.problem.addObject(table)
+
+print(TestImaginaryCreate.compile(Problem()))
+
+class TestStaticObject(PlannedAction):
+    host = Host()
+    interface = Select(Interface in host.has_interface)
+    packet = Select(Packet.at_interface_input == interface)
+
+    def selector(self):
+        return Select(self.packet.at_interface_input in self.host.has_interface)
+
+    def effect(self):
+        self.packet.at_interface_input = self.problem.testif
+
+class StaticObjectProblem(Problem):
+    def actions(self):
+        return [ TestStaticObject ]
+    def problem(self):
+        self.testif = self.addObject(Interface("test0"))
+        self.ipaddr = IPAddr("192.168.1.1")
+    def goal(self):
+        return self.testif.has_ipaddr == self.ipaddr
+
+p = StaticObjectProblem()
+p.run()
+print(p.compile_domain())
+#p.compile_problem()
+#p.compile_domain()
 
 
+class HopToRoute(PlannedAction):
+    "Relay the packet to route in the host"
+    host = Host()
+    print("MY VAR ------------------------------------")
+    packet = Select(Packet.at_interface_input in host.has_interface)
+    # TODO HERE:
+    # 1. make sure we return Packet object
+    # 2. selector that we do is two-fold:
+    #    2.1 
+    # 3. class variable on returning object must be from Packet 
+    table = Select(Table in host.has_table)
+    route = Select(Route in table.has_route)
+    route_dot_interface = Select(Interface == route.interface)
+
+    def selector(self):
+        return True
+
+    def effect(self):
+        self.packet.at_interface_input.unset()
+        self.packet.at_interface_output = self.route_dot_interface
+        
+print(HopToRoute.compile(Problem()))
+
+class CreateRoute(PlannedAction):
+    host = Host()
+    packet = Select(Packet.at_interface_input in host.has_interface)
+    table = Select(Table in host.has_table)
+    interface = Select(Interface in host.has_interface)
+
+    def selector(self):
+        return True
+
+    def effect(self):
+        r = Route()
+        r.interface = self.interface
+        self.table.has_route.add(r)
+        self.problem.addObject(r)
+
+class Cando():
+    pass
+
+class Model1(Cando):
+    def __init__(self):
+        self.actionModel = [
+                Packet.at_interface_input == Host.has_interface,
+                CreateRoute,
+                HopToRoute,
+                ForwardPacketToInterface,
+                ConsumePacket
+        ]
 
 
-
-
+    

@@ -37,6 +37,8 @@ log.addHandler(handler)
 
 _compilation = False
 _problem_compilation = False
+_effect_compilation = False
+
 _collected_predicates = []
 _collected_effects = []
 _collected_parameters = {}
@@ -47,7 +49,9 @@ _collected_objects = {} # format: { "class": [ ... objects ... ] }
 _collected_facts = []
 
 HASHNUM_VAR_NAME = "hashnum"
+HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
 HASHNUM_CLASS_NAME = "PoodleHashnum"
+HASHNUM_EXISTS_PFX = "-hashnum-exists" # predicate postfix to indicate existence of imaginary object
 
 from functools import partial
 
@@ -253,6 +257,7 @@ class Property(object):
         "finds the variable that holds the class"
         my_class_name = self.get_property_class_name()
         myclass_genvar = None
+        if self._property_of_inst._class_variable: return self._property_of_inst._class_variable
         for ph in reversed(self._property_of_inst._parse_history):
             if my_class_name in ph["variables"]:
                 myclass_genvar = ph["variables"][my_class_name]
@@ -325,7 +330,9 @@ class Property(object):
         
         # If we are property of an Object and this Object is not an instance
         #     then someone requested us to return our parent Object type when matched
-        if type(self._property_of) is BaseObjectMeta and not hasattr(self, "_property_of_inst"):
+        if not hasattr(self, "_property_of_inst") and not hasattr(other, "_property_of_inst") and not isinstance(other, Object):
+            raise AssertionError("Both LHS and RHS are classes. Do not know what to instantiate.")
+        elif type(self._property_of) is BaseObjectMeta and not hasattr(self, "_property_of_inst"):
             log.debug("OPERATOR: Decided to return SELF.property_of()")
             obj=self._property_of() # contains who am I the property of.. (meta)
             who_instantiating = "self"
@@ -333,8 +340,15 @@ class Property(object):
         #    vvv---always-true--------------vvv         vvv----check-if-subj-is-instance--vvv
         elif type(subjObjectClass) is BaseObjectMeta and not isinstance(subjObjectClass, Object) and not hasattr(other, "_property_of_inst"):
             log.debug("OPERATOR: Decided to return subj() objecs")
-            obj = subjObjectClass()
-            who_instantiating = "other"
+            who_instantiating = "other" 
+            # The following is the fix for scenario Select(Class.prop1 in inst.prop2)
+            #    in this scenario, without this fix return value and class name are wrong
+            if hasattr(other, "_value") and subjObjectClass == other._value:
+                obj = other._property_of() # TODO HERE - think what should happen next...
+                who_instantiating_fix = True # Fix for bug with instantiating Class.prop in inst.prop2
+            else:
+                obj = subjObjectClass()
+                who_instantiating_fix = False # Fix for bug with instantiating Class.prop in inst.prop2
         else:
             if _compilation: # actually means "running selector" and would be better renamed as `_selector_mode`
                 # PART 3.1.
@@ -383,7 +397,7 @@ class Property(object):
                     log.debug("OPERATOR: Found other porperty variable {0} {1} {2}".format(other._property_of_inst._class_variable, other_class_name, other._property_of_inst))
                     other_genvar = other._property_of_inst._class_variable
             elif not hasattr(other, "_property_of_inst"):
-                if other._class_variable:
+                if hasattr(other, "_class_variable") and other._class_variable:
                     log.debug("OPERATOR: Found other instance variable {0} {1}".format(other._class_variable, other_class_name))
                     other_genvar = other._class_variable
             else:
@@ -463,7 +477,10 @@ class Property(object):
             obj._class_variable = myclass_genvar
         if who_instantiating == "other": # returning object is who we are being compared to, and we invented variable for that
             log.debug("OPERATOR setting class variable ohter genvar to {0} {1}".format(other_genvar, other_class_name))
-            obj._class_variable = other_genvar
+            if who_instantiating_fix: # Fix for bug with instantiating Class.prop in inst.prop2
+                obj._class_variable = other_property_genvar
+            else:
+                obj._class_variable = other_genvar
             
         # also store variable for the instantiated object that we are comparing with, if not created before
         if has_poi: # is exactly equivalent to who_instantiating == other, means that we(who we property of) are not a class
@@ -756,7 +773,10 @@ class BaseObjectMeta(type):
 
 class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
-        if not hasattr(self, "__imaginary__"): __imaginary__ = False
+        global _effect_compilation
+        if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
+        if _effect_compilation and not self.__imaginary__:
+            raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
         self.__unlock_setter = True
         name = None
         self._class_variable = None
@@ -769,6 +789,8 @@ class Object(metaclass=BaseObjectMeta):
         global _collected_objects
         global _collected_object_classes
         if _problem_compilation:
+            self._parse_history = []
+            self._class_variable = self.name
             _collected_object_classes.add(self.__class__.__name__)
             if not self.__class__.__name__ in _collected_objects:
                 _collected_objects[self.__class__.__name__] = [ self.name ]
@@ -827,7 +849,7 @@ class Object(metaclass=BaseObjectMeta):
             # setter must probably unlock only for non-existent class attributes or only for existing properties
             if ( _problem_compilation or _compilation) and hasattr(self, name) and not self.__unlock_setter and isinstance(getattr(self, name), Property):
                 raise AssertionError("No support for setting of type %s to property %s (in compilation mode)" % (str(type(value)), name))
-            if _compilation and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter and name[0] != "_": # all system properties must start with _
+            if _compilation and name[0] != "_" and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter: # all system properties must start with _
             #if _compilation and not hasattr(self, name) and not "__unlock_setter" in name:
                 raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
             super().__setattr__(name, value)
@@ -853,10 +875,30 @@ class Imaginary(Object):
     def __init__(self):
         self.__imaginary__ = True
         super().__init__()
+        global _effect_compilation
+        global _collected_predicates
+        global _collected_effects
+        global _collected_parameters
+        if _effect_compilation:
+            self._parse_history = []
+            self._class_variable = gen_var_imaginary(self.__class__.__name__)
+            exists_predicate = gen_one_predicate(self.__class__.__name__+HASHNUM_EXISTS_PFX, self._class_variable, self.__class__.__name__)
+            for v in self._class_variable.split():
+                _collected_predicates.append("("+HASHNUM_ID_PREDICATE + " " + v + ")")
+            _collected_predicates.append("(not %s)" % exists_predicate)
+            _collected_predicate_templates.append("("+HASHNUM_ID_PREDICATE+" ?var - "+HASHNUM_CLASS_NAME+")")
+            _collected_predicate_templates.append("({pred} ?var - {cls})".format(pred=HASHNUM_ID_PREDICATE, cls=HASHNUM_CLASS_NAME))
+            _collected_effects.append(exists_predicate)
+            _collected_parameters[self._class_variable] = HASHNUM_CLASS_NAME
+
+
 
 class Digit(Object):
     pass
 
+class PoodleHashnum(Object):
+    "hashnum is used in imaginary object identification"
+    pass # unsorted, unopimized
 
 #########################################################################
 ##
@@ -887,20 +929,24 @@ class PlannedAction():
         return selt.template
 
     @classmethod
-    def compile(cls):
+    def compile(cls, problem):
         # TODO: acquire lock for multithreaded!!!
         global _compilation
         global _collected_predicates
         global _collected_parameters
         global _collected_effects
         global _selector_out
-        assert _selector_out is None, "Selector operators used outside of Select() decorator"
+        global _effect_compilation
+        assert _selector_out is None, "Selector operators used outside of Select() decorator while compiling %s in %s" % (cls, problem)
         _collected_predicates = []
         _collected_parameters = {}
         _collected_effects = []
         _compilation = True
+        cls.problem = problem
         log.info("{0}".format(cls.selector(cls))) # this fills globals above
+        _effect_compilation = True
         log.info("{0}".format(cls.effect(cls)))
+        _effect_compilation = False
         _compilation = False
         
         # _collected_predicates = filter(None, list(set(_collected_predicates)))
@@ -940,8 +986,12 @@ class PlannedAction():
     
 # problem definition
 class Problem:
+    HASHNUM_COUNT = 10 # amount of hashnums generated for imaginary object
+    HASHNUM_DEPTH = 2 # only 2 is currently supported
     folder_name = None
     objectList = []
+    def __init__(self):
+        self._has_imaginary = False
     def getFolderName(self):
         return self.folder_name
     
@@ -1005,7 +1055,7 @@ class Problem:
         self.actions_text = ""
         for act in self.actions():
             act.problem = self
-            self.actions_text += act.compile()
+            self.actions_text += act.compile(self)
         return self.actions_text
     
     def get_predicates(self):
@@ -1025,6 +1075,8 @@ class Problem:
     def compile_domain(self):
         actions = self.get_actions()
         predicates = self.get_predicates()
+        if HASHNUM_ID_PREDICATE in predicates:
+            self._has_imaginary = True # TODO REMOVE as this does not work due to order of compilation
         types = self.get_types()
         return """
 (define (domain poodle-generated)
@@ -1040,6 +1092,16 @@ class Problem:
     {actions}
 )""".format(types=types, predicates=predicates, actions=actions)
 
+    def has_imaginary(self):
+        #return self._has_imaginary # this does not work as order of compilation prevents
+        return True # TODO: find a way to detect if imaginary objects are present
+        # one option
+
+    def gen_hashnums(self):
+        for i in range(self.HASHNUM_COUNT): 
+            self.addObject(PoodleHashnum())
+
+
     def compile_problem(self):
         global _problem_compilation
         global _compilation
@@ -1052,12 +1114,15 @@ class Problem:
         _collected_objects = {}
         _collected_facts = []
         self.problem()
+        if self.has_imaginary(): self.gen_hashnums()
         self.collected_objects = _collected_objects
         self.collected_object_classes = _collected_object_classes
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal
         _collected_effects = []
         self.goal()
+        global _selector_out
+        _selector_out = None # cleaner goal
         self.collected_goal = _collected_effects
         _compilation = False
         _problem_compilation = False
