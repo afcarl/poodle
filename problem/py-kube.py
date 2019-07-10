@@ -46,6 +46,7 @@ class Node(Object):
     # Properties 
     cpuCapacity = Property(Number)
     memCapacity = Property(Number)
+    status = Property(Status)
     currentFormalCpuConsumption = Property(Number)
     currentFormalMemConsumption = Property(Number)
     currentRealMemConsumption = Property(Number)
@@ -219,11 +220,11 @@ class ToNode(PlannedAction):
     
 
     def selector(self):
-        return Select( self.node1.status == self.problem.statusNodeActive and request1.status == self.problem.statusPodDirectedToNode)
+        return Select( self.node1.status == self.problem.statusNodeActive and self.request1.status == self.problem.statusPodDirectedToNode)
 
     def effect(self):
         self.request1.status = self.problem.statusReqAtKubeproxy
-        self.request1.toNode = None 
+        self.request1.toNode.unset()
         self.request1.atNode = request1.toNode
 
 
@@ -233,7 +234,7 @@ class SwitchToNextNode(PlannedAction):
     node1 = Select( Node == request1.toNode)
     nextNode1 = Select( Node.prevNode == node1)
     def selector(self):
-        return Select( self.node1.status == self.problem.statusNodeInactive and request1.status == self.problem.statusPodDirectedToNode)
+        return Select( self.node1.status == self.problem.statusNodeInactive and self.request1.status == self.problem.statusPodDirectedToNode)
 
     def effect(self):
         self.request1.toNode = self.nextNode1
