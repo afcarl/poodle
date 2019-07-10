@@ -939,10 +939,10 @@ class PlannedAction():
         raise NotImplementedError
     
 
-class PlannedActionJinja2:
+class PlannedActionJinja2(PlannedAction):
     template = "./template/default.j2"
 
-    def templateMe(self, template=None)
+    def templateMe(self, template=None):
         t = template
         if template == None:
             t = self.template
