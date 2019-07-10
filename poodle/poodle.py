@@ -943,20 +943,17 @@ class PlannedActionJinja2(PlannedAction):
     template = "./template/default.j2"
 
     def templateMe(self, template=None):
-        t = template
-        if template == None:
-            t = self.template
         fileIn = ""
-        with open(t, "r") as fd:
+        with open(self.template, "r") as fd:
             fileIn = fd.read()
         template = Template(fileIn)
         param = []
         for arg in self.argumentList:
-            ret +=" {0}({1})".format(arg.name, arg.value)
-            arg.append(arg.name)
-            arg.append(arg.value)
-            param.append(arg)
-        print(template.render(action=self.__class__.__name__), parameters=param)
+            args = []
+            args.append(arg.name)
+            args.append(arg.value)
+            param.append(args)
+        return template.render(action=self.__class__.__name__, parameters=param)
 
     def getTemplate(self):
         if self.template == None:
@@ -1132,10 +1129,11 @@ class ActionClassLoader:
 #                            print("test again",obj," ", obj.name )
                             if argStr.lower() == obj.name.lower():
                                 argumentList.append(obj)
-                                log.debug("got {0}".format(obj.name))
+                             #   log.debug("got {0}".format(obj.name))
                 plannedAction = action(argumentList)
                 self.planList.append(plannedAction)
-                log.info(plannedAction)
+              #  log.info(plannedAction)
+                log.info(plannedAction.templateMe())
 
     def loadFromFile(self, outPlanFile):
         log.debug("load action from file {0}".format(outPlanFile))

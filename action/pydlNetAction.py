@@ -67,7 +67,7 @@ class ConsumePacketSelectInv(PlannedAction):
 
 print('"'+ConsumePacketSelectInv.compile().strip()+'"')
 
-class ConsumePacketSelect(PlannedAction):
+class ConsumePacketSelect(PlannedActionJinja2):
     cost = 1
     
     interface1 = Interface()
