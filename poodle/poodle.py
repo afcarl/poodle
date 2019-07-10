@@ -773,6 +773,7 @@ class BaseObjectMeta(type):
 
 class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
+        self._parse_history = [] # Experimentally setting to fix #78
         global _effect_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
         if _effect_compilation and not self.__imaginary__:
