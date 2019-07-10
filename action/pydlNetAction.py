@@ -1,10 +1,9 @@
 from poodle.poodle import *
 from object.networkObject import *
 
-class ConsumePacket(PlannedAction):
+class ConsumePacket(PlannedActionJinja2):
     cost = 1
-    template="template/ConsumePacketSelectTest.j2"
-    
+
     interface1 = Interface()
     # current_host = Host.has_interface.contains(interface1)
     # current_host = Host.has_interface // interface1
@@ -68,8 +67,8 @@ class ConsumePacketSelectInv(PlannedAction):
 
 #print('"'+ConsumePacketSelectInv.compile(None).strip()+'"')
 
-class ConsumePacketSelect(PlannedAction):
-    cost = 1
+class ConsumePacketSelect(PlannedActionJinja2):
+    cost = 2
     
     interface1 = Interface()
     current_host = Select( interface1 in Host.has_interface )
@@ -97,8 +96,6 @@ class ConsumePacketSelect(PlannedAction):
 #print('"'+ConsumePacketSelect.compile().strip()+'"')
 
 class ForwardPacketToInterface(PlannedAction):
-
-    template="template/ConsumePacketSelectTest.j2"
 
     interface1 = Interface()
     interface2 = Select( interface1.adjacent_interface == Interface )

@@ -15,6 +15,7 @@
 # TODO: required properties
 # TODO: if/else concept!
 
+from jinja2 import Template
 import string
 import random
 import inspect
@@ -911,6 +912,7 @@ class PoodleHashnum(Object):
 class PlannedAction():
     cost = 1
     argumentList = []
+    parameterList = []
     problem = None
     template = None
 
@@ -924,10 +926,8 @@ class PlannedAction():
             ret +=" {0}({1})".format(arg.name, arg.value)
         return ret
 
-    def getTemplate(self):
-        if self.template == None:
-            return "./template/{0}.j2".format(self.__class__.__name__)
-        return selt.template
+    def templateMe(self):
+        return self.__str__()
 
     @classmethod
     def compile(cls, problem):
@@ -971,12 +971,14 @@ class PlannedAction():
         )
         :effect (and
             {effect}
+            {cost}
         )
     )
         """.format(action_name = cls.__name__, 
             parameters=collected_parameters.strip(), 
             precondition='\n            '.join(_collected_predicates),
-            effect='\n            '.join(_collected_effects)
+            effect='\n            '.join(_collected_effects),
+            cost='(increase (total-cost) {0})'.format(cls.cost)
         )
     
     def selector(self):
@@ -985,6 +987,28 @@ class PlannedAction():
     def effect(self):
         raise NotImplementedError
     
+
+class PlannedActionJinja2(PlannedAction):
+    template = "./template/default.j2"
+
+    def templateMe(self, template=None):
+        fileIn = ""
+        with open(self.template, "r") as fd:
+            fileIn = fd.read()
+        template = Template(fileIn)
+        param = []
+        for arg in self.argumentList:
+            args = []
+            args.append(arg.name)
+            args.append(arg.value)
+            param.append(args)
+        return template.render(action=self.__class__.__name__, parameters=param)
+
+    def getTemplate(self):
+        if self.template == None:
+            return "./template/{0}.j2".format(self.__class__.__name__)
+        return selt.template
+
 # problem definition
 class Problem:
     HASHNUM_COUNT = 10 # amount of hashnums generated for imaginary object
@@ -1016,6 +1040,8 @@ class Problem:
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
 
     def run(self):
+        global _collected_parameters
+        print(_collected_parameters)
         counter = 0
         try:
             with open("./.counter", "r") as fd:
@@ -1088,6 +1114,9 @@ class Problem:
 
     (:predicates
         {predicates}
+    )
+    (:functions
+        (total-cost)
     )
 
     {actions}
@@ -1171,16 +1200,14 @@ class ActionClassLoader:
 #                            print("test again",obj," ", obj.name )
                             if argStr.lower() == obj.name.lower():
                                 argumentList.append(obj)
-                                log.debug("got {0}".format(obj.name))
+                             #   log.debug("got {0}".format(obj.name))
                 plannedAction = action(argumentList)
                 self.planList.append(plannedAction)
-                log.info(plannedAction)
+              #  log.info(plannedAction)
+                log.info(plannedAction.templateMe())
 
     def loadFromFile(self, outPlanFile):
         log.debug("load action from file {0}".format(outPlanFile))
         with open(outPlanFile, "r") as fd:
             for planLine in fd:
                 self.load(planLine.replace("(", "").replace(")", ""))
-
-    def templateMe(self):
-        pass
