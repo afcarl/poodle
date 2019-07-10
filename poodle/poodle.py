@@ -52,6 +52,8 @@ HASHNUM_VAR_NAME = "hashnum"
 HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
 HASHNUM_CLASS_NAME = "PoodleHashnum"
 HASHNUM_EXISTS_PFX = "-hashnum-exists" # predicate postfix to indicate existence of imaginary object
+HASHNUM_DEPTH_DEFAULT = 2 # "bit" depth of hashnums
+HASHNUM_COUNT_DEFAULT = 10 # default amount of generated hashnums
 
 from functools import partial
 
@@ -107,8 +109,20 @@ def new_id():
 def gen_var(name):
     return "?%s-%s" % (name, new_id())
 
-def gen_var_imaginary(name):
-    return "?%s1-%s ?%s2-%s" % (HASHNUM_VAR_NAME, new_id(), HASHNUM_VAR_NAME, new_id())
+def gen_var_imaginary(name, depth=2):
+    # TODO: depth support for more than 2 hashnums
+    hid = new_id()
+    return "?%s1-%s ?%s2-%s" % (HASHNUM_VAR_NAME, hid, HASHNUM_VAR_NAME, hid)
+
+def gen_hashnums(amount):
+    global _collected_facts
+    hashnums_generated = []
+    for i in range(amount): 
+        hashnum = PoodleHashnum()
+        hashnums_generated.append(hashnum)
+        _collected_facts.append("({pred} {hname})".format(pred=HASHNUM_ID_PREDICATE, hname=hashnum.name))
+    return hashnums_generated
+
 
 def class_or_hash(var_name, class_name):
     if HASHNUM_VAR_NAME in var_name:
@@ -465,6 +479,8 @@ class Property(object):
         
         if not hasattr(obj, "_parse_history"):
             obj._parse_history = _parse_history
+        else:
+            obj._parse_history += _parse_history
         
         # TODO: what if we have two same classes?
         
@@ -792,11 +808,12 @@ class Object(metaclass=BaseObjectMeta):
         if _problem_compilation:
             self._parse_history = []
             self._class_variable = self.name
-            _collected_object_classes.add(self.__class__.__name__)
-            if not self.__class__.__name__ in _collected_objects:
-                _collected_objects[self.__class__.__name__] = [ self.name ]
-            else:
-                _collected_objects[self.__class__.__name__].append(self.name)
+            if not self.__imaginary__:
+                _collected_object_classes.add(self.__class__.__name__)
+                if not self.__class__.__name__ in _collected_objects:
+                    _collected_objects[self.__class__.__name__] = [ self.name ]
+                else:
+                    _collected_objects[self.__class__.__name__].append(self.name)
         # when class is instantiated, make sure to "proxy" all properties
         for key in type(self).__dict__:
             # print(key)
@@ -834,6 +851,8 @@ class Object(metaclass=BaseObjectMeta):
     
     def __setattr__(self, name, value):
         global _problem_compilation
+        global _compilation
+       
         # if _problem_compilation and isinstance(value, Object):
         #     print("EXEC PC TRYING TO SET ---------------------------------------", name, value)
             
@@ -873,6 +892,15 @@ class StaticObject(Object):
     pass
 
 class Imaginary(Object):
+    
+    def gen_name(self, name):
+        global _problem_compilation
+        if _problem_compilation:
+            hns = gen_hashnums(HASHNUM_DEPTH_DEFAULT)
+            return ' '.join([v.name for v in hns])
+        else:
+            return super().gen_name(name)
+    
     def __init__(self):
         self.__imaginary__ = True
         super().__init__()
@@ -987,8 +1015,8 @@ class PlannedAction():
     
 # problem definition
 class Problem:
-    HASHNUM_COUNT = 10 # amount of hashnums generated for imaginary object
-    HASHNUM_DEPTH = 2 # only 2 is currently supported
+    HASHNUM_COUNT = HASHNUM_COUNT_DEFAULT # amount of hashnums generated for imaginary object
+    HASHNUM_DEPTH = HASHNUM_DEPTH_DEFAULT # only 2 is currently supported, waring! set globally only!
     folder_name = None
     objectList = []
     def __init__(self):
@@ -1098,9 +1126,9 @@ class Problem:
         return True # TODO: find a way to detect if imaginary objects are present
         # one option
 
-    def gen_hashnums(self):
-        for i in range(self.HASHNUM_COUNT): 
-            self.addObject(PoodleHashnum())
+    def gen_hashnums(self, amount=0):
+        if amount == 0: amount = self.HASHNUM_COUNT 
+        for hn in gen_hashnums(amount):  self.addObject(hn)
 
 
     def compile_problem(self):
