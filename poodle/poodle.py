@@ -869,6 +869,7 @@ class Digit(Object):
 class PlannedAction():
     cost = 1
     argumentList = []
+    parameterList = []
     problem = None
     template = None
 
@@ -882,17 +883,8 @@ class PlannedAction():
             ret +=" {0}({1})".format(arg.name, arg.value)
         return ret
 
-    def getTemplate(self):
-        if self.template == None:
-            return "./template/{0}.j2".format(self.__class__.__name__)
-        return selt.template
-
     def templateMe(self):
-        fileIn = ""
-        with open(self.getTemplate(), "r") as fd:
-            fileIn = fd.read()
-        template = Template(fileIn)
-        print(template.render(name=u'Вася'))
+        return self.__str__()
 
     @classmethod
     def compile(cls):
@@ -946,6 +938,31 @@ class PlannedAction():
     def effect(self):
         raise NotImplementedError
     
+
+class PlannedActionJinja2:
+    template = "./template/default.j2"
+
+    def templateMe(self, template=None)
+        t = template
+        if template == None:
+            t = self.template
+        fileIn = ""
+        with open(t, "r") as fd:
+            fileIn = fd.read()
+        template = Template(fileIn)
+        param = []
+        for arg in self.argumentList:
+            ret +=" {0}({1})".format(arg.name, arg.value)
+            arg.append(arg.name)
+            arg.append(arg.value)
+            param.append(arg)
+        print(template.render(action=self.__class__.__name__), parameters=param)
+
+    def getTemplate(self):
+        if self.template == None:
+            return "./template/{0}.j2".format(self.__class__.__name__)
+        return selt.template
+
 # problem definition
 class Problem:
     folder_name = None
@@ -973,6 +990,8 @@ class Problem:
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
 
     def run(self):
+        global _collected_parameters
+        print(_collected_parameters)
         counter = 0
         try:
             with open("./.counter", "r") as fd:
