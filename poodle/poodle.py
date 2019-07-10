@@ -284,7 +284,6 @@ class Property(object):
             assert other._value == self._value, "Property-Property check type mismatch: %s != %s" % (other._value, self._value)
             if operator == "contains":
                 assert not isinstance(other, Relation), "Can not check Relation in Relation"
-            print("####################### USED other value for subjObjectClass")
             subjObjectClass = other._value
             property_property_comparison = True
         else: # TODO: elif and else with ValueError
@@ -331,10 +330,6 @@ class Property(object):
         
         # If we are property of an Object and this Object is not an instance
         #     then someone requested us to return our parent Object type when matched
-        print("AAAAAAAAAA", type(self._property_of), hasattr(self, "_property_of_inst"))
-        if hasattr(self, "_property_of_inst"):
-            print("AAAA", self._property_of_inst)
-        print("SUBJ is", subjObjectClass)
         if not hasattr(self, "_property_of_inst") and not hasattr(other, "_property_of_inst") and not isinstance(other, Object):
             raise AssertionError("Both LHS and RHS are classes. Do not know what to instantiate.")
         elif type(self._property_of) is BaseObjectMeta and not hasattr(self, "_property_of_inst"):
@@ -345,8 +340,15 @@ class Property(object):
         #    vvv---always-true--------------vvv         vvv----check-if-subj-is-instance--vvv
         elif type(subjObjectClass) is BaseObjectMeta and not isinstance(subjObjectClass, Object) and not hasattr(other, "_property_of_inst"):
             log.debug("OPERATOR: Decided to return subj() objecs")
-            obj = subjObjectClass()
-            who_instantiating = "other"
+            who_instantiating = "other" 
+            # The following is the fix for scenario Select(Class.prop1 in inst.prop2)
+            #    in this scenario, without this fix return value and class name are wrong
+            if hasattr(other, "_value") and subjObjectClass == other._value:
+                obj = other._property_of() # TODO HERE - think what should happen next...
+                who_instantiating_fix = True # Fix for bug with instantiating Class.prop in inst.prop2
+            else:
+                obj = subjObjectClass()
+                who_instantiating_fix = False # Fix for bug with instantiating Class.prop in inst.prop2
         else:
             if _compilation: # actually means "running selector" and would be better renamed as `_selector_mode`
                 # PART 3.1.
@@ -470,13 +472,15 @@ class Property(object):
         #       store the variable in object returned - and use it first whenever needed
 
         # store variable that we created for the returning object
-        print("- WHO INST", who_instantiating)
         if who_instantiating == "self": # returning object is our class, and we just invented a new variable name for us
             log.debug("OPERATOR setting class variable myclass genvar to {0} {1}".format(myclass_genvar, my_class_name))
             obj._class_variable = myclass_genvar
         if who_instantiating == "other": # returning object is who we are being compared to, and we invented variable for that
             log.debug("OPERATOR setting class variable ohter genvar to {0} {1}".format(other_genvar, other_class_name))
-            obj._class_variable = other_genvar
+            if who_instantiating_fix: # Fix for bug with instantiating Class.prop in inst.prop2
+                obj._class_variable = other_property_genvar
+            else:
+                obj._class_variable = other_genvar
             
         # also store variable for the instantiated object that we are comparing with, if not created before
         if has_poi: # is exactly equivalent to who_instantiating == other, means that we(who we property of) are not a class
@@ -519,7 +523,6 @@ class Property(object):
             for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
-        print("    ----- - - - -- -  -RETURNING", obj)
         return obj
         
     def equals(self, other):
