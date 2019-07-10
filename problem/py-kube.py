@@ -32,6 +32,12 @@ class Status(Object):
     # Identity
     # Properties 
     # Relations 
+    
+class State(Object):
+    pass
+    # Identity
+    # Properties 
+    # Relations 
 
 class ContainerConfig(Object):
         #Identity
@@ -47,6 +53,7 @@ class Node(Object):
     cpuCapacity = Property(Number)
     memCapacity = Property(Number)
     status = Property(Status)
+    state = Property(State)
     currentFormalCpuConsumption = Property(Number)
     currentFormalMemConsumption = Property(Number)
     currentRealMemConsumption = Property(Number)
@@ -63,17 +70,23 @@ class Pod(Object):
     podId = Property(Number)
     podConfig = Property(ContainerConfig)
     node = Property(Node)
+    realInitialMemConsumption = Property( Number)
+    realInitialCpuConsumption = Property( Number)
     currentRealCpuConsumption = Property( Number)
     currentRealMemConsumption = Property( Number)
     atNode = Property(Node)
     toNode = Property(Node)
     status = Property(Status)
+    state = Property(State)
     bindedToNode = Property(Node)
     requestedMem = Property(Number)
     requestedCpu = Property(Number)
     podOverwhelmingLimits = StateFact()
     podNotOverwhelmingLimits = StateFact()
     podIsOnetime = StateFact()
+    memLimit = Property(Number)
+    cpuLimit = Property(Number)
+    
 
 Pod.prevPod = Property(Pod)    
     
@@ -129,6 +142,7 @@ class Request(Object):
     
     launchPeriod = Property(Period)
     status = Property(Status)
+    state = Property(State)
     atPod = Property(Pod)
     atNode = Property(Node)
     toPod = Property(Pod)
@@ -172,8 +186,12 @@ class AddedNumber(Object):
     operator1 = Property(Number)
     operator2 = Property(Number)
     result = Property(Number)
-     
-     
+
+class GreaterThan(Object):
+
+    lower = Property(Number)
+    higher = Property(Number)
+
 class ToLoadbalancer(PlannedAction):
     cost = 1
     request1 = Request()
@@ -187,6 +205,7 @@ class ToLoadbalancer(PlannedAction):
     
     def effect(self):
         self.request1.status = self.problem.statusReqAtLoadbalanser
+        self.request1.state = self.problem.stateRequestActive
         self.request1.atNode = self.lbNode
 
 class DirectToNode(PlannedAction):
@@ -396,6 +415,7 @@ class FinishRequest(PlannedAction):
         self.request1.status.set( self.problem.statusReqRequestFinished)
         self.request1.atPod.unset(self.pod1)
         self.request1.atNode.unset(self.node1)
+        self.request1.state = self.problem.stateRequestInactive
 
 class TerminatePodAfterFinish(PlannedAction):
     cost = 1
@@ -412,6 +432,7 @@ class TerminatePodAfterFinish(PlannedAction):
         self.request1.atPod.unset(self.pod1)
         self.request1.atNode.unset(self.node1)
         self.pod1.status.set(self.problem.statusReqRequestTerminated)
+        self.request1.state.set(self.problem.stateRequestInactive)
 
 class TerminatePod(PlannedAction):
     cost = 1
@@ -432,34 +453,33 @@ class TerminatePod(PlannedAction):
         self.pod1.status.set(self.problem.statusPodInactive) #TODO: divide status and state  for POds. state is to be active and nonactive. and status  would also include intermediate substates        
         self.currentNode.currentRealCpuConsumption = self.reducedCpuConsumptionAtCurrentNode1_op1
         self.currentNode.currentRealMemConsumption = self.reducedMemConsumptionAtCurrentNode1_op1
+        self.request1.state.set(self.problem.statePodInactive)
 
 
 ############
 # Scaling
 ### Replicas
 
-class ReadDeploymentConfig(PlannedAction):
-    pod1 = Pod()
-    def selector(self):
-        Select(self.pod1.status == self.problem.statusPodAtConfig)
+# class ReadDeploymentConfig(PlannedAction):
+#     pod1 = Pod()
+#     def selector(self):
+#         Select(self.pod1.status == self.problem.statusPodAtConfig)
     
-    def effect(self):
-        self.pod1.status.set(self.problem.statusPodPending) 
+#     def effect(self):
+# ###bug        self.pod1.status.set(self.problem.statusPodPending) 
+        
 
-class CreatePodManually(PlannedAction):
-    pod1 = Pod()
-    request1 = Request()
-    def selector(self):
-        return Select(self.request1.status == self.problem.statusPodAtManualCreation)
+# class CreatePodManually(PlannedAction):
+#     pod1 = Pod()
+#     def selector(self):
+#         return Select(self.pod1.status == self.problem.statusPodAtManualCreation)
 
-    def effect(self):
-        self.pod1.status.set(self.problem.statusPodPending)
+#     def effect(self):
+# ###bug        self.pod1.status.set(self.problem.statusPodPending)
 
 class SchedulerNofityUnboundedPod(PlannedAction):
     pod1 = Pod()
     node1 = Node()
-    freeMem_op1 = AddedNumber()
-    freeMem_op2 = AddedNumber()
     
     freeMem_op1 = Select( AddedNumber.operator2 == node1.currentFormalMemConsumption)
     #ffffreeMem_op1 = AddedNumber.Select(operator2 = node1.currentMemConsumption, result = node1.memCapacity)
@@ -467,9 +487,10 @@ class SchedulerNofityUnboundedPod(PlannedAction):
     freeCpu_op1 = Select( AddedNumber.operator2 == node1.currentFormalCpuConsumption)
     leftMem_op1 = Select( AddedNumber.operator2 == pod1.requestedMem) 
     leftCpu_op1 = Select( AddedNumber.operator2 == pod1.requestedCpu) 
-    newMemConsumptionAtNode_res = Select( AddedNumber.operator1 == node1.currentFormalMemConsumption)
-    newCpuConsumptionAtNode_res = Select( AddedNumber.operator1 == node1.currentFormalCpuConsumption)
-    
+    newFormalMemConsumptionAtNode_res = Select( AddedNumber.operator1 == node1.currentFormalMemConsumption)
+    newFormalMemConsumptionAtNode_res_res = Select( Number == newFormalMemConsumptionAtNode_res.result)
+    newFormalCpuConsumptionAtNode_res = Select( AddedNumber.operator1 == node1.currentFormalCpuConsumption)
+    newFormalCpuConsumptionAtNode_res_res = Select( Number == newFormalCpuConsumptionAtNode_res.result)
     #to-do: Soft conditions are not supported yet ( prioritization of nodes :  for example healthy  nodes are selected  rather then non healthy if pod  requests such behavior 
     def selector(self):
         return Select( self.pod1.status == self.problem.statusPodPending and \
@@ -483,9 +504,9 @@ class SchedulerNofityUnboundedPod(PlannedAction):
     
     def effect(self):
         self.pod1.status.set(self.problem.statusPodBindedToNode)
-        self.pod1.bindedToNode.set(self.node1)
-        self.node1.currentFormalMemConsumption.set(self.newFormalMemConsumptionAtNode_res.result)
-        self.node1.currentFormalCpuConsumption.set(self.newFormalCpuConsumptionAtNode_res.result)
+        ###bug self.pod1.bindedToNode.set(self.node1)
+       ###bug self.node1.currentFormalMemConsumption.set(self.newFormalMemConsumptionAtNode_res_res)
+        ### bug self.node1.currentFormalCpuConsumption.set(self.newFormalCpuConsumptionAtNode_res_res)
 
 class KubectlStartsPod(PlannedAction):
     pod1 = Pod()
@@ -493,7 +514,10 @@ class KubectlStartsPod(PlannedAction):
     # consume real resources from node
     node1 = Select( Node == pod1.bindedToNode)
     newMemRealConsumptionAtNode_res = Select(AddedNumber.operator1 == node1.currentRealMemConsumption)
+    newMemRealConsumptionAtNode_res_res = Select( Number == newMemRealConsumptionAtNode_res.result)
     newCpuRealConsumptionAtNode_res = Select(AddedNumber.operator1 == node1.currentRealCpuConsumption)
+    newCpuRealConsumptionAtNode_res_res = Select( Number == newCpuRealConsumptionAtNode_res.result)
+    
     def selector(self):
         return Select(self.pod1.status == self.problem.statusPodBindedToNode and \
         self.newMemRealConsumptionAtNode_res.operator2 == self.pod1.realInitialMemConsumption and \
@@ -501,70 +525,80 @@ class KubectlStartsPod(PlannedAction):
     
     def effect(self):
         self.pod1.status.set(self.problem.statusPodRunning)
+        self.pod1.state.set(self.problem.statePodActive)
         self.pod1.atNode.set(self.node1)
         self.pod1.bindedToNode.unset(self.node1)
-        self.node1.currentRealMemConsumption.set(self.newMemConsumptionAtNode_res.result)
-        self.node1.currentRealCpuConsumption.set(self.newCpuConsumptionAtNode_res.result)
+        self.node1.currentRealMemConsumption.set(self.newMemRealConsumptionAtNode_res_res)
+        self.node1.currentRealCpuConsumption.set(self.newCpuRealConsumptionAtNode_res_res)
 
 class MarkPodAsOverwhelmingMemLimits(PlannedAction):
     cost = 1
     pod1 = Pod()
     node1 = Select( Node == pod1.atNode)
-    nextAmountOfoverwhelming  = AddedNumber.operator1 == node1.AmountOfPodsOverwhelmingMemLimits
+    nextAmountOfoverwhelming  = Select( AddedNumber.operator1 == node1.AmountOfPodsOverwhelmingMemLimits)
+    nextAmountOfoverwhelming_res = Select( Number == nextAmountOfoverwhelming.result)
+    greaterthan = GreaterThan()
+    
 
     def selector(self):
         return Select( 
             self.pod1.podNotOverwhelmingLimits == True and \
-            self.Greaterthan.lower == self.pod1.memLimit and \
-        Greaterthan.higher == self.pod1.currentMemConsumption and \
+            self.greaterthan.lower == self.pod1.memLimit and \
+        self.greaterthan.higher == self.pod1.currentRealMemConsumption and \
         self.nextAmountOfoverwhelming.operator2 == self.problem.numberFactory.getNumber(1))
 
     def effect(self):
-        self.pod1.podOverwhelmingLimits = True
-        self.pod1.podNotOverwhelmingLimits = False
-        self.node1.AmountOfPodsOverwhelmingMemLimits = self.nextAmountOfoverwhelming.result
+        self.pod1.podOverwhelmingLimits.set()
+        self.pod1.podNotOverwhelmingLimits.unset()
+        self.node1.AmountOfPodsOverwhelmingMemLimits = self.nextAmountOfoverwhelming_res
 
 class MarkPodAsNonoverwhelmingMemLimits(PlannedAction):
     cost = 1
     pod1 = Pod()
     node1 = Select(Node == pod1.atNode)
-    prevAmountOfoverwhelming  = AddedNumber.result == node1.AmountOfPodsOverwhelmingMemLimits
+    prevAmountOfoverwhelming  = Select( AddedNumber.result == node1.AmountOfPodsOverwhelmingMemLimits)
+    prevAmountOfoverwhelming_op1  = Select( Number == prevAmountOfoverwhelming.operator1)
+    greaterthan = GreaterThan()
 
     def selector(self):
         return Select(self.pod1.podOverwhelmingLimits == True and \
-        self.Greaterthan.lower == self.pod1.memLimit and \
-        Greaterthan.higher == self.pod1.currentMemConsumption and \
+        self.greaterthan.lower == self.pod1.memLimit and \
+        self.greaterthan.higher == self.pod1.currentRealMemConsumption and \
         self.prevAmountOfoverwhelming.operator2 == self.problem.numberFactory.getNumber(1))
 
     def effect(self):
-        self.pod1.podOverwhelmingLimits = True
-        self.pod1.podNotOverwhelmingLimits = False
-        self.node1.AmountOfPodsOverwhelmingMemLimits = self.prevAmountOfoverwhelming.operator1
+        self.pod1.podOverwhelmingLimits.set()
+        self.pod1.podNotOverwhelmingLimits.unset()
+        self.node1.AmountOfPodsOverwhelmingMemLimits = self.prevAmountOfoverwhelming_op1
 
 
 class MemoryErrorKillPodOverwhelmingLimits(PlannedAction):
     cost = 1
     node1 = Node()
     pod1 = Select( Pod.atNode == node1)
+    greaterthan = GreaterThan()
+
     def selector(self):
-        return Select(self.Greaterthan.lower == self.node1.memCapacity and Greaterthan.higher == self.node1.currentRealMemConsumption and \
+        return Select(self.greaterthan.lower == self.node1.memCapacity and \
+                self.greaterthan.higher == self.node1.currentRealMemConsumption and \
                 self.node1.status == self.problem.statusNodeActive and \
                 self.pod1.podOverwhelmingLimits == True)
 
     def effect(self):
-        self.pod1.substatus.set(self.problem.statusNodeOomKilling)
+        self.pod1.status.set(self.problem.statusNodeOomKilling)
 
 class MemoryErrorKillPodNotOverwhelmingLimits(PlannedAction):
     cost = 2
     node1 = Node()
     pod1 = Select( Pod.atNode == node1)
+    greaterthan = GreaterThan()
     def selector(self):
-        return Select(self.Greaterthan.lower == self.node1.memCapacity and \
-        Greaterthan.higher == self.node1.currentRealMemConsumption and \
+        return Select(self.greaterthan.lower == self.node1.memCapacity and \
+        self.greaterthan.higher == self.node1.currentRealMemConsumption and \
         self.node1.AmountOfPodsOverwhelmingMemLimits == self.problem.numberFactory.getNumber(0))
 
     def effect(self):
-        self.pod1.substatus.set(self.problem.statusNodeOomKilling)
+        self.pod1.status.set(self.problem.statusNodeOomKilling)
         
 
 class PodFailsBecauseOfKilling(PlannedAction):
@@ -572,7 +606,9 @@ class PodFailsBecauseOfKilling(PlannedAction):
     # release initial pod resources from node  
     node1 = Select( Node == pod1.atNode)
     newMemRealConsumptionAtNode_op1 = Select( AddedNumber.result == node1.currentRealMemConsumption)
+    newMemRealConsumptionAtNode_op1_res = Select( Number == newMemRealConsumptionAtNode_op1.operator1)
     newCpuRealConsumptionAtNode_op1 = Select( AddedNumber.result == node1.currentRealCpuConsumption)
+    newCpuRealConsumptionAtNode_op1_res = Select( Number == newCpuRealConsumptionAtNode_op1.operator1)
     def selector(self):
         return Select( self.node1.status == self.problem.statusNodeOomKilling and \
         self.newMemRealConsumptionAtNode_op1.operator2 == self.pod1.realInitialMemConsumption and \
@@ -580,8 +616,9 @@ class PodFailsBecauseOfKilling(PlannedAction):
 
     def effect(self):
         self.pod1.status.set(self.problem.statusNodeFailed)
-        self.node1.currentRealMemConsumption.set(self.newMemConsumptionAtNode_op1.result)
-        self.node1.currentRealCpuConsumption.set(self.newCpuConsumptionAtNode_op1.result)
+        self.node1.currentRealMemConsumption.set(self.newMemRealConsumptionAtNode_op1_res)
+        self.node1.currentRealCpuConsumption.set(self.newCpuRealConsumptionAtNode_op1_res)
+        self.node1.state.set(self.problem.stateNodeInactive)
 
         
 
@@ -590,7 +627,9 @@ class PodSucceds(PlannedAction):
     # release initial pod resources from node  
     node1 = Select( Node == pod1.atNode)
     newMemRealConsumptionAtNode_op1 = Select(AddedNumber.result == node1.currentRealMemConsumption)
+    newMemRealConsumptionAtNode_op1_res = Select( Number == newMemRealConsumptionAtNode_op1.operator1)
     newCpuRealConsumptionAtNode_op1 = Select(AddedNumber.result == node1.currentRealCpuConsumption)
+    newCpuRealConsumptionAtNode_op1_res = Select( Number == newMemRealConsumptionAtNode_op1.operator1)
     
     def selector(self):
         return Select ( self.node1.status == self.problem.statusNodeRunning and \
@@ -599,15 +638,15 @@ class PodSucceds(PlannedAction):
     
     def effect(self):
         self.pod1.status.set(self.problem.statusNodeSucceded)
-        self.node1.currentRealMemConsumption.set(self.newMemConsumptionAtNode_op1.result)
-        self.node1.currentRealCpuConsumption.set(self.newCpuConsumptionAtNode_op1.result)
+        self.node1.currentRealMemConsumption.set(self.newMemRealConsumptionAtNode_op1_res)
+        self.node1.currentRealCpuConsumption.set(self.newCpuRealConsumptionAtNode_op1_res)
 
 
 class KubectlRecoverPod(PlannedAction):
     pod1 = Pod()
     
     def selector(self):
-        return Select( pod1.status == self.problem.statusNodeFailed)
+        return Select( self.pod1.status == self.problem.statusNodeFailed)
     def effect(self):
         self.pod1.status.set(self.problem.statusNodePending)
 
@@ -617,6 +656,7 @@ class PodGarbageCollectedFailedPod(PlannedAction):
         return Select( self.pod1.status == self.problem.statusNodeFailed)
     def effect(self):
         self.pod1.status.set(self.problem.statusNodeDeleted)
+        
 
 class PodGarbageCollectedSuccededPod(PlannedAction):
     pod1 = Pod()
@@ -652,7 +692,9 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
             
 class Problem1(Problem):
     def actions(self):
-        return [ToLoadbalancer, DirectToNode, ToNode, SwitchToNextNode, DirectToPod, ToPod, SwitchToNextPod, ConsumeResource, ProcessTempRequest, ProcessPersistentRequest, ReleaseResource, FinishRequest, TerminatePodAfterFinish, TerminatePod, ReadDeploymentConfig, CreatePodManually, SchedulerNofityUnboundedPod, KubectlStartsPod, MarkPodAsOverwhelmingMemLimits, MarkPodAsNonoverwhelmingMemLimits, MemoryErrorKillPodOverwhelmingLimits, MemoryErrorKillPodNotOverwhelmingLimits, PodFailsBecauseOfKilling, PodSucceds, KubectlRecoverPod, PodGarbageCollectedFailedPod, PodGarbageCollectedSuccededPod]
+        return [ToLoadbalancer, DirectToNode, ToNode, SwitchToNextNode, DirectToPod, ToPod, SwitchToNextPod, ConsumeResource, ProcessTempRequest, ProcessPersistentRequest, ReleaseResource, FinishRequest, TerminatePodAfterFinish, TerminatePod, \
+        #### ReadDeploymentConfig, CreatePodManually, 
+            SchedulerNofityUnboundedPod, KubectlStartsPod, MarkPodAsOverwhelmingMemLimits, MarkPodAsNonoverwhelmingMemLimits, MemoryErrorKillPodOverwhelmingLimits, MemoryErrorKillPodNotOverwhelmingLimits, PodFailsBecauseOfKilling, PodSucceds, KubectlRecoverPod, PodGarbageCollectedFailedPod, PodGarbageCollectedSuccededPod]
 
     def problem(self):
         self.numberFactory = NumberFactory()
@@ -687,6 +729,15 @@ class Problem1(Problem):
         self.statusNodeActive = self.addObject(Status())
         self.statusNodeInactive = self.addObject(Status())
         
+        self.statePodActive = self.addObject(State())
+        self.statePodInactive = self.addObject(State())
+        self.stateRequestActive = self.addObject(State())
+        self.stateRequestInactive = self.addObject(State())
+        self.stateNodeActive = self.addObject(State())
+        self.stateNodeInactive = self.addObject(State())
+        
+        
+        
         self.typeTemporary = self.addObject(Type())
         
 
@@ -697,6 +748,8 @@ class Problem1(Problem):
         self.сontainerConfig3 = self.addObject(ContainerConfig())
         
         self.node1 = self.addObject(Node())
+        self.node1.state = self.stateNodeInactive
+        self.node1.status = self.statusNodeInactive
         self.node1.cpuCapacity = self.numberFactory.getNumber(500)
         self.node1.memCapacity = self.numberFactory.getNumber(100)
         self.node1.currentFormalCpuConsumption = self.numberFactory.getNumber(0)
@@ -706,6 +759,8 @@ class Problem1(Problem):
         self.node1.AmountOfPodsOverwhelmingMemLimits = self.numberFactory.getNumber(0)
 
         self.node2 = self.addObject(Node())
+        self.node2.state = self.stateNodeInactive
+        self.node2.status = self.statusNodeInactive
         self.node2.cpuCapacity = self.numberFactory.getNumber(0)
         self.node2.memCapacity = self.numberFactory.getNumber(0)
         self.node2.currentFormalCpuConsumption = self.numberFactory.getNumber(0)
@@ -715,6 +770,8 @@ class Problem1(Problem):
         self.node2.AmountOfPodsOverwhelmingMemLimits = self.numberFactory.getNumber(0)
         
         self.node3 = self.addObject(Node())
+        self.node3.state = self.stateNodeInactive
+        self.node3.status = self.statusNodeInactive        
         self.node3.cpuCapacity = self.numberFactory.getNumber(0)
         self.node3.memCapacity = self.numberFactory.getNumber(0)
         self.node3.currentFormalCpuConsumption = self.numberFactory.getNumber(0)
@@ -729,6 +786,7 @@ class Problem1(Problem):
         self.pod1.currentRealCpuConsumption = self.numberFactory.getNumber(0)
         self.pod1.currentRealMemConsumption = self.numberFactory.getNumber(0)
         self.pod1.status = self.statusPodAtConfig
+        self.pod1.state = self.statePodInactive
         self.pod1.requestedMem = self.numberFactory.getNumber(10)
         self.pod1.requestedCpu = self.numberFactory.getNumber(50)
         self.pod1.podNotOverwhelmingLimits = True
@@ -738,6 +796,7 @@ class Problem1(Problem):
         self.pod2.currentRealCpuConsumption = self.numberFactory.getNumber(0)
         self.pod2.currentRealMemConsumption = self.numberFactory.getNumber(0)
         self.pod2.status = self.statusPodAtConfig
+        self.pod2.state = self.statePodInactive
         self.pod2.requestedMem = self.numberFactory.getNumber(10)
         self.pod2.requestedCpu = self.numberFactory.getNumber(50)
         self.pod2.podNotOverwhelmingLimits = True
@@ -749,6 +808,7 @@ class Problem1(Problem):
         self.pod3.currentRealCpuConsumption = self.numberFactory.getNumber(0)
         self.pod3.currentRealMemConsumption = self.numberFactory.getNumber(0)
         self.pod3.status = self.statusPodAtConfig
+        self.pod3.state = self.statePodInactive
         self.pod3.requestedMem = self.numberFactory.getNumber(10)
         self.pod3.requestedCpu = self.numberFactory.getNumber(50)
         self.pod3.podNotOverwhelmingLimits = True
@@ -760,21 +820,25 @@ class Problem1(Problem):
         self.request1 = self.addObject(Request())
         self.request1.launchPeriod = self.period1
         self.request1.status = self.statusReqAtStart
+        self.request1.state = self.stateRequestInactive
         self.request1.targetService = self.service1
 
         self.request2 = self.addObject(Request())
         self.request2.launchPeriod = self.period1
         self.request2.status = self.statusReqAtStart
+        self.request2.state = self.stateRequestInactive
         self.request2.targetService = self.service1
 
         self.request3 = self.addObject(Request())
         self.request3.launchPeriod = self.period1
         self.request3.status = self.statusReqAtStart
+        self.request3.state = self.stateRequestInactive
         self.request3.targetService = self.service2
 
         self.request4 = self.addObject(Request())
         self.request4.launchPeriod = self.period1
         self.request4.status = self.statusReqAtStart
+        self.request4.state = self.stateRequestInactive
         self.request4.targetService = self.service2
         
         self.lb1 = self.addObject(Loadbalancer())
