@@ -167,6 +167,8 @@ class ForwardPacketToRouteInTable(PlannedAction):
     # Need static function: net_match(packet.dst_ipaddr, route.network))
     print("VAR 1 ------------------------------------")
     interface_dest = Select(Interface.has_ipaddr == route.gw_ipaddr)
+    #interface_dest = Select(Interface.has_ipaddr == route.gw_ipaddr)
+    #packet         = Select(Packet.at_interface_input in host.has_interface)
 
     # TODO: not exists narrower...
     # net_narrower = Select(route_dot_network in Network.narrower_than)
@@ -222,7 +224,7 @@ class TestImaginaryCreate(PlannedAction):
         route.interface = self.interface
         self.problem.addObject(table)
 
-#print(TestImaginaryCreate.compile(Problem()))
+print(TestImaginaryCreate.compile(Problem()))
 
 
 class HopToRoute(PlannedAction):
@@ -230,6 +232,11 @@ class HopToRoute(PlannedAction):
     host = Host()
     print("MY VAR ------------------------------------")
     packet = Select(Packet.at_interface_input in host.has_interface)
+    # TODO HERE:
+    # 1. make sure we return Packet object
+    # 2. selector that we do is two-fold:
+    #    2.1 
+    # 3. class variable on returning object must be from Packet 
     table = Select(Table in host.has_table)
     route = Select(Route in table.has_route)
     route_dot_interface = Select(Interface == route.interface)

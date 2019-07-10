@@ -773,7 +773,10 @@ class BaseObjectMeta(type):
 
 class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
-        if not hasattr(self, "__imaginary__"): __imaginary__ = False
+        global _effect_compilation
+        if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
+        if _effect_compilation and not self.__imaginary__:
+            raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
         self.__unlock_setter = True
         name = None
         self._class_variable = None
@@ -868,8 +871,8 @@ class StaticObject(Object):
 
 class Imaginary(Object):
     def __init__(self):
-        super().__init__()
         self.__imaginary__ = True
+        super().__init__()
         global _effect_compilation
         global _collected_predicates
         global _collected_effects
