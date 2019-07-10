@@ -1171,6 +1171,7 @@ class Problem:
     (:goal (and
         {goal}
     ))
+    (:metric minimize (total-cost))
 )
 """.format(objects=txt_objects, facts='\n        '.join(self.collected_facts), goal='\n            '.join(self.collected_goal))
 
