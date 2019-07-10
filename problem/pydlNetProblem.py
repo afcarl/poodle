@@ -62,7 +62,3 @@ class SimpleTestProblem1(Problem):
 p = SimpleTestProblem1()
 retCode = p.run()
 log.info("fast downward retcode {0}".format(retCode))
-
-
-
-        
