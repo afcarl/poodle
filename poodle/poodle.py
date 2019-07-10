@@ -924,12 +924,14 @@ class PlannedAction():
         )
         :effect (and
             {effect}
+            {cost}
         )
     )
         """.format(action_name = cls.__name__, 
             parameters=collected_parameters.strip(), 
             precondition='\n            '.join(_collected_predicates),
-            effect='\n            '.join(_collected_effects)
+            effect='\n            '.join(_collected_effects),
+            cost='(increase (total-cost) {0})'.format(cls.cost)
         )
     
     def selector(self):
@@ -1059,6 +1061,9 @@ class Problem:
 
     (:predicates
         {predicates}
+    )
+    (:functions
+        (total-cost)
     )
 
     {actions}

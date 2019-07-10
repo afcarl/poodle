@@ -68,7 +68,7 @@ class ConsumePacketSelectInv(PlannedAction):
 print('"'+ConsumePacketSelectInv.compile().strip()+'"')
 
 class ConsumePacketSelect(PlannedActionJinja2):
-    cost = 1
+    cost = 2
     
     interface1 = Interface()
     current_host = Select( interface1 in Host.has_interface )
