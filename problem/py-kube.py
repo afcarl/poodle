@@ -134,6 +134,8 @@ class Request(Object):
     toPod = Property(Pod)
     toNode = Property(Node)    
     targetService = Property(Service)
+    cpuRequest = Property(Number)
+    memRequest = Property(Number)
          # Relations
 
 class Loadbalancer(Object):
@@ -217,7 +219,6 @@ class ToNode(PlannedAction):
     cost = 1 
     request1 = Request()
     node1 = Select( Node == request1.toNode)
-    
 
     def selector(self):
         return Select( self.node1.status == self.problem.statusNodeActive and self.request1.status == self.problem.statusPodDirectedToNode)
@@ -225,7 +226,7 @@ class ToNode(PlannedAction):
     def effect(self):
         self.request1.status = self.problem.statusReqAtKubeproxy
         self.request1.toNode.unset()
-        self.request1.atNode = request1.toNode
+        self.request1.atNode = self.node1
 
 
 class SwitchToNextNode(PlannedAction):
@@ -249,11 +250,11 @@ class DirectToPod(PlannedAction):
 
 
     def selector(self):
-        return Select( self.podWithTargetService == self.request1.atNode and request1.status == self.problem.statusReqAtKubeproxy)
+        return Select(self.request1.status == self.problem.statusReqAtKubeproxy)
 
     def effect(self):
         self.request1.status = self.problem.statusPodDirectedToNode
-        self.request1.toPod = podWithTargetService
+        self.request1.toPod = self.podWithTargetService
 
 
 class ToPod(PlannedAction):
@@ -263,12 +264,12 @@ class ToPod(PlannedAction):
 
     def selector(self):
         return Select( self.pod1.status == self.problem.statusPodActive and \
-        request1.status == self.problem.statusPodDirectedToNode) 
+        self.request1.status == self.problem.statusPodDirectedToNode) 
 
     def effect(self):
         self.request1.status = self.problem.statusReqAtPodInput
-        self.request1.toPod = None 
-        self.request1.atPod = pod1
+        self.request1.toPod.unset() 
+        self.request1.atPod = self.pod1
 
 
 
@@ -302,19 +303,19 @@ class ConsumeResource(PlannedAction):
     #KB: FormalCPUConcumption - it is consumption calculated for nodes only. Pods when try to start shoul check limits by this value.  
     
     def selector(self):
-        return Select( request1.status == self.problem.statusReqAtPodInput and \
-        addedCpuConsumptionAtCurrentPod1.operator2 == request1.cpuRequest and \
-        addedMemConsumptionAtCurrentPod1.operator2 == request1.memRequest and \
-        addedCpuConsumptionAtCurrentNode1.operator2 == request1.cpuRequest and \
-        addedMemConsumptionAtCurrentNode1.operator2 == request1.memRequest )        
+        return Select( self.request1.status == self.problem.statusReqAtPodInput and \
+        self.addedCpuConsumptionAtCurrentPod1.operator2 == self.request1.cpuRequest and \
+        self.addedMemConsumptionAtCurrentPod1.operator2 == self.request1.memRequest and \
+        self.addedCpuConsumptionAtCurrentNode1.operator2 == self.request1.cpuRequest and \
+        self.addedMemConsumptionAtCurrentNode1.operator2 == self.request1.memRequest )        
 
 
     def effect(self):
         self.request1.status.set(self.problem.statusReqResourcesConsumed)
-        self.currentPod.currentRealCpuConsumption.set(addedCpuConsumptionAtCurrentPod1.result)
-        self.currentPod.currentRealMemConsumption.set(addedMemConsumptionAtCurrentPod1.result)
-        self.currentNode.currentRealCpuConsumption.set(addedCpuConsumptionAtCurrentNode1.result)
-        self.currentNode.currentRealMemConsumption.set(addedMemConsumptionAtCurrentNode1.result)
+        self.currentPod.currentRealCpuConsumption.set(self.addedCpuConsumptionAtCurrentPod1.result)
+        self.currentPod.currentRealMemConsumption.set(self.addedMemConsumptionAtCurrentPod1.result)
+        self.currentNode.currentRealCpuConsumption.set(self.addedCpuConsumptionAtCurrentNode1.result)
+        self.currentNode.currentRealMemConsumption.set(self.addedMemConsumptionAtCurrentNode1.result)
  
 
 class ProcessTempRequest(PlannedAction):
@@ -659,6 +660,7 @@ class Problem1(Problem):
         self.statusNodeSucceded = self.addObject(Status())
         self.statusNodePending = self.addObject(Status())
         self.statusNodeDeleted = self.addObject(Status())
+        self.statusPodInactive = self.addObject(Status())
         
         self.statusNodeActive = self.addObject(Status())
         self.statusNodeInactive = self.addObject(Status())
