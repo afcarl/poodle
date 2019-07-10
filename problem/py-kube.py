@@ -74,7 +74,6 @@ class Pod(Object):
     podNotOverwhelmingLimits = StateFact()
     podIsOnetime = StateFact()
 
-
 Pod.prevPod = Property(Pod)    
     
 # class Event(PlannedAction):
@@ -121,8 +120,6 @@ class Container(Object):
     memLimit = Property(Number)
     config = Property(ContainerConfig)
 
-     
-
 class Request(Object):
         # Identity
     identified_by = ["requestId"]
@@ -137,9 +134,6 @@ class Request(Object):
     toNode = Property(Node)    
     targetService = Property(Service)
          # Relations
-
-
-         
 
 class Loadbalancer(Object):
         # Identity
@@ -182,13 +176,14 @@ class ToLoadbalancer(PlannedAction):
     serviceTarget = Select(request1.targetService ==  Service)
     lb = Loadbalancer()
     lbServedService = Select( Service in lb.selectionedService)
+    lbNode = Select(Node == lb.atNode)
 
     def selector(self):
         return Select( self.serviceTarget == self.lbServedService and request1.status == self.problem.statusReqAtStart)
     
     def effect(self):
         self.request1.status = self.problem.statusReqAtLoadbalanser
-        self.request1.atNode = self.lb.atNode
+        self.request1.atNode = self.lbNode
 
 class DirectToNode(PlannedAction):
     cost = 1
@@ -197,26 +192,12 @@ class DirectToNode(PlannedAction):
     podWithTargetService = Select( Pod == targetService.selectionedPod)
     nodeWithTargetService = Node()
     
-    
-
-#(pod ?number)
-
-# (Object ?entitytype - entitytypes ?obj-id - Number)
-# (pod-memRequest ?podId1 - Number ?podId2 - Number ?memRequest - Number)
-
-# (pod-memRequest ?pod - Pod ?memRequest - Number)
-
-#    podtemplate =  ...
-#    maxNumberofPod = ....
-#    nextNumberofPod = ... 
-    # newPod = Pod.pod_id == nextNumberofPod
-     
     def selector(self):
-        return Select( self.nodeWithTargetService == self.podWithTargetService.node and request1.status == self.problem.statusReqAtLoadbalanser)
+        return Select( self.nodeWithTargetService == self.podWithTargetService.node and self.request1.status == self.problem.statusReqAtLoadbalanser)
 
     def effect(self):
         self.request1.status = self.problem.statusPodDirectedToNode
-        self.request1.toNode = nodeWithTargetService
+        self.request1.toNode = self.nodeWithTargetService
         
         # newPod = self.problem.addObject(Pod())
         # newPod.memRequest = self.template1.memRequest
@@ -483,7 +464,7 @@ class SchedulerNofityUnboundedPod(PlannedAction):
         self.node1.currentFormalMemConsumption.set(newFormalMemConsumptionAtNode_res.result)
         self.node1.currentFormalCpuConsumption.set(newFormalCpuConsumptionAtNode_res.result)
 
-class KubectlStartsNode(PlannedAction):
+class KubectlStartsPod(PlannedAction):
     pod1 = Pod()
     
     # consume real resources from node
@@ -503,6 +484,7 @@ class KubectlStartsNode(PlannedAction):
         self.node1.currentRealCpuConsumption.set(newCpuConsumptionAtNode_res.result)
 
 class MarkPodAsOverwhelmingMemLimits(PlannedAction):
+    cost = 1
     pod1 = Pod()
     node1 = Select( Node == pod1.atNode)
     nextAmountOfoverwhelming  = AddedNumber.operator1 == node1.AmountOfPodsOverwhelmingMemLimits
@@ -520,6 +502,7 @@ class MarkPodAsOverwhelmingMemLimits(PlannedAction):
         self.node1.AmountOfPodsOverwhelmingMemLimits = nextAmountOfoverwhelming.result
 
 class MarkPodAsNonoverwhelmingMemLimits(PlannedAction):
+    cost = 1
     pod1 = Pod()
     node1 = Select(Node == pod1.atNode)
     prevAmountOfoverwhelming  = AddedNumber.result == node1.AmountOfPodsOverwhelmingMemLimits
@@ -537,6 +520,7 @@ class MarkPodAsNonoverwhelmingMemLimits(PlannedAction):
 
 
 class MemoryErrorKillPodOverwhelmingLimits(PlannedAction):
+    cost = 1
     node1 = Node()
     pod1 = Select( Pod.atNode == node1)
     def selector(self):
@@ -548,10 +532,12 @@ class MemoryErrorKillPodOverwhelmingLimits(PlannedAction):
         self.pod1.substatus.set(self.problem.statusNodeOomKilling)
 
 class MemoryErrorKillPodNotOverwhelmingLimits(PlannedAction):
+    cost = 2
     node1 = Node()
     pod1 = Select( Pod.atNode == node1)
     def selector(self):
-        return Select(self.Greaterthan.lower == node1.memCapacity and Greaterthan.higher == node1.currentRealMemConsumption and \
+        return Select(self.Greaterthan.lower == node1.memCapacity and \
+        Greaterthan.higher == node1.currentRealMemConsumption and \
         node1.AmountOfPodsOverwhelmingMemLimits == self.problem.numberFactory.getNumber(0))
 
     def effect(self):
@@ -617,6 +603,7 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
     def effect(self):
         self.pod1.status.set(self.problem.statusNodeDeleted)
 
+#class SchedullerCreatesPod(PlannedAction):
 # class updatePodMetricsReleaseStarted(PlannedAction):
 #     cost = 1
 #     request1    = Select( Request.status == "resourcesReleased")
@@ -642,7 +629,7 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
             
 class Problem1(Problem):
     def actions(self):
-        return [ToLoadbalancer, DirectToNode, ToNode, SwitchToNextNode, DirectToPod, ToPod, SwitchToNextPod, ConsumeResource, ProcessTempRequest, ProcessPersistentRequest, ReleaseResource, FinishRequest, TerminatePodAfterFinish, TerminatePod, ReadDeploymentConfig, CreatePodManually, SchedulerNofityUnboundedPod, KubectlStartsNode, MarkPodAsOverwhelmingMemLimits, MarkPodAsNonoverwhelmingMemLimits, MemoryErrorKillPodOverwhelmingLimits, MemoryErrorKillPodNotOverwhelmingLimits, PodFailsBecauseOfKilling, PodSucceds, KubectlRecoverPod, PodGarbageCollectedFailedPod, PodGarbageCollectedSuccededPod]
+        return [ToLoadbalancer, DirectToNode, ToNode, SwitchToNextNode, DirectToPod, ToPod, SwitchToNextPod, ConsumeResource, ProcessTempRequest, ProcessPersistentRequest, ReleaseResource, FinishRequest, TerminatePodAfterFinish, TerminatePod, ReadDeploymentConfig, CreatePodManually, SchedulerNofityUnboundedPod, KubectlStartsPod, MarkPodAsOverwhelmingMemLimits, MarkPodAsNonoverwhelmingMemLimits, MemoryErrorKillPodOverwhelmingLimits, MemoryErrorKillPodNotOverwhelmingLimits, PodFailsBecauseOfKilling, PodSucceds, KubectlRecoverPod, PodGarbageCollectedFailedPod, PodGarbageCollectedSuccededPod]
 
     def problem(self):
         self.numberFactory = NumberFactory()
@@ -662,6 +649,7 @@ class Problem1(Problem):
         self.statusPodActive = self.addObject(Status())
         self.statusPodPending = self.addObject(Status())
         self.statusPodAtManualCreation = self.addObject(Status())
+        self.statusPodDirectedToNode = self.addObject(Status())
         self.statusPodBindedToNode = self.addObject(Status())
         self.statusPodRunning = self.addObject(Status())
         self.statusNodeOomKilling = self.addObject(Status())
