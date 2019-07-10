@@ -226,6 +226,32 @@ class TestImaginaryCreate(PlannedAction):
 
 print(TestImaginaryCreate.compile(Problem()))
 
+class TestStaticObject(PlannedAction):
+    host = Host()
+    interface = Select(Interface in host.has_interface)
+    packet = Select(Packet.at_interface_input == interface)
+
+    def selector(self):
+        return Select(self.packet.at_interface_input in self.host.has_interface)
+
+    def effect(self):
+        self.packet.at_interface_input = self.problem.testif
+
+class StaticObjectProblem(Problem):
+    def actions(self):
+        return [ TestStaticObject ]
+    def problem(self):
+        self.testif = self.addObject(Interface("test0"))
+        self.ipaddr = IPAddr("192.168.1.1")
+    def goal(self):
+        return self.testif.has_ipaddr == self.ipaddr
+
+p = StaticObjectProblem()
+p.run()
+print(p.compile_domain())
+#p.compile_problem()
+#p.compile_domain()
+
 
 class HopToRoute(PlannedAction):
     "Relay the packet to route in the host"

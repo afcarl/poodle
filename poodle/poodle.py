@@ -789,6 +789,8 @@ class Object(metaclass=BaseObjectMeta):
         global _collected_objects
         global _collected_object_classes
         if _problem_compilation:
+            self._parse_history = []
+            self._class_variable = self.name
             _collected_object_classes.add(self.__class__.__name__)
             if not self.__class__.__name__ in _collected_objects:
                 _collected_objects[self.__class__.__name__] = [ self.name ]
@@ -935,7 +937,7 @@ class PlannedAction():
         global _collected_effects
         global _selector_out
         global _effect_compilation
-        assert _selector_out is None, "Selector operators used outside of Select() decorator"
+        assert _selector_out is None, "Selector operators used outside of Select() decorator while compiling %s in %s" % (cls, problem)
         _collected_predicates = []
         _collected_parameters = {}
         _collected_effects = []
@@ -1028,10 +1030,10 @@ class Problem:
         rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
         self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, self.__class__.__name__, str(datetime.date.today()),rnd)
         os.makedirs(self.folder_name, exist_ok=True)
-        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_domain())
         with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
             fd.write(self.compile_problem())
+        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
+            fd.write(self.compile_domain())
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
         runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
@@ -1074,7 +1076,7 @@ class Problem:
         actions = self.get_actions()
         predicates = self.get_predicates()
         if HASHNUM_ID_PREDICATE in predicates:
-            self._has_imaginary = True
+            self._has_imaginary = True # TODO REMOVE as this does not work due to order of compilation
         types = self.get_types()
         return """
 (define (domain poodle-generated)
@@ -1091,7 +1093,9 @@ class Problem:
 )""".format(types=types, predicates=predicates, actions=actions)
 
     def has_imaginary(self):
-        return self._has_imaginary
+        #return self._has_imaginary # this does not work as order of compilation prevents
+        return True # TODO: find a way to detect if imaginary objects are present
+        # one option
 
     def gen_hashnums(self):
         for i in range(self.HASHNUM_COUNT): 
@@ -1117,6 +1121,8 @@ class Problem:
         _compilation = True # required to compile the goal
         _collected_effects = []
         self.goal()
+        global _selector_out
+        _selector_out = None # cleaner goal
         self.collected_goal = _collected_effects
         _compilation = False
         _problem_compilation = False
