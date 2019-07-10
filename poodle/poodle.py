@@ -15,6 +15,7 @@
 # TODO: required properties
 # TODO: if/else concept!
 
+from jinja2 import Template
 import string
 import random
 import inspect
@@ -886,6 +887,13 @@ class PlannedAction():
             return "./template/{0}.j2".format(self.__class__.__name__)
         return selt.template
 
+    def templateMe(self):
+        fileIn = ""
+        with open(self.getTemplate(), "r") as fd:
+            fileIn = fd.read()
+        template = Template(fileIn)
+        print(template.render(name=u'Вася'))
+
     @classmethod
     def compile(cls):
         # TODO: acquire lock for multithreaded!!!
@@ -1115,6 +1123,3 @@ class ActionClassLoader:
         with open(outPlanFile, "r") as fd:
             for planLine in fd:
                 self.load(planLine.replace("(", "").replace(")", ""))
-
-    def templateMe(self):
-        pass
