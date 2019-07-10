@@ -284,6 +284,7 @@ class Property(object):
             assert other._value == self._value, "Property-Property check type mismatch: %s != %s" % (other._value, self._value)
             if operator == "contains":
                 assert not isinstance(other, Relation), "Can not check Relation in Relation"
+            print("####################### USED other value for subjObjectClass")
             subjObjectClass = other._value
             property_property_comparison = True
         else: # TODO: elif and else with ValueError
@@ -330,7 +331,13 @@ class Property(object):
         
         # If we are property of an Object and this Object is not an instance
         #     then someone requested us to return our parent Object type when matched
-        if type(self._property_of) is BaseObjectMeta and not hasattr(self, "_property_of_inst"):
+        print("AAAAAAAAAA", type(self._property_of), hasattr(self, "_property_of_inst"))
+        if hasattr(self, "_property_of_inst"):
+            print("AAAA", self._property_of_inst)
+        print("SUBJ is", subjObjectClass)
+        if not hasattr(self, "_property_of_inst") and not hasattr(other, "_property_of_inst") and not isinstance(other, Object):
+            raise AssertionError("Both LHS and RHS are classes. Do not know what to instantiate.")
+        elif type(self._property_of) is BaseObjectMeta and not hasattr(self, "_property_of_inst"):
             log.debug("OPERATOR: Decided to return SELF.property_of()")
             obj=self._property_of() # contains who am I the property of.. (meta)
             who_instantiating = "self"
@@ -388,7 +395,7 @@ class Property(object):
                     log.debug("OPERATOR: Found other porperty variable {0} {1} {2}".format(other._property_of_inst._class_variable, other_class_name, other._property_of_inst))
                     other_genvar = other._property_of_inst._class_variable
             elif not hasattr(other, "_property_of_inst"):
-                if other._class_variable:
+                if hasattr(other, "_class_variable") and other._class_variable:
                     log.debug("OPERATOR: Found other instance variable {0} {1}".format(other._class_variable, other_class_name))
                     other_genvar = other._class_variable
             else:
@@ -463,6 +470,7 @@ class Property(object):
         #       store the variable in object returned - and use it first whenever needed
 
         # store variable that we created for the returning object
+        print("- WHO INST", who_instantiating)
         if who_instantiating == "self": # returning object is our class, and we just invented a new variable name for us
             log.debug("OPERATOR setting class variable myclass genvar to {0} {1}".format(myclass_genvar, my_class_name))
             obj._class_variable = myclass_genvar
@@ -511,6 +519,7 @@ class Property(object):
             for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
+        print("    ----- - - - -- -  -RETURNING", obj)
         return obj
         
     def equals(self, other):

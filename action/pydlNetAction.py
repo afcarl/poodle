@@ -38,7 +38,7 @@ class ConsumePacket(PlannedAction):
         self.packet.is_consumed.set() # = False
         self.packet.current_packet.unset()
 
-print('"'+ConsumePacket.compile(None).strip()+'"')
+#print('"'+ConsumePacket.compile(None).strip()+'"')
 
 class ConsumePacketSelectInv(PlannedAction):
     cost = 1
@@ -66,7 +66,7 @@ class ConsumePacketSelectInv(PlannedAction):
         self.packet.is_consumed.set() # = False
         self.packet.current_packet.unset()
 
-print('"'+ConsumePacketSelectInv.compile(None).strip()+'"')
+#print('"'+ConsumePacketSelectInv.compile(None).strip()+'"')
 
 class ConsumePacketSelect(PlannedAction):
     cost = 1
@@ -117,7 +117,7 @@ class ForwardPacketToInterface(PlannedAction):
         # TODO: set() could automatically issue an unset()
         self.packet.at_interface_input.set(self.interface2)
 
-print(ForwardPacketToInterface.compile(None))
+#print(ForwardPacketToInterface.compile(None))
         
 class ForwardPacketInSwitch(PlannedAction):
 
@@ -165,6 +165,7 @@ class ForwardPacketToRouteInTable(PlannedAction):
     route = Select(Route in table.has_route) # Route is also imaginary
     route_dot_network = Select(Network == route.network) # TODO: need just a dereference...
     # Need static function: net_match(packet.dst_ipaddr, route.network))
+    print("VAR 1 ------------------------------------")
     interface_dest = Select(Interface.has_ipaddr == route.gw_ipaddr)
 
     # TODO: not exists narrower...
@@ -192,9 +193,7 @@ class ForwardPacketToRouteInTable(PlannedAction):
         self.packet.at_interface_output = self.interface # TODO remove when above is supported
         self.packet.dst_macaddr = self.interface_dest
 
-print("Compiling imaginary test")
-print(ForwardPacketToRouteInTable.compile(None))
-print("End compiling imaginary test")
+print(ForwardPacketToRouteInTable.compile(Problem()))
 
 class TestImaginaryCreate(PlannedAction):
     host = Host()
@@ -223,4 +222,54 @@ class TestImaginaryCreate(PlannedAction):
         route.interface = self.interface
         self.problem.addObject(table)
 
-print(TestImaginaryCreate.compile(Problem()))
+#print(TestImaginaryCreate.compile(Problem()))
+
+
+class HopToRoute(PlannedAction):
+    "Relay the packet to route in the host"
+    host = Host()
+    print("MY VAR ------------------------------------")
+    packet = Select(Packet.at_interface_input in host.has_interface)
+    table = Select(Table in host.has_table)
+    route = Select(Route in table.has_route)
+    route_dot_interface = Select(Interface == route.interface)
+
+    def selector(self):
+        return True
+
+    def effect(self):
+        self.packet.at_interface_input.unset()
+        self.packet.at_interface_output = self.route_dot_interface
+        
+print(HopToRoute.compile(Problem()))
+
+class CreateRoute(PlannedAction):
+    host = Host()
+    packet = Select(Packet.at_interface_input in host.has_interface)
+    table = Select(Table in host.has_table)
+    interface = Select(Interface in host.has_interface)
+
+    def selector(self):
+        return True
+
+    def effect(self):
+        r = Route()
+        r.interface = self.interface
+        self.table.has_route.add(r)
+        self.problem.addObject(r)
+
+class Cando():
+    pass
+
+class Model1(Cando):
+    def __init__(self):
+        self.actionModel = [
+                Packet.at_interface_input == Host.has_interface,
+                CreateRoute,
+                HopToRoute,
+                ForwardPacketToInterface,
+                ConsumePacket
+        ]
+
+
+    

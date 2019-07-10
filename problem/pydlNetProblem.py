@@ -17,7 +17,7 @@ class IPFactory():
 class SimpleTestProblem1(Problem):
 
     def actions(self):
-        return [ ConsumePacketSelect, ForwardPacketToInterface ]
+        return [ ConsumePacketSelect, ForwardPacketToInterface, CreateRoute, HopToRoute ]
 
     def problem(self):
         
@@ -32,7 +32,9 @@ class SimpleTestProblem1(Problem):
         self.host1 = self.addObject(Host())
         interface = self.addObject(Interface(value='eth0'))
         interface.has_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.1"))
+        self.interface_dummyinput = self.addObject(Interface("eth1"))
         self.host1.has_interface.add(interface)
+        self.host1.has_interface.add(self.interface_dummyinput)
         self.host2 = Host()
         self.interface2 = self.addObject(Interface(value='eth0'))
         self.interface2.has_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.2"))
@@ -51,7 +53,8 @@ class SimpleTestProblem1(Problem):
         
         # this does not work! TODO: protect from this happening
         #self.packet.at_interface_input = self.host1.has_interface
-        self.packet.at_interface_output = interface
+        #self.packet.at_interface_output = interface
+        self.packet.at_interface_input = self.interface_dummyinput
 
     def goal(self):
         return self.packet.is_consumed == True
