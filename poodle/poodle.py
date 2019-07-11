@@ -753,7 +753,9 @@ class StateFact(Property):
             raise NotImplementedError("Comparing StateFact to False is not supported")
         global _problem_compilation
         if _problem_compilation:
-            _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
+            text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
+            # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
+            _collected_effects.append(text_predicate)
         else:
             self._prepare() # not sure if this is needed here???
             text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
