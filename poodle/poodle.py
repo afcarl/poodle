@@ -174,7 +174,9 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
     global _collected_predicate_templates
     global _collected_object_classes
     if property_name: predicate_name = class_name+"-"+property_name
-    else: predicate_name = class_name
+    else: 
+        predicate_name = class_name
+        class_name = None
     #if not imaginary:
         # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
     # TODO HERE: looks like we can match the class by "id" which is N-hashnum variable
@@ -1161,7 +1163,7 @@ class Problem:
     def get_types(self):
         # collect all types used in both actions and problem objects
         global _collected_object_classes
-        return ' '.join(list(_collected_object_classes))
+        return ' '.join(list(filter(None, list(_collected_object_classes))))
 
     def compile_domain(self):
         actions = self.get_actions()
