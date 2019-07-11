@@ -95,6 +95,17 @@ def Select(what):
     ret = _selector_out
     _selector_out = None
     return ret
+    
+def Unselect(what):
+    global _collected_predicates
+    ret = Select(what)
+    if ret._parse_history[-1]["text_predicates"][-1] != None:
+        raise AssertionError("Complex Unselect()'s are not supported")
+    if _collected_predicates[-1] != None:
+        raise AssertionError("Complex Unselect()'s are not supported")
+    assert ret._parse_history[-1]["text_predicates"][0] == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
+    _collected_predicates[-2] = "(not %s)" % _collected_predicates[-2]
+    return ret
 
 # https://stackoverflow.com/a/2257449
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
