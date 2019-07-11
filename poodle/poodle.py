@@ -173,7 +173,8 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
 # def gen_text_predicate_globals(predicate_name, var1, var1_class, var2, var2_class):
     global _collected_predicate_templates
     global _collected_object_classes
-    predicate_name = class_name+"-"+property_name
+    if property_name: predicate_name = class_name+"-"+property_name
+    else: predicate_name = class_name
     #if not imaginary:
         # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
     # TODO HERE: looks like we can match the class by "id" which is N-hashnum variable
@@ -597,11 +598,15 @@ class Property(object):
         self._actual_value = value
         if _problem_compilation:
             global _collected_facts
-            _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
+            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            _collected_facts.append(text_predicate)
             return
         self._prepare(value)
         global _collected_effects
-        _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
+        text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, value.class_variable(), value.__class__.__name__)
+        # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
+        _collected_effects.append(text_predicate)
         
     def unset(self, what = None):
         # we need to unset the value that we selected for us
@@ -609,9 +614,13 @@ class Property(object):
         global _collected_effects
         if what is None: 
             log.warning("WARNING! Using experimental support for what=None")
-            _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable()+"))")
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, self.find_parameter_variable(), self._value.__name__)
+            # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable()+"))")
+            _collected_effects.append("(not %s)" % text_predicate)
         else:
-            _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, what._class_variable, what.__class__.__name__)
+            # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
+            _collected_effects.append("(not %s)" % text_predicate)
         self._unset = True
    
     def __getattr__(self, attr):
@@ -726,7 +735,9 @@ class StateFact(Property):
         self._prepare()
         global _collected_effects
         # TODO: do we need to generate this??
-        _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
+        text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+        # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
+        _collected_effects.append("(not %s)" % text_predicate)
 
     def __eq__(self, other):
         "StateFact can only be compared to True or False"
