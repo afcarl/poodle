@@ -295,6 +295,8 @@ class Property(object):
         global _collected_predicates
         global _collected_parameters
         global _collected_predicate_templates
+        global _problem_compilation
+        global _collected_effects
         # TODO: multi-positional checks
         
         # PART 1.
@@ -532,18 +534,18 @@ class Property(object):
                 else:
                     log.warning("WARNING! Not setting other variable to {0} as it already has {1}".format(other_genvar, other._class_variable))
 
-        
-        obj._parse_history.append({
-            "operator": operator, 
-            "self": self, 
-            "other": subjObjectClass, 
-            "self-prop": self._value, 
-            #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
-            "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
-            "class_variables": { my_class_name: myclass_genvar },
-            "text_predicates": [text_predicate, text_predicate_2],
-            "parameters": collected_parameters
-        })
+        if not _problem_compilation: # prevents leak of goal into predicates...
+            obj._parse_history.append({
+                "operator": operator, 
+                "self": self, 
+                "other": subjObjectClass, 
+                "self-prop": self._value, 
+                #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+                "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
+                "class_variables": { my_class_name: myclass_genvar },
+                "text_predicates": [text_predicate, text_predicate_2],
+                "parameters": collected_parameters
+            })
         #print("OPERATOR-HIST-2", _parse_history)
 
         # this is required for the variables to become available at selector compilation
@@ -551,7 +553,9 @@ class Property(object):
         if has_poi and not hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history = _parse_history
         if has_poi and hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history += _parse_history
         
-        if _compilation:
+        if _problem_compilation:
+            _collected_effects += [text_predicate, text_predicate_2]
+        elif _compilation:
             # because in compilation mode our _parse_history now contains merged history ->>>
             for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
@@ -1185,6 +1189,7 @@ class Problem:
         global _collected_object_classes
         global _collected_facts
         global _collected_effects
+        global _collected_predicates
         _problem_compilation = True
         _collected_object_classes = set()
         _collected_objects = {}
@@ -1197,9 +1202,13 @@ class Problem:
         _compilation = True # required to compile the goal
         _collected_effects = []
         self.goal()
+        print("+++++++++++++++++", _collected_effects, _collected_predicates)
         global _selector_out
         _selector_out = None # cleaner goal
-        self.collected_goal = _collected_effects
+        self.collected_goal = list(filter(None, _collected_effects)) # filtering is not required...
+        _collected_predicates = []
+        _collected_effects = []
+        
         _compilation = False
         _problem_compilation = False
         txt_objects = ""
