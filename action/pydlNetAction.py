@@ -232,7 +232,8 @@ class TestStaticObject(PlannedAction):
     packet = Select(Packet.at_interface_input == interface)
 
     def selector(self):
-        return Select(self.packet.at_interface_input in self.host.has_interface)
+        return Select(self.packet.at_interface_input in self.host.has_interface \
+        and self.packet.at_interface_input == self.problem.testif)
 
     def effect(self):
         self.packet.at_interface_input = self.problem.testif

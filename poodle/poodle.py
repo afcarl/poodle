@@ -793,6 +793,7 @@ class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
         global _effect_compilation
+        global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
         if _effect_compilation and not self.__imaginary__:
             raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
@@ -800,11 +801,12 @@ class Object(metaclass=BaseObjectMeta):
         name = None
         self._class_variable = gen_var(self.__class__.__name__, prefix="default-")
         self.value = value
-        if name is None: # WARNING name must always be none
-            frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
-            name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
-        self.name = self.gen_name(name) # object name when instantiating..
-        global _problem_compilation
+        self.name = ""
+        if _problem_compilation:
+            if name is None: # WARNING name must always be none
+                frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
+                name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
+            self.name = self.gen_name(name) # object name when instantiating..
         global _collected_objects
         global _collected_object_classes
         if _problem_compilation:
