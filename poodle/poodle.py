@@ -106,13 +106,13 @@ def new_id():
     id_counter += 1
     return id_counter
 
-def gen_var(name):
-    return "?%s-%s" % (name, new_id())
+def gen_var(name, prefix=""):
+    return "?%s%s-%s" % (prefix, name, new_id())
 
-def gen_var_imaginary(name, depth=2):
+def gen_var_imaginary(name, depth=2, prefix=""):
     # TODO: depth support for more than 2 hashnums
     hid = new_id()
-    return "?%s1-%s ?%s2-%s" % (HASHNUM_VAR_NAME, hid, HASHNUM_VAR_NAME, hid)
+    return "?%s%s1-%s ?%s%s2-%s" % (prefix, HASHNUM_VAR_NAME, hid, prefix, HASHNUM_VAR_NAME, hid)
 
 def gen_hashnums(amount):
     global _collected_facts
@@ -418,6 +418,8 @@ class Property(object):
                 log.debug("OPERATOR Skipping getting variable from instances")
                 pass
                 
+        if has_poi and self._property_of_inst._class_variable:
+            myclass_genvar = self._property_of_inst._class_variable
         # WARNING@!!!! finding variables in history is obsolete and UNSAFE!!!
         if _parse_history:
             if not other_genvar:
@@ -796,7 +798,7 @@ class Object(metaclass=BaseObjectMeta):
             raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
         self.__unlock_setter = True
         name = None
-        self._class_variable = None
+        self._class_variable = gen_var(self.__class__.__name__, prefix="default-")
         self.value = value
         if name is None: # WARNING name must always be none
             frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
@@ -904,6 +906,7 @@ class Imaginary(Object):
     def __init__(self):
         self.__imaginary__ = True
         super().__init__()
+        self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-default-")
         global _effect_compilation
         global _collected_predicates
         global _collected_effects
