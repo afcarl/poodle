@@ -634,10 +634,11 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
         self.pod1.status.set(self.problem.statusNodeDeleted)
 
 class ExitBrakePointForRequest(PlannedAction):
-    cost = 1000
+    cost = 1
     request1 = Request()
+    status1 = Status()
     def selector(self):
-        return Select( self.request1.status != self.problem.statusReqRequestFinished) 
+        return Select( self.request1.status == self.status1) 
 
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
