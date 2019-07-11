@@ -164,12 +164,11 @@ class ToLoadbalancer(PlannedAction):
     request1 = Request()
     serviceTarget = Select(Service == request1.targetService)
     lb = Loadbalancer()
-    lbServedService = Select( Service in lb.selectionedService)
     lbNode = Select(Node == lb.atNode)
 
     def selector(self):
-        return Select( self.serviceTarget == self.lbServedService and \
-        request1.status == self.problem.statusReqAtStart)
+        return Select( self.serviceTarget in self.lb.selectionedService and \
+        self.request1.status == self.problem.statusReqAtStart)
     
     def effect(self):
         self.request1.status.set(self.problem.statusReqAtLoadbalanser)
@@ -875,10 +874,10 @@ class Problem1(Problem):
         self.kp3.selectionedService.add(self.service2)
         
     def goal(self):
-        return self.request1 == self.statusReqRequestFinished and \
-        self.request2 == self.statusReqRequestFinished and \
-        self.request3 == self.statusReqRequestFinished and \
-        self.request4 == self.statusReqRequestFinished
+        return self.request1.status == self.statusReqRequestFinished and \
+        self.request2.status == self.statusReqRequestFinished and \
+        self.request3.status == self.statusReqRequestFinished and \
+        self.request4.status == self.statusReqRequestFinished
 
 p = Problem1()
 retCode = p.run()
