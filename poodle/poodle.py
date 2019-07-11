@@ -1202,7 +1202,7 @@ class Problem:
         _compilation = True # required to compile the goal
         _collected_effects = []
         self.goal()
-        print("+++++++++++++++++", _collected_effects, _collected_predicates)
+        # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         global _selector_out
         _selector_out = None # cleaner goal
         self.collected_goal = list(filter(None, _collected_effects)) # filtering is not required...
