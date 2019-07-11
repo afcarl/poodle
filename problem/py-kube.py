@@ -460,22 +460,22 @@ class TerminatePod(PlannedAction):
 # Scaling
 ### Replicas
 
-# class ReadDeploymentConfig(PlannedAction):
-#     pod1 = Pod()
-#     def selector(self):
-#         Select(self.pod1.status == self.problem.statusPodAtConfig)
+class ReadDeploymentConfig(PlannedAction):
+    pod1 = Pod()
+    def selector(self):
+        Select(self.pod1.status == self.problem.statusPodAtConfig)
     
-#     def effect(self):
-# ###bug        self.pod1.status.set(self.problem.statusPodPending) 
+    def effect(self):
+        self.pod1.status.set(self.problem.statusPodPending) 
         
 
-# class CreatePodManually(PlannedAction):
-#     pod1 = Pod()
-#     def selector(self):
-#         return Select(self.pod1.status == self.problem.statusPodAtManualCreation)
+class CreatePodManually(PlannedAction):
+    pod1 = Pod()
+    def selector(self):
+        return Select(self.pod1.status == self.problem.statusPodAtManualCreation)
 
-#     def effect(self):
-# ###bug        self.pod1.status.set(self.problem.statusPodPending)
+    def effect(self):
+        self.pod1.status.set(self.problem.statusPodPending)
 
 class SchedulerNofityUnboundedPod(PlannedAction):
     pod1 = Pod()
@@ -504,9 +504,9 @@ class SchedulerNofityUnboundedPod(PlannedAction):
     
     def effect(self):
         self.pod1.status.set(self.problem.statusPodBindedToNode)
-        ###bug self.pod1.bindedToNode.set(self.node1)
-       ###bug self.node1.currentFormalMemConsumption.set(self.newFormalMemConsumptionAtNode_res_res)
-        ### bug self.node1.currentFormalCpuConsumption.set(self.newFormalCpuConsumptionAtNode_res_res)
+        self.pod1.bindedToNode.set(self.node1)
+        self.node1.currentFormalMemConsumption.set(self.newFormalMemConsumptionAtNode_res_res)
+        self.node1.currentFormalCpuConsumption.set(self.newFormalCpuConsumptionAtNode_res_res)
 
 class KubectlStartsPod(PlannedAction):
     pod1 = Pod()
@@ -692,9 +692,7 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
             
 class Problem1(Problem):
     def actions(self):
-        return [ToLoadbalancer, DirectToNode, ToNode, SwitchToNextNode, DirectToPod, ToPod, SwitchToNextPod, ConsumeResource, ProcessTempRequest, ProcessPersistentRequest, ReleaseResource, FinishRequest, TerminatePodAfterFinish, TerminatePod, \
-        #### ReadDeploymentConfig, CreatePodManually, 
-            SchedulerNofityUnboundedPod, KubectlStartsPod, MarkPodAsOverwhelmingMemLimits, MarkPodAsNonoverwhelmingMemLimits, MemoryErrorKillPodOverwhelmingLimits, MemoryErrorKillPodNotOverwhelmingLimits, PodFailsBecauseOfKilling, PodSucceds, KubectlRecoverPod, PodGarbageCollectedFailedPod, PodGarbageCollectedSuccededPod]
+        return [ToLoadbalancer, DirectToNode, ToNode, SwitchToNextNode, DirectToPod, ToPod, SwitchToNextPod, ConsumeResource, ProcessTempRequest, ProcessPersistentRequest, ReleaseResource, FinishRequest, TerminatePodAfterFinish, TerminatePod, ReadDeploymentConfig, CreatePodManually, SchedulerNofityUnboundedPod, KubectlStartsPod, MarkPodAsOverwhelmingMemLimits, MarkPodAsNonoverwhelmingMemLimits, MemoryErrorKillPodOverwhelmingLimits, MemoryErrorKillPodNotOverwhelmingLimits, PodFailsBecauseOfKilling, PodSucceds, KubectlRecoverPod, PodGarbageCollectedFailedPod, PodGarbageCollectedSuccededPod]
 
     def problem(self):
         self.numberFactory = NumberFactory()
