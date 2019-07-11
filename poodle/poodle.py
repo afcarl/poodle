@@ -96,6 +96,17 @@ def Select(what):
     ret = _selector_out
     _selector_out = None
     return ret
+    
+def Unselect(what):
+    global _collected_predicates
+    ret = Select(what)
+    if ret._parse_history[-1]["text_predicates"][-1] != None:
+        raise AssertionError("Complex Unselect()'s are not supported")
+    if _collected_predicates[-1] != None:
+        raise AssertionError("Complex Unselect()'s are not supported")
+    assert ret._parse_history[-1]["text_predicates"][0] == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
+    _collected_predicates[-2] = "(not %s)" % _collected_predicates[-2]
+    return ret
 
 # https://stackoverflow.com/a/2257449
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
@@ -107,13 +118,13 @@ def new_id():
     id_counter += 1
     return id_counter
 
-def gen_var(name):
-    return "?%s-%s" % (name, new_id())
+def gen_var(name, prefix=""):
+    return "?%s%s-%s" % (prefix, name, new_id())
 
-def gen_var_imaginary(name, depth=2):
+def gen_var_imaginary(name, depth=2, prefix=""):
     # TODO: depth support for more than 2 hashnums
     hid = new_id()
-    return "?%s1-%s ?%s2-%s" % (HASHNUM_VAR_NAME, hid, HASHNUM_VAR_NAME, hid)
+    return "?%s%s1-%s ?%s%s2-%s" % (prefix, HASHNUM_VAR_NAME, hid, prefix, HASHNUM_VAR_NAME, hid)
 
 def gen_hashnums(amount):
     global _collected_facts
@@ -279,7 +290,7 @@ class Property(object):
                 break
         return myclass_genvar
     
-    def operator(self, other, operator="equals"):
+    def operator(self, other, operator="equals", dir_hint="straight"):
         assert operator == "equals" or operator == "contains"
         global _compilation
         global _collected_predicates
@@ -369,7 +380,11 @@ class Property(object):
                 # PART 3.1.
                 # in compilation mode, we can return anything we want as result is not being used in later computations
                 log.debug("OPERATOR IN COMPILATION/SELECTOR MODE")
-                obj = self._value()
+                # obj = self._value()
+                if dir_hint == "reverse": # for ABC.RSelect support
+                    obj = other._property_of_inst
+                else:
+                    obj = self._property_of_inst
                 who_instantiating = None
             else:
                 raise ValueError("No class to select is present in selector expression. Both LHS and RHS are instances.")
@@ -419,6 +434,8 @@ class Property(object):
                 log.debug("OPERATOR Skipping getting variable from instances")
                 pass
                 
+        if has_poi and self._property_of_inst._class_variable:
+            myclass_genvar = self._property_of_inst._class_variable
         # WARNING@!!!! finding variables in history is obsolete and UNSAFE!!!
         if _parse_history:
             if not other_genvar:
@@ -792,18 +809,20 @@ class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
         global _effect_compilation
+        global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
         if _effect_compilation and not self.__imaginary__:
             raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
         self.__unlock_setter = True
         name = None
-        self._class_variable = None
+        self._class_variable = gen_var(self.__class__.__name__, prefix="default-")
         self.value = value
-        if name is None: # WARNING name must always be none
-            frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
-            name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
-        self.name = self.gen_name(name) # object name when instantiating..
-        global _problem_compilation
+        self.name = ""
+        if _problem_compilation:
+            if name is None: # WARNING name must always be none
+                frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
+                name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
+            self.name = self.gen_name(name) # object name when instantiating..
         global _collected_objects
         global _collected_object_classes
         if _problem_compilation:
@@ -844,6 +863,33 @@ class Object(metaclass=BaseObjectMeta):
         #        break
         #return myclass_genvar
     
+    @classmethod
+    def Select(cls, **kwargs):
+        "ret = Class.Select(prop1=inst1,prop2=inst2,...) is equivalent to \
+        v1=Select(Class.prop1 in/== inst1) and ret = Select(v1.prop2 in/== inst2)"
+        global _compilation
+        ret = cls
+        _compilation = True
+        for k,v in kwargs.items(): 
+            ret = getattr(ret,k).operator(v)
+        _compilation = False
+        return ret
+     
+    @classmethod
+    def RSelect(cls, **kwargs):
+        "ret = Class.RSelect(prop1=inst1,prop2=inst2,...) is equivalent to \
+        v1=Select(inst1 in/== Class.prop1) and ret = Select(inst2 in/== v1.prop2)"
+        global _compilation
+        # ret1 = list(kwargs.items())[0][1].operator(getattr(cls,list(kwargs.items())[0][0]))
+        # ret = ret1
+        ret = cls
+        _compilation = True
+        # for k,v in list(kwargs.items())[1:]: 
+        for k,v in kwargs.items(): 
+            ret = v.operator(getattr(ret,k),dir_hint="reverse")
+        _compilation = False
+        return ret
+        
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
@@ -905,6 +951,7 @@ class Imaginary(Object):
     def __init__(self):
         self.__imaginary__ = True
         super().__init__()
+        self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-default-")
         global _effect_compilation
         global _collected_predicates
         global _collected_effects
@@ -982,7 +1029,7 @@ class PlannedAction():
         _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(_collected_predicates))))
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
-        assert len(_collected_predicates) > 0, "Action %s has no precondition" % cls.__name__
+        assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
         for ob in _collected_parameters:
             if " " in ob:
                 # WARNING! this is because of how imaginary variables are implemented

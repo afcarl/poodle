@@ -83,8 +83,8 @@ class ConsumePacketSelect(PlannedActionJinja2):
     
     def selector(self):
         # TODO: when implementing and/or protection - compilation mode should switch to return True
-        return Select(self.packet.dst_ipaddr == self.interface_any.has_ipaddr \
-                and self.interface1.has_ipaddr == self.packet.dst_ipaddr)
+        return Select(self.packet.dst_ipaddr == self.interface_any.has_ipaddr)
+                # and self.interface1.has_ipaddr == self.packet.dst_ipaddr) # incorrect, add to unit test
     
     def effect(self):
         self.packet_next.current_packet.set() # = True
@@ -194,6 +194,32 @@ class ForwardPacketToRouteInTable(PlannedAction):
 
 print(ForwardPacketToRouteInTable.compile(Problem()))
 
+class TestABCSelect(PlannedAction):
+    host = Host()
+    ipaddr = IPAddr()
+    packet = Packet.Select(at_interface_input=host.has_interface, dst_ipaddr=ipaddr)
+    
+    def selector(self):
+        return True
+        
+    def effect(self):
+        self.packet.src_ipaddr = self.ipaddr
+print(TestABCSelect.compile(Problem()))
+
+class TestABCRSelect(PlannedAction):
+    packet = Packet()
+    ipaddr = IPAddr()
+    table = Table()
+    host2 = Host()
+    host = Host.RSelect(has_interface=packet.at_interface_input, has_table=host2.has_table)
+    
+    def selector(self):
+        return Select(self.packet.at_interface_output in self.host.has_interface)
+        
+    def effect(self):
+        self.packet.src_ipaddr = self.ipaddr
+print(TestABCRSelect.compile(Problem()))
+
 class TestImaginaryCreate(PlannedAction):
     host = Host()
     packet = Packet()
@@ -229,7 +255,9 @@ class TestStaticObject(PlannedAction):
     packet = Select(Packet.at_interface_input == interface)
 
     def selector(self):
-        return Select(self.packet.at_interface_input in self.host.has_interface)
+        # return Select(self.packet.at_interface_input in self.host.has_interface \
+        # and self.packet.at_interface_input == self.problem.testif) and \
+        return Unselect(self.host.has_interface == self.interface)
 
     def effect(self):
         self.packet.at_interface_input = self.problem.testif
