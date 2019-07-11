@@ -197,6 +197,32 @@ class ForwardPacketToRouteInTable(PlannedAction):
 
 print(ForwardPacketToRouteInTable.compile(Problem()))
 
+class TestABCSelect(PlannedAction):
+    host = Host()
+    ipaddr = IPAddr()
+    packet = Packet.Select(at_interface_input=host.has_interface, dst_ipaddr=ipaddr)
+    
+    def selector(self):
+        return True
+        
+    def effect(self):
+        self.packet.src_ipaddr = self.ipaddr
+print(TestABCSelect.compile(Problem()))
+
+class TestABCRSelect(PlannedAction):
+    packet = Packet()
+    ipaddr = IPAddr()
+    table = Table()
+    host2 = Host()
+    host = Host.RSelect(has_interface=packet.at_interface_input, has_table=host2.has_table)
+    
+    def selector(self):
+        return Select(self.packet.at_interface_output in self.host.has_interface)
+        
+    def effect(self):
+        self.packet.src_ipaddr = self.ipaddr
+print(TestABCRSelect.compile(Problem()))
+
 class TestImaginaryCreate(PlannedAction):
     host = Host()
     packet = Packet()

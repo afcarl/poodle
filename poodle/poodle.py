@@ -289,7 +289,7 @@ class Property(object):
                 break
         return myclass_genvar
     
-    def operator(self, other, operator="equals"):
+    def operator(self, other, operator="equals", dir_hint="straight"):
         assert operator == "equals" or operator == "contains"
         global _compilation
         global _collected_predicates
@@ -379,7 +379,11 @@ class Property(object):
                 # PART 3.1.
                 # in compilation mode, we can return anything we want as result is not being used in later computations
                 log.debug("OPERATOR IN COMPILATION/SELECTOR MODE")
-                obj = self._value()
+                # obj = self._value()
+                if dir_hint == "reverse": # for ABC.RSelect support
+                    obj = other._property_of_inst
+                else:
+                    obj = self._property_of_inst
                 who_instantiating = None
             else:
                 raise ValueError("No class to select is present in selector expression. Both LHS and RHS are instances.")
@@ -858,6 +862,33 @@ class Object(metaclass=BaseObjectMeta):
         #        break
         #return myclass_genvar
     
+    @classmethod
+    def Select(cls, **kwargs):
+        "ret = Class.Select(prop1=inst1,prop2=inst2,...) is equivalent to \
+        v1=Select(Class.prop1 in/== inst1) and ret = Select(v1.prop2 in/== inst2)"
+        global _compilation
+        ret = cls
+        _compilation = True
+        for k,v in kwargs.items(): 
+            ret = getattr(ret,k).operator(v)
+        _compilation = False
+        return ret
+     
+    @classmethod
+    def RSelect(cls, **kwargs):
+        "ret = Class.RSelect(prop1=inst1,prop2=inst2,...) is equivalent to \
+        v1=Select(inst1 in/== Class.prop1) and ret = Select(inst2 in/== v1.prop2)"
+        global _compilation
+        # ret1 = list(kwargs.items())[0][1].operator(getattr(cls,list(kwargs.items())[0][0]))
+        # ret = ret1
+        ret = cls
+        _compilation = True
+        # for k,v in list(kwargs.items())[1:]: 
+        for k,v in kwargs.items(): 
+            ret = v.operator(getattr(ret,k),dir_hint="reverse")
+        _compilation = False
+        return ret
+        
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
@@ -998,7 +1029,7 @@ class PlannedAction():
         _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(_collected_predicates))))
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
-        assert len(_collected_predicates) > 0, "Action %s has no precondition" % cls.__name__
+        assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
         for ob in _collected_parameters:
             if " " in ob:
                 # WARNING! this is because of how imaginary variables are implemented
