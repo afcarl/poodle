@@ -174,7 +174,8 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
 # def gen_text_predicate_globals(predicate_name, var1, var1_class, var2, var2_class):
     global _collected_predicate_templates
     global _collected_object_classes
-    predicate_name = class_name+"-"+property_name
+    if property_name: predicate_name = class_name+"-"+property_name
+    else: predicate_name = class_name
     #if not imaginary:
         # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
     # TODO HERE: looks like we can match the class by "id" which is N-hashnum variable
@@ -296,6 +297,8 @@ class Property(object):
         global _collected_predicates
         global _collected_parameters
         global _collected_predicate_templates
+        global _problem_compilation
+        global _collected_effects
         # TODO: multi-positional checks
         
         # PART 1.
@@ -533,18 +536,18 @@ class Property(object):
                 else:
                     log.warning("WARNING! Not setting other variable to {0} as it already has {1}".format(other_genvar, other._class_variable))
 
-        
-        obj._parse_history.append({
-            "operator": operator, 
-            "self": self, 
-            "other": subjObjectClass, 
-            "self-prop": self._value, 
-            #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
-            "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
-            "class_variables": { my_class_name: myclass_genvar },
-            "text_predicates": [text_predicate, text_predicate_2],
-            "parameters": collected_parameters
-        })
+        if not _problem_compilation: # prevents leak of goal into predicates...
+            obj._parse_history.append({
+                "operator": operator, 
+                "self": self, 
+                "other": subjObjectClass, 
+                "self-prop": self._value, 
+                #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+                "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
+                "class_variables": { my_class_name: myclass_genvar },
+                "text_predicates": [text_predicate, text_predicate_2],
+                "parameters": collected_parameters
+            })
         #print("OPERATOR-HIST-2", _parse_history)
 
         # this is required for the variables to become available at selector compilation
@@ -552,7 +555,9 @@ class Property(object):
         if has_poi and not hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history = _parse_history
         if has_poi and hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history += _parse_history
         
-        if _compilation:
+        if _problem_compilation:
+            _collected_effects += [text_predicate, text_predicate_2]
+        elif _compilation:
             # because in compilation mode our _parse_history now contains merged history ->>>
             for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
@@ -594,11 +599,15 @@ class Property(object):
         self._actual_value = value
         if _problem_compilation:
             global _collected_facts
-            _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
+            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            _collected_facts.append(text_predicate)
             return
         self._prepare(value)
         global _collected_effects
-        _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
+        text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, value.class_variable(), value.__class__.__name__)
+        # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
+        _collected_effects.append(text_predicate)
         
     def unset(self, what = None):
         # we need to unset the value that we selected for us
@@ -606,9 +615,14 @@ class Property(object):
         global _collected_effects
         if what is None: 
             log.warning("WARNING! Using experimental support for what=None")
-            _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable+"))")
+
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, self.find_parameter_variable(), self._value.__name__)
+            # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable()+"))")
+            _collected_effects.append("(not %s)" % text_predicate)
         else:
-            _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, what._class_variable, what.__class__.__name__)
+            # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
+            _collected_effects.append("(not %s)" % text_predicate)
         self._unset = True
    
     def __getattr__(self, attr):
@@ -723,7 +737,9 @@ class StateFact(Property):
         self._prepare()
         global _collected_effects
         # TODO: do we need to generate this??
-        _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
+        text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+        # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
+        _collected_effects.append("(not %s)" % text_predicate)
 
     def __eq__(self, other):
         "StateFact can only be compared to True or False"
@@ -1214,6 +1230,7 @@ class Problem:
         global _collected_object_classes
         global _collected_facts
         global _collected_effects
+        global _collected_predicates
         _problem_compilation = True
         _collected_object_classes = set()
         _collected_objects = {}
@@ -1226,9 +1243,13 @@ class Problem:
         _compilation = True # required to compile the goal
         _collected_effects = []
         self.goal()
+        # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         global _selector_out
         _selector_out = None # cleaner goal
-        self.collected_goal = _collected_effects
+        self.collected_goal = list(filter(None, _collected_effects)) # filtering is not required...
+        _collected_predicates = []
+        _collected_effects = []
+        
         _compilation = False
         _problem_compilation = False
         txt_objects = ""
