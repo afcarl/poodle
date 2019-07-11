@@ -28,6 +28,7 @@ class SimpleTestProblem1(Problem):
         packet2 = self.addObject(Packet())
         packet2.is_consumed = True
         self.packet.next = packet2
+        
         self.packet.dst_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.3"))
         self.host1 = self.addObject(Host())
         interface = self.addObject(Interface(value='eth0'))
@@ -39,6 +40,10 @@ class SimpleTestProblem1(Problem):
         self.interface2 = self.addObject(Interface(value='eth0'))
         self.interface2.has_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.2"))
         # self.interface2.has_ipaddr = self.host1
+        
+        # Now add tables to host1:
+        self.t = self.addObject(Table())
+        self.host1.has_table.add(self.t)
         
         self.interface3 = self.addObject(Interface(value='eth1'))
         self.interface3.has_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.3"))
@@ -53,7 +58,8 @@ class SimpleTestProblem1(Problem):
         
         # this does not work! TODO: protect from this happening
         #self.packet.at_interface_input = self.host1.has_interface
-        #self.packet.at_interface_output = interface
+        # self.packet.at_interface_output = interface
+        # Imaginary test:
         self.packet.at_interface_input = self.interface_dummyinput
 
     def goal(self):
