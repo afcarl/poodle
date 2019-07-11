@@ -175,7 +175,9 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
     global _collected_predicate_templates
     global _collected_object_classes
     if property_name: predicate_name = class_name+"-"+property_name
-    else: predicate_name = class_name
+    else: 
+        predicate_name = class_name
+        class_name = None
     #if not imaginary:
         # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
     # TODO HERE: looks like we can match the class by "id" which is N-hashnum variable
@@ -1047,6 +1049,7 @@ class PlannedAction():
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
         for ob in _collected_parameters:
+            if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
                 # WARNING! this is because of how imaginary variables are implemented
                 collected_parameters += "%s - %s " % (ob.split()[0], _collected_parameters[ob])
@@ -1188,7 +1191,7 @@ class Problem:
     def get_types(self):
         # collect all types used in both actions and problem objects
         global _collected_object_classes
-        return ' '.join(list(_collected_object_classes))
+        return ' '.join(list(filter(None, list(_collected_object_classes))))
 
     def compile_domain(self):
         actions = self.get_actions()
