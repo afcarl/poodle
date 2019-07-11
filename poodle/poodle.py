@@ -758,7 +758,8 @@ class StateFact(Property):
             _collected_effects.append(text_predicate)
         else:
             self._prepare() # not sure if this is needed here???
-            text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
+            # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
+            text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_effects.append(text_predicate)
         return True
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
