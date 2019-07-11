@@ -1048,6 +1048,7 @@ class PlannedAction():
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
         for ob in _collected_parameters:
+            if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
                 # WARNING! this is because of how imaginary variables are implemented
                 collected_parameters += "%s - %s " % (ob.split()[0], _collected_parameters[ob])
