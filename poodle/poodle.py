@@ -103,8 +103,10 @@ def Unselect(what):
         raise AssertionError("Complex Unselect()'s are not supported")
     if _collected_predicates[-1] != None:
         raise AssertionError("Complex Unselect()'s are not supported")
-    assert ret._parse_history[-1]["text_predicates"][0] == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
-    _collected_predicates[-2] = "(not %s)" % _collected_predicates[-2]
+    search_pred = ret._parse_history[-1]["text_predicates"][0]
+    assert search_pred == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
+    replace_pred = "(not %s)" % search_pred
+    _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
     return ret
 
 # https://stackoverflow.com/a/2257449

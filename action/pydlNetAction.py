@@ -254,8 +254,9 @@ print(TestImaginaryCreate.compile(Problem()))
 
 class TestStaticObject(PlannedAction):
     host = Host()
+    packet = Packet()
     interface = Select(Interface in host.has_interface)
-    packet = Select(Packet.at_interface_input == interface)
+    # packet = Select(Packet.at_interface_input == interface)
 
     def selector(self):
         # return Select(self.packet.at_interface_input in self.host.has_interface \
