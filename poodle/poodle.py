@@ -94,6 +94,7 @@ def Select(what):
     global _selector_out
     ret = _selector_out
     _selector_out = None
+    if not ret: return True
     return ret
     
 def Unselect(what):
@@ -107,6 +108,7 @@ def Unselect(what):
     assert search_pred == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
     replace_pred = "(not %s)" % search_pred
     _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
+    if not ret: return True
     return ret
 
 # https://stackoverflow.com/a/2257449
@@ -914,6 +916,14 @@ class Object(metaclass=BaseObjectMeta):
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
+        elif isinstance(other, Object):
+            assert self._class_variable and other._class_variable, "Expected fully initialized objects"
+            global _collected_predicates
+            global _collected_parameters
+            _collected_predicates.append("(= %s %s)" % (self._class_variable, other._class_variable))
+            _collected_parameters.update({self._class_variable: self.__class__.__name__, other._class_variable: other.__class__.__name__}) # TODO: could be done easier if we added them on init...
+            # raise NotImplementedError("Object-Object selector is not supported")
+            return True
         else:
             return super().__eq__(other)
     
@@ -1061,6 +1071,7 @@ class PlannedAction():
             else:
                 collected_parameters += "%s - %s " % (ob, _collected_parameters[ob])
         
+        assert len(collected_parameters) > 0
         return """
     (:action {action_name}
         :parameters ({parameters})

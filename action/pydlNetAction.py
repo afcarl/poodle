@@ -256,12 +256,13 @@ class TestStaticObject(PlannedAction):
     host = Host()
     packet = Packet()
     interface = Select(Interface in host.has_interface)
-    # packet = Select(Packet.at_interface_input == interface)
+    packet2 = Select(Packet.at_interface_input == interface)
 
     def selector(self):
         # return Select(self.packet.at_interface_input in self.host.has_interface \
         # and self.packet.at_interface_input == self.problem.testif) and \
-        return Unselect(self.host.has_interface == self.interface)
+        return Select(self.packet == self.packet2) \
+            and Unselect(self.host.has_interface == self.interface)
 
     def effect(self):
         self.packet.at_interface_input = self.problem.testif
