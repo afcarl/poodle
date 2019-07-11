@@ -162,18 +162,19 @@ class GreaterThan(Object):
 class ToLoadbalancer(PlannedAction):
     cost = 1
     request1 = Request()
-    serviceTarget = Select(request1.targetService ==  Service)
+    serviceTarget = Select(Service == request1.targetService)
     lb = Loadbalancer()
     lbServedService = Select( Service in lb.selectionedService)
     lbNode = Select(Node == lb.atNode)
 
     def selector(self):
-        return Select( self.serviceTarget == self.lbServedService and request1.status == self.problem.statusReqAtStart)
+        return Select( self.serviceTarget == self.lbServedService and \
+        request1.status == self.problem.statusReqAtStart)
     
     def effect(self):
-        self.request1.status = self.problem.statusReqAtLoadbalanser
-        self.request1.state = self.problem.stateRequestActive
-        self.request1.atNode = self.lbNode
+        self.request1.status.set(self.problem.statusReqAtLoadbalanser)
+        self.request1.state.set(self.problem.stateRequestActive)
+        self.request1.atNode.set(self.lbNode)
 
 class DirectToNode(PlannedAction):
     cost = 1
@@ -633,6 +634,15 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
     def effect(self):
         self.pod1.status.set(self.problem.statusNodeDeleted)
 
+class ExitBrakePointForRequest(PlannedAction):
+    cost = 1000
+    request1 = Request()
+    def selector(self):
+        return Select( self.request1.status != self.problem.statusReqRequestFinished) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
+
 #class SchedullerCreatesPod(PlannedAction):
 # class updatePodMetricsReleaseStarted(PlannedAction):
 #     cost = 1
@@ -659,7 +669,36 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
             
 class Problem1(Problem):
     def actions(self):
-        return [ToLoadbalancer, DirectToNode, ToNode, SwitchToNextNode, DirectToPod, ToPod, SwitchToNextPod, ConsumeResource, ProcessTempRequest, ProcessPersistentRequest, ReleaseResource, FinishRequest, TerminatePodAfterFinish, TerminatePod, ReadDeploymentConfig, CreatePodManually, SchedulerNofityUnboundedPod, KubectlStartsPod, MarkPodAsOverwhelmingMemLimits, MarkPodAsNonoverwhelmingMemLimits, MemoryErrorKillPodOverwhelmingLimits, MemoryErrorKillPodNotOverwhelmingLimits, PodFailsBecauseOfKilling, PodSucceds, KubectlRecoverPod, PodGarbageCollectedFailedPod, PodGarbageCollectedSuccededPod]
+        return [
+            ToLoadbalancer, 
+            DirectToNode, 
+            ToNode, 
+            SwitchToNextNode, 
+            DirectToPod, 
+            ToPod, 
+            SwitchToNextPod, 
+            ConsumeResource, 
+            ProcessTempRequest, 
+            ProcessPersistentRequest, 
+            ReleaseResource, 
+            FinishRequest, 
+            TerminatePodAfterFinish, 
+            TerminatePod, 
+            ReadDeploymentConfig, 
+            CreatePodManually, 
+            SchedulerNofityUnboundedPod, 
+            KubectlStartsPod, 
+            MarkPodAsOverwhelmingMemLimits, 
+            MarkPodAsNonoverwhelmingMemLimits, 
+            MemoryErrorKillPodOverwhelmingLimits, 
+            MemoryErrorKillPodNotOverwhelmingLimits, 
+            PodFailsBecauseOfKilling, 
+            PodSucceds, 
+            KubectlRecoverPod, 
+            PodGarbageCollectedFailedPod, 
+            PodGarbageCollectedSuccededPod, 
+            ExitBrakePointForRequest
+            ]
 
     def problem(self):
         self.numberFactory = NumberFactory()
