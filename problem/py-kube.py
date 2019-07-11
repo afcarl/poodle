@@ -1,6 +1,5 @@
 from poodle.poodle import * 
-from action.pydlNetAction import *
-from object.networkObject import *
+from object.commonObject import *
 
 class NumberFactory():
     numberCollection = {}
@@ -35,20 +34,12 @@ class Status(Object):
     
 class State(Object):
     pass
-    # Identity
-    # Properties 
-    # Relations 
 
 class ContainerConfig(Object):
-        #Identity
-    identified_by = ["containerconfigId"]
-    identified_by = Property(containerConfigId=Number)
-         # Properties
+    pass
 
 class Node(Object):
     # Identity
-    identified_by = ["nodeId"]
-    identified_by = Property(nodeId=Number)
     # Properties 
     cpuCapacity = Property(Number)
     memCapacity = Property(Number)
@@ -92,8 +83,6 @@ Pod.prevPod = Property(Pod)
     
 # class Event(PlannedAction):
 #     #Identity
-#     identified_by = ["eventId"]
-#     identified_by = Property( eventId = Number)
 #     # Property
 #     node = Property(Node)
 #     extraValue = Property(Number)
@@ -103,10 +92,6 @@ Pod.prevPod = Property(Pod)
 #     #Identity
     
 class Service(Object):
-        # Identity
-    identified_by = ["serviceId"]
-    identified_by = Property(serviceId=Number)
-         # Properties 
     lastPod = Property(Pod)
     atNode = Property(Node)
 
@@ -114,18 +99,12 @@ class Service(Object):
 Service.selectionedPod = Relation(Pod)
 
 class Period(Object):
-        # Identity
-    identified_by = ["periodId"]
-    identified_by = Property(periodId=Number)
-
+    pass
          # Relations
 Period.prevPeriod = Property(Period)         
 
 
 class Container(Object):
-        #Identity
-    identified_by = ["containerId"]
-    identified_by = Property(containerId=Number)
         # Properties
     hasPod = Property(Pod)
     cpuRequest = Property(Number)
@@ -135,9 +114,6 @@ class Container(Object):
     config = Property(ContainerConfig)
 
 class Request(Object):
-        # Identity
-    identified_by = ["requestId"]
-    identified_by = Property(requestId=Number)
          # Properties 
     
     launchPeriod = Property(Period)
@@ -154,19 +130,13 @@ class Request(Object):
          # Relations
 
 class Loadbalancer(Object):
-        # Identity
-    identified_by = ["lbId"]
-    identified_by = Property(lbId=Number)
     lastNode = Property(Node)
     atNode = Property(Node)
          # Relations
 Loadbalancer.selectionedService = Relation(Service)
         
 class Kubeproxy(Object):
-    # Identity
-    identified_by = ["kpId"]
-    identified_by = Property(kpId=Number)
-        
+
 
     # Properties 
     mode = Property(Mode)
@@ -180,9 +150,6 @@ Kubeproxy.selectionedService = Relation(Service)
          
 class AddedNumber(Object):
     cost = 1
-    identified_by = ["operator1,operator2"]
-    identified_by = Property(operator1=Number,operator2=Number)
-    
     operator1 = Property(Number)
     operator2 = Property(Number)
     result = Property(Number)
