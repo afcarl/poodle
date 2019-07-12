@@ -121,6 +121,7 @@ class Packet(Object):
     protocol_state = Relation(RequestState)
     
     current_packet = StateFact()
+    next = Property("Packet")
 
     
     packet_has_dst_ip = StateFact() # Do not know why we need this
@@ -148,7 +149,7 @@ class Packet(Object):
     at_interface_output = StateProperty(Interface)
     # can also be manually derived (as it is now manually written in PDDL)
     related_to = Relation(Interface) # TODO: REMOVE!!
-Packet.next = Property(Packet) # next packet in chain
+# Packet.next = Property(Packet) # next packet in chain
 Packet.validation_packet = Property(Packet)
 
 

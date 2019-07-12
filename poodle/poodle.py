@@ -228,13 +228,20 @@ class Property(object):
         self._order = []
         self._unset = False
         self._property_value = None
-        if len(initial_data) == 1 and issubclass(initial_data[0], Object):
+        if len(initial_data) == 1 and (type(initial_data[0]) == type(str) or (inspect.isclass(initial_data[0]) and issubclass(initial_data[0], Object))):
             self._singleton = True
-            self._value = initial_data[0]
+            classtype = initial_data[0]
+            assert type(initial_data[0]) == type(str) or issubclass(initial_data[0], Object)
+            if type(initial_data[0])==type(str):
+                assert issubclass(globals()[classtype], Object)
+                self._value = globals()[classtype]()
+            else:
+                self._value = initial_data[0]
             return
         else:
             self._singleton = False
         for dictionary in initial_data:
+            if type(dictionary) != type(dict()): continue
             for key in dictionary:
                 setattr(self, key, dictionary[key])
             self._order.append(key)
