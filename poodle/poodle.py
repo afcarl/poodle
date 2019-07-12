@@ -481,20 +481,21 @@ class Property(object):
         if has_poi and self._property_of_inst._class_variable:
             myclass_genvar = self._property_of_inst._class_variable
         # WARNING@!!!! finding variables in history is obsolete and UNSAFE!!!
-        if _parse_history:
-            if not other_genvar:
-                for ph in reversed(_parse_history):
-                    if other_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
-                        other_genvar = ph["variables"][other_class_name]
-                        log.debug("WARNING! Variable found in history - resulted PDDL may be wrong")
-                        break
-            for ph in reversed(_parse_history):
-                if has_poi and self._property_of_inst._class_variable:
-                    myclass_genvar = self._property_of_inst._class_variable
-                else:
-                    if my_class_name in ph["variables"] and who_instantiating != "self":
-                        myclass_genvar = ph["variables"][my_class_name]
-                        break
+        # if _parse_history:
+        #     if not other_genvar:
+        #         for ph in reversed(_parse_history):
+        #             if other_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
+        #                 other_genvar = ph["variables"][other_class_name]
+        #                 log.debug("WARNING! Variable found in history - resulted PDDL may be wrong")
+        #                 break
+        #     for ph in reversed(_parse_history):
+        #         if has_poi and self._property_of_inst._class_variable:
+        #             myclass_genvar = self._property_of_inst._class_variable
+        #         else:
+        #             if my_class_name in ph["variables"] and who_instantiating != "self":
+        #                 myclass_genvar = ph["variables"][my_class_name]
+        #                 log.debug("WARNING! myclass Variable found in history - resulted PDDL may be wrong")
+        #                 break
                     
         if myclass_genvar is None: 
             if issubclass(my_class, Imaginary):
