@@ -227,6 +227,7 @@ class Property(object):
         self._property_of = None # for reference only
         self._order = []
         self._unset = False
+        self._property_value = None
         if len(initial_data) == 1 and issubclass(initial_data[0], Object):
             self._singleton = True
             self._value = initial_data[0]
@@ -276,7 +277,7 @@ class Property(object):
         return self.get_property_class_name()+"-"+self._property_name
         
     def find_parameter_variable(self):
-        "finds the variable that holds the class"
+        "finds the variable that holds the class or our value"
         my_class_name = self._value.__name__ # _value is always a class
         myclass_genvar = None
         for ph in reversed(self._property_of_inst._parse_history):
@@ -287,7 +288,7 @@ class Property(object):
     
     
     def find_class_variable(self):
-        "finds the variable that holds the class"
+        "finds the variable that holds the class that we are property of"
         my_class_name = self.get_property_class_name()
         myclass_genvar = None
         if self._property_of_inst._class_variable: return self._property_of_inst._class_variable
@@ -481,7 +482,8 @@ class Property(object):
             other_property_class_name = get_property_class_name(other)
             other_property_class = other.get_parent_class()
             other_property_genvar = None
-            if _parse_history:
+            if hasattr(other, "_property_of_inst") and other._property_of_inst: other_property_genvar = other._property_of_inst._class_variable
+            if not other_property_genvar and _parse_history: # must not fire?
                 for ph in reversed(_parse_history):
                     if other_property_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
                         other_property_genvar = ph["variables"][other_property_class_name]
@@ -602,7 +604,7 @@ class Property(object):
     def set(self, value):
         global _problem_compilation
         assert type(value) == self._value, "Type mismatch: setting %s to %s.%s expecting %s" % (value, self._property_of_inst.__class__.__name__, self._property_name, self._value)
-        self._actual_value = value
+        if not isinstance(self, Relation): self._property_value = value # protect from re-setting value as Relation did same above...
         if _problem_compilation:
             global _collected_facts
             text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
@@ -629,6 +631,9 @@ class Property(object):
             # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
             _collected_effects.append("(not %s)" % text_predicate)
         self._unset = True
+        
+    def value(self):
+        return self._property_value
    
     def __getattr__(self, attr):
         "get my value"
@@ -672,6 +677,9 @@ class Property(object):
 class Relation(Property):
     "a property that can have multiple values"
     # https://stackoverflow.com/a/932580
+    def __init__(self, *p, **kw):
+        super().__init__(*p, **kw)
+        self._property_value = []
     def contains(self, other):
         return self.operator(other, "contains")
         
@@ -685,9 +693,11 @@ class Relation(Property):
         raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
     
     def add(self, what):
+        if isinstance(what, Object): self._property_value.append(what)
         super().set(what)
         
     def remove(self, what):
+        if isinstance(what, Object) and what in self._property_value: self._property_value.remove(what)
         super().unset(what)
 
     def __contains__(self, what):
@@ -832,6 +842,7 @@ class BaseObjectMeta(type):
 class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
+        self._sealed = False
         global _effect_compilation
         global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
@@ -953,11 +964,13 @@ class Object(metaclass=BaseObjectMeta):
                 raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
             super().__setattr__(name, value)
 
-
-
-    # def __getattr__(self, attr):
-    #     print ("getting arrt", attr)
-    #     return super().__getattr__(self, attr)
+    def __getattribute__(self, attr):
+        if "_" in attr: return super().__getattribute__(attr)
+        v = super().__getattribute__(attr)
+        # print(attr,":",v)
+        # if self._sealed and isinstance(v, Property):
+        #     return v._property_value
+        return v
     
     # def __getattr__(self, attr):
     #     if attr == "_type_of_property": return super().__getattr__(self, attr)
@@ -1023,18 +1036,34 @@ class PlannedAction():
     problem = None
     template = None
 
-    def __init__(self, argumentList):
-        self.argumentList = argumentList
-#        print("argument list ",self.argumentList  )
+    def __init__(self, **kwargs):
+        self._planned_objects_dict = kwargs
+        for k,v in kwargs.items():
+            if isinstance(v, Object):
+                v._sealed = True
+            setattr(self, k, v)
+            
     
     def __str__(self):
-        ret = "{0}".format(self.__class__.__name__)
-        for arg in self.argumentList:
-            ret +=" {0}({1})".format(arg.name, arg.value)
-        return ret
-
-    def templateMe(self):
-        return self.__str__()
+        return self.render(self._planned_objects_dict)
+        
+    def __repr__(self):
+        return self._default_render(self._planned_objects_dict)
+        
+    def render(self, obj_dict):
+        return self._default_render(obj_dict)
+        
+    def _default_render(self, obj_dict):
+        return self.__class__.__name__+": "+", ".join('%s=%s' % (n, obj_dict.get(n)) for n in dir(self) if isinstance(getattr(self,n), Object))
+        # return ", ".join(repr(getattr(self,n)) for n in dir(self))
+        # return repr(dir(self))
+        # return ', '.join("%s: %s" % item for item in attrs.items() if isinstance(item[1], Property))
+        # return ', '.join("%s: %s" % item for item in attrs.items() )
+        
+        # ret = "{0}".format(self.__class__.__name__)
+        # for arg in self.argumentList:
+        #     ret +=" {0}({1})".format(arg.name, arg.value)
+        # return ret
 
     @classmethod
     def compile(cls, problem):
@@ -1062,6 +1091,7 @@ class PlannedAction():
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
+        cls.collected_parameters = _collected_parameters
         for ob in _collected_parameters:
             if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
@@ -1100,23 +1130,23 @@ class PlannedAction():
 class PlannedActionJinja2(PlannedAction):
     template = "./template/default.j2"
 
-    def templateMe(self, template=None):
-        fileIn = ""
-        with open(self.template, "r") as fd:
-            fileIn = fd.read()
-        template = Template(fileIn)
-        param = []
-        for arg in self.argumentList:
-            args = []
-            args.append(arg.name)
-            args.append(arg.value)
-            param.append(args)
-        return template.render(action=self.__class__.__name__, parameters=param)
+    # def __str__(self, template=None):
+    #     fileIn = ""
+    #     with open(self.template, "r") as fd:
+    #         fileIn = fd.read()
+    #     template = Template(fileIn)
+    #     param = []
+    #     for arg in self.argumentList:
+    #         args = []
+    #         args.append(arg.name)
+    #         args.append(arg.value)
+    #         param.append(args)
+    #     return template.render(action=self.__class__.__name__, parameters=param)
 
-    def getTemplate(self):
-        if self.template == None:
-            return "./template/{0}.j2".format(self.__class__.__name__)
-        return selt.template
+    # def getTemplate(self):
+    #     if self.template == None:
+    #         return "./template/{0}.j2".format(self.__class__.__name__)
+    #     return selt.template
 
 # problem definition
 class Problem:
@@ -1126,6 +1156,7 @@ class Problem:
     objectList = []
     def __init__(self):
         self._has_imaginary = False
+        self._plan = None
     def getFolderName(self):
         return self.folder_name
     
@@ -1183,7 +1214,12 @@ class Problem:
             if self.getFolderName() != None:
                 actionClassLoader = ActionClassLoader(self.actions(), self)
                 actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
+                self._plan = actionClassLoader._plan
         return retcode
+        
+    @property
+    def plan(self):
+        return self._plan
 
         
     def compile_actions(self):
@@ -1291,12 +1327,10 @@ class Problem:
 
 class ActionClassLoader:
     actionList = [] #list of the ActionPlanned type
-    planList = [] #list instances of the ActionPlanned type
+    _plan = [] #list instances of the ActionPlanned type
     problem = None
+    
     # put as argument for constructor list of the ActionPlanned type which got from Problem.actions()
-    def __init__(self, actionList):
-        self.actionList = actionList
-
     def __init__(self, actionList, problem):
         self.actionList = actionList
         self.problem = problem
@@ -1309,17 +1343,20 @@ class ActionClassLoader:
             if action.__name__.lower() == actionString.lower():
                 argumentList = []
                 for argStr in str(planString).split()[1:]:
+                    obj_found = None
                     for obj in self.problem.getObjectList():
-#                        print("test",obj)
                         if isinstance(obj, Object):
-#                            print("test again",obj," ", obj.name )
                             if argStr.lower() == obj.name.lower():
-                                argumentList.append(obj)
-                             #   log.debug("got {0}".format(obj.name))
-                plannedAction = action(argumentList)
-                self.planList.append(plannedAction)
-              #  log.info(plannedAction)
-                log.info(plannedAction.templateMe())
+                                obj_found = obj
+                    argumentList.append(obj_found)
+                parameter_names = []
+                for k in action.collected_parameters.keys(): parameter_names+=k.split()
+                pos_args_dict = dict(zip(parameter_names,argumentList))
+                action_py_vars_dict = {n:getattr(action,n)._class_variable for n in dir(action) if isinstance(getattr(action,n), Object)}
+                action_py_vars_matched_values = {pyvar:pos_args_dict.get(ppar) for pyvar,ppar in action_py_vars_dict.items()}
+                plannedAction = action(**action_py_vars_matched_values)
+                self._plan.append(plannedAction)
+                # log.info(plannedAction)
 
     def loadFromFile(self, outPlanFile):
         log.debug("load action from file {0}".format(outPlanFile))

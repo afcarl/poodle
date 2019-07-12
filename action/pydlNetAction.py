@@ -305,7 +305,7 @@ class HopToRoute(PlannedAction):
 print(HopToRoute.compile(Problem()))
 # raise AssertionError("TEST")
 
-class CreateRoute(PlannedAction):
+class CreateRouteInsupported(PlannedAction):
     host = Host()
     packet = Select(Packet.at_interface_input in host.has_interface)
     table = Select(Table in host.has_table)
@@ -319,6 +319,25 @@ class CreateRoute(PlannedAction):
         r.interface = self.interface
         self.table.has_route.add(r)
         self.problem.addObject(r)
+
+class CreateRoute(PlannedAction):
+    host = Host()
+    packet = Packet()
+    table = Select(Table in host.has_table)
+    interface = Select(Interface in host.has_interface)
+
+    def selector(self):
+        return Select(self.packet.at_interface_input in self.host.has_interface)
+
+    def effect(self):
+        r = Route()
+        r.interface = self.interface
+        self.table.has_route.add(r)
+        self.problem.addObject(r)
+    
+    def render(self, d):
+        return "Custom rendered {cls} for packet -> {packet} and host interfaces -> {host_ifs}".format(\
+                cls=self.__class__.__name__,host_ifs=self.host.has_interface.value(),**d)
 
 class Cando():
     pass
