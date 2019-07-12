@@ -267,6 +267,17 @@ class Property(object):
     def __set_name__(self, owner, name):
         if not hasattr(self, "_property_name"):
             self._property_name = name
+    
+    def __get__(self, instance, owner):
+        # if hasattr(self, "_property_of_inst") and self._property_of_inst and self._property_of_inst._sealed:
+        # this does not work and is not needed:::: -->
+        if hasattr(self, "_dot_from") and isinstance(self._dot_from, Property):
+            raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
+        # print("BLA",instance, owner)
+        # if hasattr(self, "_property_of_inst"):
+            # print("BLABLABLA")
+            # return self._value
+        return self
 
     def get_property_class_name(self):
         return self.get_parent_class().__name__
@@ -672,9 +683,11 @@ class Property(object):
         me_has_value = False
         
         # The above renders this obolete: (check!)
-        if "_" in attr or attr in [ "_property_of_inst", "_value", "_property_name" ]:
+        if "_" == attr[0] or attr in [ "_property_of_inst", "_value", "_property_name" ]:
             # return super().__getattr__(self, attr)
             return super().__getattribute__(attr)
+        if hasattr(self, "_dot_from") and isinstance(self._dot_from, Object):
+            raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
         if hasattr(self, "_property_of_inst") and not me_has_attr:
             try:
                 super().__getattribute__("_value")
@@ -825,7 +838,7 @@ class BaseObjectMeta(type):
                 obj.__set_name__(cls, attr)
         return cls
     def __getattribute__(self, what):
-        #print("WHAT IS", what)
+        # print("WHAT IS", what)
         if what == "_type_of_property":
             return super().__getattribute__(what)
         # if not hasattr(super(), what):
@@ -990,13 +1003,24 @@ class Object(metaclass=BaseObjectMeta):
                 raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
             super().__setattr__(name, value)
 
+    # def __getattr__(self, attr):
+    #     print("GA-", self, attr)
+    #     return super().__getattribute__(attr)
+
     def __getattribute__(self, attr):
-        if "_" in attr: return super().__getattribute__(attr)
+        if "_" == attr[0]: return super().__getattribute__(attr)
+        # this does not work and is not needed:::: -->
+        if hasattr(self, "_dot_from") and isinstance(self._dot_from, Property):
+            raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
+        # print(self,":",attr)
         v = super().__getattribute__(attr)
-        # print(attr,":",v)
-        # if self._sealed and isinstance(v, Property):
-        #     return v._property_value
+        # print(self,":",attr,":",v)
+        if self._sealed and isinstance(v, Property):
+            return v._property_value
+        if isinstance(v, Property): 
+            v._dot_from = self
         return v
+
     
     # def __getattr__(self, attr):
     #     if attr == "_type_of_property": return super().__getattr__(self, attr)
