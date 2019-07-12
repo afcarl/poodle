@@ -48,6 +48,7 @@ _collected_predicate_templates = [] # TODO: localize state! also not all predica
 _collected_object_classes = set()
 _collected_objects = {} # format: { "class": [ ... objects ... ] }
 _collected_facts = []
+_poodle_object_classes = {}
 
 HASHNUM_VAR_NAME = "hashnum"
 HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
@@ -228,18 +229,19 @@ class Property(object):
         self._order = []
         self._unset = False
         self._property_value = None
-        if len(initial_data) == 1 and (type(initial_data[0]) == type(str) or (inspect.isclass(initial_data[0]) and issubclass(initial_data[0], Object))):
+        self.__value = None
+        if len(initial_data) == 1 and (type(initial_data[0]) == type(str()) or (inspect.isclass(initial_data[0]) and issubclass(initial_data[0], Object))):
             self._singleton = True
             classtype = initial_data[0]
-            assert type(initial_data[0]) == type(str) or issubclass(initial_data[0], Object)
-            if type(initial_data[0])==type(str):
-                assert issubclass(globals()[classtype], Object)
-                self._value = globals()[classtype]()
+            if type(initial_data[0])==type(str()):
+                self._value = classtype
             else:
                 self._value = initial_data[0]
             return
         else:
             self._singleton = False
+        # WARNING: the below is unused as we only support singleton, and code is never checked
+        assert len(initial_data) == 0 and len(kwargs) == 0, "Only singleton properties are supported"
         for dictionary in initial_data:
             if type(dictionary) != type(dict()): continue
             for key in dictionary:
@@ -247,7 +249,21 @@ class Property(object):
             self._order.append(key)
         for key in kwargs:
             setattr(self, key, kwargs[key])
-            
+    
+    @property
+    def _value(self):
+        if type(self.__value) == type(str()):
+            global _poodle_object_classes 
+            if not self.__value in _poodle_object_classes:
+                raise AssertionError("Dereferencing Object '%s' failed: undefined class %s" % (self.__value, self.__value))
+            assert issubclass(_poodle_object_classes[self.__value], Object)
+            self.__value = _poodle_object_classes[self.__value]
+        return self.__value
+    
+    @_value.setter
+    def _value(self, v):
+        self.__value = v
+    
     def __set_name__(self, owner, name):
         if not hasattr(self, "_property_name"):
             self._property_name = name
@@ -654,16 +670,17 @@ class Property(object):
         except AttributeError:
             pass
         me_has_value = False
-        try:
-            super().__getattribute__("_value")
-            me_has_value = True
-        except AttributeError:
-            pass
+        
         # The above renders this obolete: (check!)
-        if attr in [ "_property_of_inst", "_value", "_property_name", "myname" ]: # please delete 'myname'
+        if "_" in attr or attr in [ "_property_of_inst", "_value", "_property_name" ]:
             # return super().__getattr__(self, attr)
             return super().__getattribute__(attr)
         if hasattr(self, "_property_of_inst") and not me_has_attr:
+            try:
+                super().__getattribute__("_value")
+                me_has_value = True
+            except AttributeError:
+                pass
             if me_has_value:
                 if hasattr(self._value, attr):
                     ob = copy.copy(getattr(self._value, attr))
@@ -677,7 +694,7 @@ class Property(object):
             #print("returning val %s %s" % (attr, self._value)) # This is wrong
             raise NotImplementedError("`%s` is not implemented in %s and no _value is assigned to %s" % (attr, self.__class__.__name__, self)) # you can add a stopword if you need this property upstream
         else:
-            raise AttributeError('%s object has no attribute %s' % (self._value, attr))
+            raise AttributeError('%s object has no attribute %s' % (self.__value, attr))
         
         
     
@@ -801,6 +818,8 @@ class ActionMeta(type):
 class BaseObjectMeta(type):
     def __new__(mcls, name, bases, attrs):
         cls = super(BaseObjectMeta, mcls).__new__(mcls, name, bases, attrs)
+        global _poodle_object_classes 
+        _poodle_object_classes[name] = cls 
         for attr, obj in attrs.items():
             if isinstance(obj, Property):
                 obj.__set_name__(cls, attr)

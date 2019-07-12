@@ -73,9 +73,9 @@ class Host(Host_P):
     #   -- note for every action there is different key
     has_host_rule_to = Property(IPAddr) # -> ()
     #            Property may be just a single object, or a collection of objects (positioned or named)
-    has_host_rule_to_fwmark_sport = Property(ipto=IPAddr, sport=Port)
-    has_host_rule_to_fwmark_dport = Property(ipto=IPAddr, dport=Port)
-    has_host_rule_to_fwmark_sport_dport = Property(ipto=IPAddr, sport=Port, dport=Port)
+    # has_host_rule_to_fwmark_sport = Property(ipto=IPAddr, sport=Port)
+    # has_host_rule_to_fwmark_dport = Property(ipto=IPAddr, dport=Port)
+    # has_host_rule_to_fwmark_sport_dport = Property(ipto=IPAddr, sport=Port, dport=Port)
 
   
 
@@ -95,12 +95,12 @@ class RuleTo(Imaginary):
 #       this should probably happen at action side! so that action can not fire
 #       with this costraint in place!
 
-class SPortRule(RuleTo):
-    rule_to = Property(ipaddr=IPAddr, port=Port)
-class DPortRule(RuleTo):
-    rule_to = Property(ipaddr=IPAddr, port=Port)
-class SPortDPortRule(RuleTo):
-    rule_to = Property(ipaddr=IPAddr, src_port=Port, dst_port=Port)
+# class SPortRule(RuleTo):
+#     rule_to = Property(ipaddr=IPAddr, port=Port)
+# class DPortRule(RuleTo):
+#     rule_to = Property(ipaddr=IPAddr, port=Port)
+# class SPortDPortRule(RuleTo):
+#     rule_to = Property(ipaddr=IPAddr, src_port=Port, dst_port=Port)
 
 class ProtectedProperty(Property):
     def _check(self):
@@ -138,8 +138,8 @@ class Packet(Object):
     
     # validation_packet_recv = RelationRecv(Packet) # checking relation receipt
     
-    seen_at = Relation(host=Host, state=RequestState)
-    seen_at_eth = Relation(iface=Interface, state=RequestState)
+    # seen_at = Relation(host=Host, state=RequestState)
+    # seen_at_eth = Relation(iface=Interface, state=RequestState)
     
     origin = ProtectedProperty(Host)
     
@@ -155,11 +155,6 @@ Packet.validation_packet = Property(Packet)
 
 
 class ConntrackState(Imaginary):
-    #                        src     dst     src   dst
-    # identified_by = [ Host, IPAddr, IPAddr, Port, Port, Interface ]
-    # strings mean properties from the list below
-    identified_by = [ "host", "src", "dst", "src_port", "dst_port", "interface" ] 
-    identified_by = Property(host=Host, src=IPAddr, dst=IPAddr, src_port=Port, dst_port=Port, intnerface=Interface)
     # host = Property(Host)
     # src = Property(IPAddr)
     # dst = Property(IPAddr)
@@ -167,3 +162,4 @@ class ConntrackState(Imaginary):
     # dst_port = Property(Port)
     # interface = Property(Interface)
     
+    pass
