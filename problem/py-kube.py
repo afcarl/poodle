@@ -445,12 +445,15 @@ class SchedulerNofityUnboundedPod(PlannedAction):
     node1 = Node()
     
     #freeMem_op1 = Select( AddedNumber.operator2 == node1.currentFormalMemConsumption)
-    NodeWithSomefreeMem_op1 = AddedNumber.Select(operator2 = node1.currentFormalMemConsumption, result = node1.memCapacity)
-    NodeWithSomefreeCpu_op1 = AddedNumber.Select(operator2 = node1.currentFormalCpuConsumption, result = node1.cpuCapacity)
-    checkThatfreeMemIsEnoughForPodLaunch_op1 =  AddedNumber.Select(operator2 = pod1.requestedMem, result = NodeWithSomefreeMem_op1.operator1)
-    checkThatfreeCpuIsEnoughForPodLaunch_op1 = AddedNumber.Select(operator2 = pod1.requestedCpu, result = NodeWithSomefreeCpu_op1.operator1)
+    # NodeWithSomefreeMem_op1 = AddedNumber.Select(operator2 = node1.currentFormalMemConsumption, result = node1.memCapacity)
+    # NodeWithSomefreeCpu_op1 = AddedNumber.Select(operator2 = node1.currentFormalCpuConsumption, result = node1.cpuCapacity)
+    # checkThatfreeMemIsEnoughForPodLaunch_op1 =  AddedNumber.Select(operator2 = pod1.requestedMem, result = NodeWithSomefreeMem_op1.operator1)
+    # checkThatfreeCpuIsEnoughForPodLaunch_op1 = AddedNumber.Select(operator2 = pod1.requestedCpu, result = NodeWithSomefreeCpu_op1.operator1)
     newFormalMemConsumptionAtNode_res = AddedNumber.Select(operator1 = node1.currentFormalMemConsumption, operator2 = pod1.requestedMem)
     newFormalCpuConsumptionAtNode_res = AddedNumber.Select(operator1 = node1.currentFormalCpuConsumption, operator2 = pod1.requestedCpu)
+    newFormalMemConsumptionAtNode_res_num = Select(Number == newFormalMemConsumptionAtNode_res.result)
+    newFormalCpuConsumptionAtNode_res_num = Select(Number == newFormalCpuConsumptionAtNode_res.result)
+    
     #to-do: Soft conditions are not supported yet ( prioritization of nodes :  for example healthy  nodes are selected  rather then non healthy if pod  requests such behavior 
     def selector(self):
         return Select( self.pod1.status == self.problem.statusPodPending)
@@ -458,8 +461,8 @@ class SchedulerNofityUnboundedPod(PlannedAction):
     def effect(self):
         self.pod1.status.set(self.problem.statusPodBindedToNode)
         self.pod1.bindedToNode.set(self.node1)
-        self.node1.currentFormalMemConsumption.set(self.newFormalMemConsumptionAtNode_res.result)
-        self.node1.currentFormalCpuConsumption.set(self.newFormalCpuConsumptionAtNode_res.result)
+        self.node1.currentFormalMemConsumption.set(self.newFormalMemConsumptionAtNode_res_num)
+        self.node1.currentFormalCpuConsumption.set(self.newFormalCpuConsumptionAtNode_res_num)
 
 class KubectlStartsPod(PlannedAction):
     pod1 = Pod()
@@ -1825,7 +1828,7 @@ class Problem1(KubeBase):
         self.request2.status == self.statusReqRequestFinished and \
         self.request3.status == self.statusReqRequestFinished and \
         self.request4.status == self.statusReqRequestFinished and \
-        self.pod1.status == self.statusPodBindedToNode
+        self.pod1.status == self.statusPodPending
 
 p = Problem1()
 retCode = p.run()
