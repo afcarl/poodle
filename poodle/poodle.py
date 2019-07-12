@@ -95,6 +95,21 @@ def Select(what):
     global _selector_out
     ret = _selector_out
     _selector_out = None
+    if not ret: return True
+    return ret
+    
+def Unselect(what):
+    global _collected_predicates
+    ret = Select(what)
+    if ret._parse_history[-1]["text_predicates"][-1] != None:
+        raise AssertionError("Complex Unselect()'s are not supported")
+    if _collected_predicates[-1] != None:
+        raise AssertionError("Complex Unselect()'s are not supported")
+    search_pred = ret._parse_history[-1]["text_predicates"][0]
+    assert search_pred == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
+    replace_pred = "(not %s)" % search_pred
+    _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
+    if not ret: return True
     return ret
 
 # https://stackoverflow.com/a/2257449
@@ -107,13 +122,13 @@ def new_id():
     id_counter += 1
     return id_counter
 
-def gen_var(name):
-    return "?%s-%s" % (name, new_id())
+def gen_var(name, prefix=""):
+    return "?%s%s-%s" % (prefix, name, new_id())
 
-def gen_var_imaginary(name, depth=2):
+def gen_var_imaginary(name, depth=2, prefix=""):
     # TODO: depth support for more than 2 hashnums
     hid = new_id()
-    return "?%s1-%s ?%s2-%s" % (HASHNUM_VAR_NAME, hid, HASHNUM_VAR_NAME, hid)
+    return "?%s%s1-%s ?%s%s2-%s" % (prefix, HASHNUM_VAR_NAME, hid, prefix, HASHNUM_VAR_NAME, hid)
 
 def gen_hashnums(amount):
     global _collected_facts
@@ -163,7 +178,10 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
 # def gen_text_predicate_globals(predicate_name, var1, var1_class, var2, var2_class):
     global _collected_predicate_templates
     global _collected_object_classes
-    predicate_name = class_name+"-"+property_name
+    if property_name: predicate_name = class_name+"-"+property_name
+    else: 
+        predicate_name = class_name
+        class_name = None
     #if not imaginary:
         # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
     # TODO HERE: looks like we can match the class by "id" which is N-hashnum variable
@@ -279,12 +297,14 @@ class Property(object):
                 break
         return myclass_genvar
     
-    def operator(self, other, operator="equals"):
+    def operator(self, other, operator="equals", dir_hint="straight"):
         assert operator == "equals" or operator == "contains"
         global _compilation
         global _collected_predicates
         global _collected_parameters
         global _collected_predicate_templates
+        global _problem_compilation
+        global _collected_effects
         # TODO: multi-positional checks
         
         # PART 1.
@@ -369,7 +389,11 @@ class Property(object):
                 # PART 3.1.
                 # in compilation mode, we can return anything we want as result is not being used in later computations
                 log.debug("OPERATOR IN COMPILATION/SELECTOR MODE")
-                obj = self._value()
+                # obj = self._value()
+                if dir_hint == "reverse": # for ABC.RSelect support
+                    obj = other._property_of_inst
+                else:
+                    obj = self._property_of_inst
                 who_instantiating = None
             else:
                 raise ValueError("No class to select is present in selector expression. Both LHS and RHS are instances.")
@@ -419,6 +443,8 @@ class Property(object):
                 log.debug("OPERATOR Skipping getting variable from instances")
                 pass
                 
+        if has_poi and self._property_of_inst._class_variable:
+            myclass_genvar = self._property_of_inst._class_variable
         # WARNING@!!!! finding variables in history is obsolete and UNSAFE!!!
         if _parse_history:
             if not other_genvar:
@@ -516,18 +542,18 @@ class Property(object):
                 else:
                     log.warning("WARNING! Not setting other variable to {0} as it already has {1}".format(other_genvar, other._class_variable))
 
-        
-        obj._parse_history.append({
-            "operator": operator, 
-            "self": self, 
-            "other": subjObjectClass, 
-            "self-prop": self._value, 
-            #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
-            "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
-            "class_variables": { my_class_name: myclass_genvar },
-            "text_predicates": [text_predicate, text_predicate_2],
-            "parameters": collected_parameters
-        })
+        if not _problem_compilation: # prevents leak of goal into predicates...
+            obj._parse_history.append({
+                "operator": operator, 
+                "self": self, 
+                "other": subjObjectClass, 
+                "self-prop": self._value, 
+                #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+                "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
+                "class_variables": { my_class_name: myclass_genvar },
+                "text_predicates": [text_predicate, text_predicate_2],
+                "parameters": collected_parameters
+            })
         #print("OPERATOR-HIST-2", _parse_history)
 
         # this is required for the variables to become available at selector compilation
@@ -535,7 +561,9 @@ class Property(object):
         if has_poi and not hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history = _parse_history
         if has_poi and hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history += _parse_history
         
-        if _compilation:
+        if _problem_compilation:
+            _collected_effects += [text_predicate, text_predicate_2]
+        elif _compilation:
             # because in compilation mode our _parse_history now contains merged history ->>>
             for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
@@ -577,11 +605,15 @@ class Property(object):
         self._actual_value = value
         if _problem_compilation:
             global _collected_facts
-            _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
+            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            _collected_facts.append(text_predicate)
             return
         self._prepare(value)
         global _collected_effects
-        _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
+        text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, value.class_variable(), value.__class__.__name__)
+        # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
+        _collected_effects.append(text_predicate)
         
     def unset(self, what = None):
         # we need to unset the value that we selected for us
@@ -589,9 +621,13 @@ class Property(object):
         global _collected_effects
         if what is None: 
             log.warning("WARNING! Using experimental support for what=None")
-            _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable()+"))")
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, self.find_parameter_variable(), self._value.__name__)
+            # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable()+"))")
+            _collected_effects.append("(not %s)" % text_predicate)
         else:
-            _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, what._class_variable, what.__class__.__name__)
+            # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
+            _collected_effects.append("(not %s)" % text_predicate)
         self._unset = True
    
     def __getattr__(self, attr):
@@ -706,7 +742,9 @@ class StateFact(Property):
         self._prepare()
         global _collected_effects
         # TODO: do we need to generate this??
-        _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
+        text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+        # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
+        _collected_effects.append("(not %s)" % text_predicate)
 
     def __eq__(self, other):
         "StateFact can only be compared to True or False"
@@ -718,10 +756,13 @@ class StateFact(Property):
             raise NotImplementedError("Comparing StateFact to False is not supported")
         global _problem_compilation
         if _problem_compilation:
-            _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
+            text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
+            # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
+            _collected_effects.append(text_predicate)
         else:
             self._prepare() # not sure if this is needed here???
-            text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
+            # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
+            text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_effects.append(text_predicate)
         return True
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
@@ -792,18 +833,20 @@ class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
         global _effect_compilation
+        global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
         if _effect_compilation and not self.__imaginary__:
             raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
         self.__unlock_setter = True
         name = None
-        self._class_variable = None
+        self._class_variable = gen_var(self.__class__.__name__, prefix="default-")
         self.value = value
-        if name is None: # WARNING name must always be none
-            frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
-            name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
-        self.name = self.gen_name(name) # object name when instantiating..
-        global _problem_compilation
+        self.name = ""
+        if _problem_compilation:
+            if name is None: # WARNING name must always be none
+                frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
+                name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
+            self.name = self.gen_name(name) # object name when instantiating..
         global _collected_objects
         global _collected_object_classes
         if _problem_compilation:
@@ -844,9 +887,44 @@ class Object(metaclass=BaseObjectMeta):
         #        break
         #return myclass_genvar
     
+    @classmethod
+    def Select(cls, **kwargs):
+        "ret = Class.Select(prop1=inst1,prop2=inst2,...) is equivalent to \
+        v1=Select(Class.prop1 in/== inst1) and ret = Select(v1.prop2 in/== inst2)"
+        global _compilation
+        ret = cls
+        _compilation = True
+        for k,v in kwargs.items(): 
+            ret = getattr(ret,k).operator(v)
+        _compilation = False
+        return ret
+     
+    @classmethod
+    def RSelect(cls, **kwargs):
+        "ret = Class.RSelect(prop1=inst1,prop2=inst2,...) is equivalent to \
+        v1=Select(inst1 in/== Class.prop1) and ret = Select(inst2 in/== v1.prop2)"
+        global _compilation
+        # ret1 = list(kwargs.items())[0][1].operator(getattr(cls,list(kwargs.items())[0][0]))
+        # ret = ret1
+        ret = cls
+        _compilation = True
+        # for k,v in list(kwargs.items())[1:]: 
+        for k,v in kwargs.items(): 
+            ret = v.operator(getattr(ret,k),dir_hint="reverse")
+        _compilation = False
+        return ret
+        
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
+        elif isinstance(other, Object):
+            assert self._class_variable and other._class_variable, "Expected fully initialized objects"
+            global _collected_predicates
+            global _collected_parameters
+            _collected_predicates.append("(= %s %s)" % (self._class_variable, other._class_variable))
+            _collected_parameters.update({self._class_variable: self.__class__.__name__, other._class_variable: other.__class__.__name__}) # TODO: could be done easier if we added them on init...
+            # raise NotImplementedError("Object-Object selector is not supported")
+            return True
         else:
             return super().__eq__(other)
     
@@ -905,6 +983,7 @@ class Imaginary(Object):
     def __init__(self):
         self.__imaginary__ = True
         super().__init__()
+        self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-default-")
         global _effect_compilation
         global _collected_predicates
         global _collected_effects
@@ -982,8 +1061,9 @@ class PlannedAction():
         _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(_collected_predicates))))
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
-        assert len(_collected_predicates) > 0, "Action %s has no precondition" % cls.__name__
+        assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
         for ob in _collected_parameters:
+            if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
                 # WARNING! this is because of how imaginary variables are implemented
                 collected_parameters += "%s - %s " % (ob.split()[0], _collected_parameters[ob])
@@ -991,6 +1071,7 @@ class PlannedAction():
             else:
                 collected_parameters += "%s - %s " % (ob, _collected_parameters[ob])
         
+        assert len(collected_parameters) > 0
         return """
     (:action {action_name}
         :parameters ({parameters})
@@ -1125,7 +1206,7 @@ class Problem:
     def get_types(self):
         # collect all types used in both actions and problem objects
         global _collected_object_classes
-        return ' '.join(list(_collected_object_classes))
+        return ' '.join(list(filter(None, list(_collected_object_classes))))
 
     def compile_domain(self):
         actions = self.get_actions()
@@ -1167,6 +1248,7 @@ class Problem:
         global _collected_object_classes
         global _collected_facts
         global _collected_effects
+        global _collected_predicates
         _problem_compilation = True
         _collected_object_classes = set()
         _collected_objects = {}
@@ -1179,9 +1261,13 @@ class Problem:
         _compilation = True # required to compile the goal
         _collected_effects = []
         self.goal()
+        # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         global _selector_out
         _selector_out = None # cleaner goal
-        self.collected_goal = _collected_effects
+        self.collected_goal = list(filter(None, _collected_effects)) # filtering is not required...
+        _collected_predicates = []
+        _collected_effects = []
+        
         _compilation = False
         _problem_compilation = False
         txt_objects = ""
