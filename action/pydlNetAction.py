@@ -224,6 +224,9 @@ class TestImaginaryCreate(PlannedAction):
     host = Host()
     packet = Packet()
     interface = Select(Interface in host.has_interface)
+    # print("VARRR---")
+    # if2 = host.has_interface.adjacent_interface
+    # print("VARRR---2")
 
     def selector(self):
         return Select(self.packet.at_interface_input in self.host.has_interface)
@@ -337,7 +340,7 @@ class CreateRoute(PlannedAction):
     
     def render(self, d):
         return "Custom rendered {cls} for packet -> {packet} and host interfaces -> {host_ifs}".format(\
-                cls=self.__class__.__name__,host_ifs=self.host.has_interface.value(),**d)
+                cls=self.__class__.__name__,host_ifs=self.host.has_interface,**d)
 
 class Cando():
     pass
