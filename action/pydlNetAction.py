@@ -114,7 +114,7 @@ class ForwardPacketToInterface(PlannedAction):
         # TODO: set() could automatically issue an unset()
         self.packet.at_interface_input.set(self.interface2)
 
-#print(ForwardPacketToInterface.compile(None))
+print(ForwardPacketToInterface.compile_clips(None))
         
 class ForwardPacketInSwitch(PlannedAction):
 
@@ -205,6 +205,7 @@ class TestABCSelect(PlannedAction):
     def effect(self):
         self.packet.src_ipaddr = self.ipaddr
 print(TestABCSelect.compile(Problem()))
+print(TestABCSelect.compile_clips(Problem()))
 
 class TestABCRSelect(PlannedAction):
     packet = Packet()

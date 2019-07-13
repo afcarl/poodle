@@ -1143,6 +1143,8 @@ class PlannedAction():
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
         cls.collected_parameters = _collected_parameters
+        cls.collected_predicates = _collected_predicates
+        cls.collected_effects = _collected_effects
         for ob in _collected_parameters:
             if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
@@ -1170,6 +1172,32 @@ class PlannedAction():
             effect='\n            '.join(_collected_effects),
             cost='(increase (total-cost) {0})'.format(cls.cost)
         )
+    
+    @classmethod
+    def compile_clips(cls, problem):
+        cls.compile(problem)
+        lhs = copy.copy(cls.collected_predicates)
+        rhs = []
+        for p in cls.collected_effects:
+            if p.startswith("(not"):
+                fname = "?f"+str(new_id())
+                retracting_predicate = p.replace("(not","")[:-1].strip()
+                lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
+                cl = "(retract %s)" % fname
+            else:
+                cl = "(assert {ce})".format(ce=p)
+            rhs.append(cl)
+                
+        
+        
+        return """
+    (defrule {name}
+        {lhs}
+        =>
+        {rhs}
+    )
+        """.format(name=cls.__name__,lhs='\n        '.join(lhs),
+                    rhs='\n        '.join(rhs))
     
     def selector(self):
         raise NotImplementedError
