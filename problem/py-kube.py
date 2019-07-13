@@ -1,6 +1,6 @@
 from poodle.poodle import * 
 from object.commonObject import *
-from object.addedNumbers import *
+from object.addedNumbers10 import *
 
 class NumberFactory():
     numberCollection = {}
@@ -268,7 +268,7 @@ class SwitchToNextPod(PlannedAction):
     def effect(self):
         self.request1.toPod = self.nextPod1
 
-class ConsumeResource(PlannedAction):
+class ConsumeResourceCpu(PlannedAction):
     cost = 1
     request1 =  Request()
     currentPod = Select( Pod == request1.atPod)
@@ -277,14 +277,8 @@ class ConsumeResource(PlannedAction):
     addedCpuConsumptionAtCurrentPod1_res = AddedNumber.Select(operator1 = currentPod.currentRealCpuConsumption, operator2 = request1.cpuRequest)
     addedCpuConsumptionAtCurrentPod1_res_num = Select(  Number == addedCpuConsumptionAtCurrentPod1_res.result)
     
-    addedMemConsumptionAtCurrentPod1_res = AddedNumber.Select(operator1 = currentPod.currentRealMemConsumption, operator2 = request1.memRequest) 
-    addedMemConsumptionAtCurrentPod1_res_num = Select(  Number == addedMemConsumptionAtCurrentPod1_res.result)
-    
     addedCpuConsumptionAtCurrentNode1_res = AddedNumber.Select( operator1 = currentNode.currentRealCpuConsumption, operator2 = request1.cpuRequest) 
     addedCpuConsumptionAtCurrentNode1_res_num = Select(  Number == addedCpuConsumptionAtCurrentNode1_res.result)
-    
-    addedMemConsumptionAtCurrentNode1_res = AddedNumber.Select( operator1 = currentNode.currentRealMemConsumption, operator2 = request1.memRequest)
-    addedMemConsumptionAtCurrentNode1_res_num = Select(  Number == addedMemConsumptionAtCurrentNode1_res.result)
     
     #KB: RealCPUConsumption - is consumption calculated per active requests ( each request adds some level of consumption, realy on the CPU/Mem
     #KB: RealCPUConsumption - it is tracked for pod and node . Both. this is used by autoscale and scheduller and kubectl  while starting pods on node
@@ -293,22 +287,49 @@ class ConsumeResource(PlannedAction):
     def selector(self):
         return Select( self.request1.status == self.problem.statusReqAtPodInput )        
 
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqCpuResourceConsumed)
+        self.currentPod.currentRealCpuConsumption.set(self.addedCpuConsumptionAtCurrentPod1_res_num)
+        self.currentNode.currentRealCpuConsumption.set(self.addedCpuConsumptionAtCurrentNode1_res_num)
+
+class ConsumeResourceMem(PlannedAction):
+    cost = 1
+    request1 =  Request()
+    currentPod = Select( Pod == request1.atPod)
+    currentNode = Select( Node == currentPod.atNode)
+
+    addedMemConsumptionAtCurrentPod1_res = AddedNumber.Select(operator1 = currentPod.currentRealMemConsumption, operator2 = request1.memRequest) 
+    addedMemConsumptionAtCurrentPod1_res_num = Select(  Number == addedMemConsumptionAtCurrentPod1_res.result)
+    
+    addedMemConsumptionAtCurrentNode1_res = AddedNumber.Select( operator1 = currentNode.currentRealMemConsumption, operator2 = request1.memRequest)
+    addedMemConsumptionAtCurrentNode1_res_num = Select(  Number == addedMemConsumptionAtCurrentNode1_res.result)
+    
+    def selector(self):
+        return Select( self.request1.status == self.problem.statusReqCpuResourceConsumed )        
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqMemResourceConsumed)
+        self.currentPod.currentRealMemConsumption.set(self.addedMemConsumptionAtCurrentPod1_res_num)
+        self.currentNode.currentRealMemConsumption.set(self.addedMemConsumptionAtCurrentNode1_res_num)
+
+class ConsumeResource(PlannedAction):
+    cost = 1
+    request1 =  Request()
+    currentPod = Select( Pod == request1.atPod)
+    currentNode = Select( Node == currentPod.atNode)
+
+    def selector(self):
+        return Select( self.request1.status == self.problem.statusReqMemResourceConsumed )        
 
     def effect(self):
         self.request1.status.set(self.problem.statusReqResourcesConsumed)
-        self.currentPod.currentRealCpuConsumption.set(self.addedCpuConsumptionAtCurrentPod1_res_num)
-        self.currentPod.currentRealMemConsumption.set(self.addedMemConsumptionAtCurrentPod1_res_num)
-        self.currentNode.currentRealCpuConsumption.set(self.addedCpuConsumptionAtCurrentNode1_res_num)
-        self.currentNode.currentRealMemConsumption.set(self.addedMemConsumptionAtCurrentNode1_res_num)
- 
 
 class ProcessTempRequest(PlannedAction):
     cost = 1
     request1 = Request()
     
     def selector(self):
-        return Select( self.request1.type == self.problem.typeTemporary and \
-        self.request1.status == self.problem.statusReqResourcesConsumed)
+        return Select( self.request1.status == self.problem.statusReqResourcesConsumed and self.request1.type == self.problem.typeTemporary)
     
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestPIDToBeEnded)
@@ -319,13 +340,13 @@ class ProcessPersistentRequest(PlannedAction):
     
     def selector(self):
         return Select( self.request1.status == self.problem.statusReqResourcesConsumed and \
-        self.request1.type != self.problem.typeTemporary)
+        self.request1.type == self.problem.typePersistent)
 
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
 
-class ReleaseResource(PlannedAction):
+class ReleaseResourceCpu(PlannedAction):
     cost = 1
     request1 = Request() 
     currentPod = Select( Pod == request1.atPod)
@@ -334,28 +355,52 @@ class ReleaseResource(PlannedAction):
     reducedCpuConsumptionAtCurrentPod1 = Select( AddedNumber.result == currentPod.currentRealCpuConsumption)
     reducedCpuConsumptionAtCurrentPod1_op1 = Select (Number == reducedCpuConsumptionAtCurrentPod1.operator1)
     
-    reducedMemConsumptionAtCurrentPod1 = Select( AddedNumber.result == currentPod.currentRealMemConsumption) 
-    reducedMemConsumptionAtCurrentPod1_op1 = Select (Number == reducedMemConsumptionAtCurrentPod1.operator1)
-    
     reducedCpuConsumptionAtCurrentNode1 = Select( AddedNumber.result == currentNode.currentRealCpuConsumption) 
     reducedCpuConsumptionAtCurrentNode1_op1 = Select (Number == reducedCpuConsumptionAtCurrentNode1.operator1)
+    
+    def selector(self):
+        return Select( self.request1.status == self.problem.statusReqRequestPIDToBeEnded and \
+        self.reducedCpuConsumptionAtCurrentPod1.operator2 == self.request1.cpuRequest and \
+        self.reducedCpuConsumptionAtCurrentNode1.operator2 == self.request1.cpuRequest)
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqCpuResourceReleased)
+        self.currentPod.currentRealCpuConsumption.set(self.reducedCpuConsumptionAtCurrentPod1_op1)
+        self.currentNode.currentRealCpuConsumption.set(self.reducedCpuConsumptionAtCurrentNode1_op1)
+
+class ReleaseResourceMem(PlannedAction):
+    cost = 1
+    request1 = Request() 
+    currentPod = Select( Pod == request1.atPod)
+    currentNode = Select( Node == request1.atNode)
+
+    reducedMemConsumptionAtCurrentPod1 = Select( AddedNumber.result == currentPod.currentRealMemConsumption) 
+    reducedMemConsumptionAtCurrentPod1_op1 = Select (Number == reducedMemConsumptionAtCurrentPod1.operator1)
     
     reducedMemConsumptionAtCurrentNode1 = Select( AddedNumber.result == currentNode.currentRealMemConsumption)
     reducedMemConsumptionAtCurrentNode1_op1 = Select (Number == reducedMemConsumptionAtCurrentNode1.operator1)
     def selector(self):
-        return Select( self.request1.status == self.problem.statusReqRequestPIDToBeEnded and \
-        self.reducedCpuConsumptionAtCurrentPod1.operator2 == self.request1.cpuRequest and \
+        return Select( self.request1.status == self.problem.statusReqCpuResourceReleased and \
         self.reducedMemConsumptionAtCurrentPod1.operator2 == self.request1.memRequest and \
-        self.reducedCpuConsumptionAtCurrentNode1.operator2 == self.request1.cpuRequest and \
         self.reducedMemConsumptionAtCurrentNode1.operator2 == self.request1.memRequest)
 
 
     def effect(self):
-        self.request1.status.set(self.problem.statusReqResourcesReleased)
-        self.currentPod.currentRealCpuConsumption.set(self.reducedCpuConsumptionAtCurrentPod1_op1)
+        self.request1.status.set(self.problem.statusReqMemResourceReleased)
         self.currentPod.currentRealMemConsumption.set(self.reducedMemConsumptionAtCurrentPod1_op1)
-        self.currentNode.currentRealCpuConsumption.set(self.reducedCpuConsumptionAtCurrentNode1_op1)
         self.currentNode.currentRealMemConsumption.set(self.reducedMemConsumptionAtCurrentNode1_op1) 
+
+class ReleasedResources(PlannedAction):
+    cost = 1
+    request1 = Request() 
+    currentPod = Select( Pod == request1.atPod)
+    currentNode = Select( Node == request1.atNode)
+
+    def selector(self):
+        return Select( self.request1.status == self.problem.statusReqMemResourceReleased)
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqResourcesReleased)
 
 class FinishRequest(PlannedAction):
     cost = 1
@@ -618,7 +663,7 @@ class PodGarbageCollectedSuccededPod(PlannedAction):
     def effect(self):
         self.pod1.status.set(self.problem.statusNodeDeleted)
 
-class ExitBrakePointForRequest1AtStart(PlannedAction):
+class ExitBrakePointForRequest1(PlannedAction):
     cost = 9000
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -628,7 +673,7 @@ class ExitBrakePointForRequest1AtStart(PlannedAction):
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
-class ExitBrakePointForRequest2AtLoadbalancer(PlannedAction):
+class ExitBrakePointForRequest2(PlannedAction):
     cost = 8500
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -638,7 +683,7 @@ class ExitBrakePointForRequest2AtLoadbalancer(PlannedAction):
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
-class ExitBrakePointForRequest3AtKubeproxy(PlannedAction):
+class ExitBrakePointForRequest3(PlannedAction):
     cost = 8000
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -648,7 +693,7 @@ class ExitBrakePointForRequest3AtKubeproxy(PlannedAction):
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
-class ExitBrakePointForRequest4AtPodInput(PlannedAction):
+class ExitBrakePointForRequest4(PlannedAction):
     cost = 7500
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -658,7 +703,7 @@ class ExitBrakePointForRequest4AtPodInput(PlannedAction):
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
-class ExitBrakePointForRequest5ResourcesConsumed(PlannedAction):
+class ExitBrakePointForRequest5(PlannedAction):
     cost = 7000
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -668,7 +713,7 @@ class ExitBrakePointForRequest5ResourcesConsumed(PlannedAction):
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
-class ExitBrakePointForRequest6DirectedToPod(PlannedAction):
+class ExitBrakePointForRequest6(PlannedAction):
     cost = 6500
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -678,7 +723,7 @@ class ExitBrakePointForRequest6DirectedToPod(PlannedAction):
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
-class ExitBrakePointForRequest7RequestPIDToBeEnded(PlannedAction):
+class ExitBrakePointForRequest7(PlannedAction):
     cost = 6000
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -688,7 +733,7 @@ class ExitBrakePointForRequest7RequestPIDToBeEnded(PlannedAction):
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
-class ExitBrakePointForRequest8ResourcesReleased(PlannedAction):
+class ExitBrakePointForRequest8(PlannedAction):
     cost = 5500
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -698,7 +743,7 @@ class ExitBrakePointForRequest8ResourcesReleased(PlannedAction):
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
 
-class ExitBrakePointForRequest9RequestTerminated(PlannedAction):
+class ExitBrakePointForRequest9(PlannedAction):
     cost = 4000
     request1 = Request()
     status1 = Select( Status == request1.status)
@@ -707,9 +752,90 @@ class ExitBrakePointForRequest9RequestTerminated(PlannedAction):
 
     def effect(self):
         self.request1.status.set(self.problem.statusReqRequestFinished)
+
+class ExitBrakePointForRequest10(PlannedAction):
+    cost = 3800
+    request1 = Request()
+    status1 = Select( Status == request1.status)
+    def selector(self):
+        return Select( self.status1.sequence == self.problem.numberFactory.getNumber(10)) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
+
+class ExitBrakePointForRequest11(PlannedAction):
+    cost = 3650
+    request1 = Request()
+    status1 = Select( Status == request1.status)
+    def selector(self):
+        return Select( self.status1.sequence == self.problem.numberFactory.getNumber(11)) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
         
-class ExitBrakePointForRequest20RequestFinished(PlannedAction):
+class ExitBrakePointForRequest12(PlannedAction):
     cost = 3500
+    request1 = Request()
+    status1 = Select( Status == request1.status)
+    def selector(self):
+        return Select( self.status1.sequence == self.problem.numberFactory.getNumber(12)) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
+        
+class ExitBrakePointForRequest13(PlannedAction):
+    cost = 3250
+    request1 = Request()
+    status1 = Select( Status == request1.status)
+    def selector(self):
+        return Select( self.status1.sequence == self.problem.numberFactory.getNumber(13)) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
+
+class ExitBrakePointForRequest14(PlannedAction):
+    cost = 3000
+    request1 = Request()
+    status1 = Select( Status == request1.status)
+    def selector(self):
+        return Select( self.status1.sequence == self.problem.numberFactory.getNumber(14)) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
+        
+class ExitBrakePointForRequest15(PlannedAction):
+    cost = 2850
+    request1 = Request()
+    status1 = Select( Status == request1.status)
+    def selector(self):
+        return Select( self.status1.sequence == self.problem.numberFactory.getNumber(15)) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
+        
+class ExitBrakePointForRequest16(PlannedAction):
+    cost = 2500
+    request1 = Request()
+    status1 = Select( Status == request1.status)
+    def selector(self):
+        return Select( self.status1.sequence == self.problem.numberFactory.getNumber(16)) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
+        
+class ExitBrakePointForRequest17(PlannedAction):
+    cost = 2250
+    request1 = Request()
+    status1 = Select( Status == request1.status)
+    def selector(self):
+        return Select( self.status1.sequence == self.problem.numberFactory.getNumber(17)) 
+
+    def effect(self):
+        self.request1.status.set(self.problem.statusReqRequestFinished)
+        
+
+class ExitBrakePointForRequest20(PlannedAction):
+    cost = 2000
     request1 = Request()
     status1 = Select( Status == request1.status)
     def selector(self):
@@ -754,10 +880,14 @@ class Problem1(KubeBase):
             DirectToPod, 
             ToPod, 
             SwitchToNextPod, 
+            ConsumeResourceMem, 
+            ConsumeResourceCpu, 
             ConsumeResource, 
             ProcessTempRequest, 
             ProcessPersistentRequest, 
-            ReleaseResource, 
+            ReleaseResourceCpu, 
+            ReleaseResourceMem, 
+            ReleasedResources, 
             FinishRequest, 
             TerminatePodAfterFinish, 
             TerminatePod, 
@@ -774,16 +904,24 @@ class Problem1(KubeBase):
             KubectlRecoverPod, 
             PodGarbageCollectedFailedPod, 
             PodGarbageCollectedSuccededPod, 
-            ExitBrakePointForRequest1AtStart,
-            ExitBrakePointForRequest2AtLoadbalancer,
-            ExitBrakePointForRequest3AtKubeproxy,
-            ExitBrakePointForRequest4AtPodInput,
-            ExitBrakePointForRequest5ResourcesConsumed,
-            ExitBrakePointForRequest6DirectedToPod,
-            ExitBrakePointForRequest7RequestPIDToBeEnded,
-            ExitBrakePointForRequest8ResourcesReleased,
-            ExitBrakePointForRequest9RequestTerminated,
-            ExitBrakePointForRequest20RequestFinished
+            ExitBrakePointForRequest1,
+            ExitBrakePointForRequest2,
+            ExitBrakePointForRequest3,
+            ExitBrakePointForRequest4,
+            ExitBrakePointForRequest5,
+            ExitBrakePointForRequest6,
+            ExitBrakePointForRequest7,
+            ExitBrakePointForRequest8,
+            ExitBrakePointForRequest9,
+            ExitBrakePointForRequest10,
+            ExitBrakePointForRequest11,
+            ExitBrakePointForRequest12,
+            ExitBrakePointForRequest13,
+            ExitBrakePointForRequest14,
+            ExitBrakePointForRequest15,
+            ExitBrakePointForRequest16,
+            ExitBrakePointForRequest17,
+            ExitBrakePointForRequest20
             ]
 
     def problem(self):
@@ -793,10 +931,15 @@ class Problem1(KubeBase):
         self.statusReqAtLoadbalancer = self.addObject(Status())
         self.statusReqAtKubeproxy = self.addObject(Status())
         self.statusReqAtPodInput = self.addObject(Status())
+        self.statusReqMemResourceConsumed = self.addObject(Status())
+        self.statusReqCpuResourceConsumed = self.addObject(Status())
         self.statusReqResourcesConsumed = self.addObject(Status())
         self.statusReqDirectedToPod = self.addObject(Status())
         self.statusReqRequestPIDToBeEnded = self.addObject(Status())
+        self.statusReqCpuResourceReleased = self.addObject(Status())
+        self.statusReqMemResourceReleased = self.addObject(Status())
         self.statusReqResourcesReleased = self.addObject(Status())
+        
         self.statusReqRequestTerminated = self.addObject(Status())
         self.statusReqRequestFinished = self.addObject(Status())
         
@@ -804,11 +947,15 @@ class Problem1(KubeBase):
         self.statusReqAtLoadbalancer.sequence =  self.numberFactory.getNumber(2)
         self.statusReqAtKubeproxy.sequence =  self.numberFactory.getNumber(3)
         self.statusReqAtPodInput.sequence =  self.numberFactory.getNumber(4)
-        self.statusReqResourcesConsumed.sequence =  self.numberFactory.getNumber(5)
-        self.statusReqDirectedToPod.sequence =  self.numberFactory.getNumber(6)
-        self.statusReqRequestPIDToBeEnded.sequence =  self.numberFactory.getNumber(7)
-        self.statusReqResourcesReleased.sequence =  self.numberFactory.getNumber(8)
-        self.statusReqRequestTerminated.sequence =  self.numberFactory.getNumber(9)
+        self.statusReqMemResourceConsumed.sequence =  self.numberFactory.getNumber(5)
+        self.statusReqCpuResourceConsumed.sequence =  self.numberFactory.getNumber(6)
+        self.statusReqResourcesConsumed.sequence =  self.numberFactory.getNumber(7)
+        self.statusReqDirectedToPod.sequence =  self.numberFactory.getNumber(8)
+        self.statusReqRequestPIDToBeEnded.sequence =  self.numberFactory.getNumber(9)
+        self.statusReqCpuResourceReleased.sequence =  self.numberFactory.getNumber(10)
+        self.statusReqMemResourceReleased.sequence =  self.numberFactory.getNumber(11)
+        self.statusReqResourcesReleased.sequence =  self.numberFactory.getNumber(12)
+        self.statusReqRequestTerminated.sequence =  self.numberFactory.getNumber(13)
         self.statusReqRequestFinished.sequence =  self.numberFactory.getNumber(20)
         
 
@@ -840,6 +987,7 @@ class Problem1(KubeBase):
         
         
         self.typeTemporary = self.addObject(Type())
+        self.typePersistent = self.addObject(Type())
         
 
         self.period1 = self.addObject(Period()) 
@@ -895,6 +1043,7 @@ class Problem1(KubeBase):
         self.pod1.podNotOverwhelmingLimits = True
         self.pod1.realInitialMemConsumption = self.numberFactory.getNumber(1)
         self.pod1.realInitialCpuConsumption = self.numberFactory.getNumber(1)
+        self.pod1.type = self.typeTemporary
         
         self.pod2 = self.addObject(Pod())
         self.pod2.podConfig = self.сontainerConfig2
@@ -907,6 +1056,7 @@ class Problem1(KubeBase):
         self.pod2.podNotOverwhelmingLimits = True
         self.pod2.realInitialMemConsumption = self.numberFactory.getNumber(1)
         self.pod2.realInitialCpuConsumption = self.numberFactory.getNumber(1)        
+        self.pod2.type = self.typeTemporary
          
         ## to-do:  for relations  it should give helpful error message when = instead of add.
         
@@ -921,6 +1071,7 @@ class Problem1(KubeBase):
         self.pod3.podNotOverwhelmingLimits = True
         self.pod3.realInitialMemConsumption = self.numberFactory.getNumber(1)
         self.pod3.realInitialCpuConsumption = self.numberFactory.getNumber(1)
+        self.pod3.type = self.typePersistent
         
         self.service1 = self.addObject(Service())
         self.service2 = self.addObject(Service())
@@ -936,25 +1087,40 @@ class Problem1(KubeBase):
         self.request1.status = self.statusReqAtStart
         self.request1.state = self.stateRequestInactive
         self.request1.targetService = self.service1
+        self.request1.cpuRequest = self.numberFactory.getNumber(1)
+        self.request1.memRequest = self.numberFactory.getNumber(1)
+        self.request1.type = self.typeTemporary
 
         self.request2 = self.addObject(Request())
         self.request2.launchPeriod = self.period1
         self.request2.status = self.statusReqAtStart
         self.request2.state = self.stateRequestInactive
         self.request2.targetService = self.service1
+        self.request2.cpuRequest = self.numberFactory.getNumber(1)
+        self.request2.memRequest = self.numberFactory.getNumber(1)
+        self.request2.type = self.typeTemporary
+
 
         self.request3 = self.addObject(Request())
         self.request3.launchPeriod = self.period1
         self.request3.status = self.statusReqAtStart
         self.request3.state = self.stateRequestInactive
         self.request3.targetService = self.service2
+        self.request3.cpuRequest = self.numberFactory.getNumber(1)
+        self.request3.memRequest = self.numberFactory.getNumber(1)
+        self.request3.type = self.typePersistent
+
 
         self.request4 = self.addObject(Request())
         self.request4.launchPeriod = self.period1
         self.request4.status = self.statusReqAtStart
         self.request4.state = self.stateRequestInactive
         self.request4.targetService = self.service2
-        
+        self.request4.cpuRequest = self.numberFactory.getNumber(1)
+        self.request4.memRequest = self.numberFactory.getNumber(1)
+        self.request4.type = self.typePersistent
+#Todo: request of pod are temporary ? 
+
         self.lb1 = self.addObject(Loadbalancer())
         self.lb1.atNode = self.node1
         self.lb1.selectionedService.add(self.service1)
