@@ -19,7 +19,7 @@ from jinja2 import Template
 import string
 import random
 import inspect
-import copy, subprocess
+import copy, subprocess, tempfile
 from collections import OrderedDict
 import os
 import datetime
@@ -1174,7 +1174,7 @@ class PlannedAction():
         )
     
     @classmethod
-    def compile_clips(cls, problem):
+    def get_clips_lhs_rhs(cls, problem):
         cls.compile(problem)
         lhs = copy.copy(cls.collected_predicates)
         rhs = []
@@ -1187,9 +1187,11 @@ class PlannedAction():
             else:
                 cl = "(assert {ce})".format(ce=p)
             rhs.append(cl)
-                
-        
-        
+        return lhs, rhs
+    
+    @classmethod
+    def compile_clips(cls, problem):
+        lhs, rhs = cls.get_clips_lhs_rhs(problem)
         return """
     (defrule {name}
         {lhs}
@@ -1403,6 +1405,122 @@ class Problem:
     (:metric minimize (total-cost))
 )
 """.format(objects=txt_objects, facts='\n        '.join(self.collected_facts), goal='\n            '.join(self.collected_goal))
+
+    def facts(self):
+        self.compile_problem()
+        return self.collected_facts
+        
+    def check_solution(self):
+        "run debugging session over the solution"
+        work_facts = self.facts() # TODO HERE
+        for act in self.solution():
+            c = CLIPSExecutor()
+            lhs, rhs = act.get_clips_lhs_rhs(self)
+            c.load_rule(act.__name__, lhs=lhs, rhs=rhs)
+            # c.load(act.compile_clips())
+            c.load_facts(work_facts)
+            try:
+                c.run()
+                work_facts = c.get_facts()
+            except MatchError:
+                match_struct = c.check_match() # TODO HERE
+                print(match_struct)
+                return match_struct
+        # TODO HERE: check if goal is satisfied!
+        return work_facts
+
+class CLIPSRule:
+    def __init__(self, name, lhs, rhs):
+        self.name = name
+        self.lhs = lhs
+        self.rhs = rhs
+        
+    def compile(self):
+        return """
+    (defrule {name}
+        {lhs}
+        =>
+        {rhs}
+    )
+        """.format(name=self.name,lhs='\n        '.join(self.lhs),
+                    rhs='\n        '.join(self.rhs))
+    
+    def __str__(self):
+        return self.compile()
+
+class MatchError(Exception):
+    pass
+
+class CLIPSExecutor:
+    CLIPS_BINARY = "clips"
+    def __init__(self):
+        self.rules = []
+    
+    def load_rule(self, name, lhs, rhs):
+        self.rules.append(CLIPSRule(name, lhs, rhs))
+        
+    def load_facts(self, facts):
+        self.facts = facts
+        
+    def gen_run_problem(self):
+        defrules = str(self.rules[0])
+        facts = '\n'.join(self.facts)
+        return """
+        {defrules}
+        (watch facts)
+        {facts}
+        (printout t "--- RUN ---" crlf)
+        (run)
+        (exit)
+        """.format(defrules=defrules, facts=facts)
+        
+    def gen_match_problem(self):
+        defrules = str(self.rules[0])
+        rname = self.rules[0].name
+        facts = '\n'.join(self.facts)
+        return """
+        {defrules}
+        (watch facts)
+        {facts}
+        (matches {rname})
+        (exit)
+        """.format(defrules=defrules, facts=facts, rname=rname)
+    
+    
+    def get_facts(self):
+        run_result = self.run_result.split("--- RUN ---")[-1]
+        new_facts = []
+        del_facts = []
+        for l in run_result:
+            if not "==" in l: continue
+            fact = l.split("  ")[-1].strip()
+            if "<==" in l:
+                del_facts.append(fact)
+            else:
+                new_facts.append(fact)
+        return list(set(self.facts)-set(del_facts))+new_facts
+            
+    def run_clips_file(self, fn):
+        print("FILE IS",fn)
+        p = subprocess.run([self.CLIPS_BINARY, "-f2", fn])
+        return p.stdout
+        
+    def run_result(self, prg):
+        with tempfile.TemporaryFile() as fp:
+            fp.write(prg.encode('utf-8'))
+            fn = fp.name
+            fp.close()
+            self.run_result = self.run_clips_file(fn)
+            
+    def run(self):
+        self.run_result(self.gen_run_problem())
+        if len(self.run_result.split("--- RUN ---")[-1]) < 10:
+            raise MatchError("Rule %s does not match its selector")
+    
+    def check_match(self):
+        self.run_result(self.gen_match_problem())
+        return self.run_result
+        
 
 class ActionClassLoader:
     actionList = [] #list of the ActionPlanned type
