@@ -1413,6 +1413,7 @@ class Problem:
     def check_solution(self):
         "run debugging session over the solution"
         work_facts = self.facts() # TODO HERE
+        i=0
         for act in self.solution():
             c = CLIPSExecutor()
             lhs, rhs = act.get_clips_lhs_rhs(self)
@@ -1424,8 +1425,10 @@ class Problem:
                 work_facts = c.get_facts()
             except MatchError:
                 match_struct = c.check_match() # TODO HERE
+                raise SolutionCheckError(("Executing %s - %s\n" % (i, act)) + match_struct)
                 print(match_struct)
                 return match_struct
+            i+=1
         # TODO HERE: check if goal is satisfied!
         return work_facts
 
@@ -1451,6 +1454,9 @@ class CLIPSRule:
 class MatchError(Exception):
     pass
 
+class SolutionCheckError(Exception):
+    pass
+
 class CLIPSExecutor:
     CLIPS_BINARY = "clips"
     def __init__(self):
@@ -1461,10 +1467,13 @@ class CLIPSExecutor:
         
     def load_facts(self, facts):
         self.facts = facts
+
+    def render_assert_facts(self):
+        return '\n'.join("(assert %s)" % f for f in self.facts)
         
     def gen_run_problem(self):
         defrules = str(self.rules[0])
-        facts = '\n'.join(self.facts)
+        facts = self.render_assert_facts()
         return """
         {defrules}
         (watch facts)
@@ -1477,11 +1486,12 @@ class CLIPSExecutor:
     def gen_match_problem(self):
         defrules = str(self.rules[0])
         rname = self.rules[0].name
-        facts = '\n'.join(self.facts)
+        facts = self.render_assert_facts()
         return """
         {defrules}
         (watch facts)
         {facts}
+        (printout t "--- RUN ---" crlf)
         (matches {rname})
         (exit)
         """.format(defrules=defrules, facts=facts, rname=rname)
@@ -1501,25 +1511,25 @@ class CLIPSExecutor:
         return list(set(self.facts)-set(del_facts))+new_facts
             
     def run_clips_file(self, fn):
-        print("FILE IS",fn)
-        p = subprocess.run([self.CLIPS_BINARY, "-f2", fn])
-        return p.stdout
+        p = subprocess.run([self.CLIPS_BINARY, "-f2", fn], stdout=subprocess.PIPE)
+        return p.stdout.decode("utf-8")
         
-    def run_result(self, prg):
-        with tempfile.TemporaryFile() as fp:
+    def run_get_result(self, prg):
+        with tempfile.NamedTemporaryFile() as fp:
             fp.write(prg.encode('utf-8'))
+            fp.flush()
             fn = fp.name
-            fp.close()
             self.run_result = self.run_clips_file(fn)
+            fp.close()
             
     def run(self):
-        self.run_result(self.gen_run_problem())
+        self.run_get_result(self.gen_run_problem())
         if len(self.run_result.split("--- RUN ---")[-1]) < 10:
             raise MatchError("Rule %s does not match its selector")
     
     def check_match(self):
-        self.run_result(self.gen_match_problem())
-        return self.run_result
+        self.run_get_result(self.gen_match_problem())
+        return self.run_result.split("--- RUN ---")[-1]
         
 
 class ActionClassLoader:
