@@ -343,18 +343,3 @@ class CreateRoute(PlannedAction):
         return "Custom rendered {cls} for packet -> {packet} and host interfaces -> {host_ifs}".format(\
                 cls=self.__class__.__name__,host_ifs=self.host.has_interface,**d)
 
-class Cando():
-    pass
-
-class Model1(Cando):
-    def __init__(self):
-        self.actionModel = [
-                Packet.at_interface_input == Host.has_interface,
-                CreateRoute,
-                HopToRoute,
-                ForwardPacketToInterface,
-                ConsumePacket
-        ]
-
-
-    
