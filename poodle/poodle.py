@@ -1418,9 +1418,9 @@ class Problem:
             c = CLIPSExecutor()
             lhs, rhs = act.get_clips_lhs_rhs(self)
             c.load_rule(act.__name__, lhs=lhs, rhs=rhs)
-            # c.load(act.compile_clips())
             c.load_facts(work_facts)
             try:
+                print("Executing", act)
                 c.run()
                 work_facts = c.get_facts()
             except MatchError:
@@ -1466,6 +1466,7 @@ class CLIPSExecutor:
         self.rules.append(CLIPSRule(name, lhs, rhs))
         
     def load_facts(self, facts):
+        print("loading facts", facts)
         self.facts = facts
 
     def render_assert_facts(self):
@@ -1479,7 +1480,7 @@ class CLIPSExecutor:
         (watch facts)
         {facts}
         (printout t "--- RUN ---" crlf)
-        (run)
+        (run 1)
         (exit)
         """.format(defrules=defrules, facts=facts)
         
@@ -1499,15 +1500,19 @@ class CLIPSExecutor:
     
     def get_facts(self):
         run_result = self.run_result.split("--- RUN ---")[-1]
+        print("RUN RES", run_result)
         new_facts = []
         del_facts = []
-        for l in run_result:
+        for l in run_result.split("\n"):
             if not "==" in l: continue
             fact = l.split("  ")[-1].strip()
             if "<==" in l:
+                print("DEL fct", l)
                 del_facts.append(fact)
             else:
+                print("NEW fct", l)
                 new_facts.append(fact)
+        print("NEW facts", new_facts)
         return list(set(self.facts)-set(del_facts))+new_facts
             
     def run_clips_file(self, fn):
