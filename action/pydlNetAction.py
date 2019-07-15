@@ -104,7 +104,7 @@ class ForwardPacketToInterface(PlannedAction):
     packet = Packet() # any packet
     
     def selector(self):
-        return self.packet.at_interface_output |EQ| self.interface1
+        return Select(self.packet.at_interface_output == self.interface1)
         
     def effect(self):
         # TODO: we can auto-detect what to unset in property

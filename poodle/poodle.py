@@ -1161,7 +1161,7 @@ class PlannedAction():
         _collected_effects = []
         _compilation = True
         cls.problem = problem
-        cls.selector_objects = cls.selector(cls)
+        cls.selector_objects = [item for sublist in [[cls.selector(cls)]] for item in sublist]
         _effect_compilation = True
         log.info("{0}".format(cls.effect(cls)))
         _effect_compilation = False
@@ -1582,23 +1582,30 @@ class CLIPSExecutor:
     def check_match(self, actClass):
         self.run_get_result(self.gen_match_problem())
         m = self.run_result.split("--- RUN ---")[-1]
-        all_selected_objects_histories = list(filter(None, [ getattr(actClass,n)._parse_history[-1] if getattr(actClass,n)._parse_history else None for n in dir(actClass) if isinstance(getattr(actClass,n), Object)] + actClass.selector_objects))
+        all_selected_objects_histories = []
+        for n in dir(actClass):
+            if not isinstance(getattr(actClass,n), Object): continue
+            if getattr(actClass,n)._parse_history:
+                all_selected_objects_histories += getattr(actClass,n)._parse_history
+        for phl in [ob._parse_history for ob in actClass.selector_objects]:
+            all_selected_objects_histories += phl
         indexed_ces = []
+        print("MY CHECK searching in", [o["text_predicates"] for o in all_selected_objects_histories])
         for ce in self.rules[0].lhs:
             found = False
             for ph in all_selected_objects_histories:
-                if ce in ph["text_predicates"]:
+                if ce.split("<-")[-1].strip() in ph["text_predicates"]:
                     found = True
-                    print("MY CHECK FOUND")
-                    indexed_ces.append(ph["frame"])
+                    indexed_ces.append("{code}, in {file}:{line}".format(code=ph["frame"]["code"],file=os.path.basename(ph["frame"]["file"]),line=ph["frame"]["line"]))
             if not found:
-                print("MY CHECK NOT FOUND", ce)
-            assert found
+                print("MY CHECK NOT FOUND", ce.split("<-")[-1].strip(), "from", actClass)
+                indexed_ces.append("unknown") # 
+            # assert found
         ret = []
         for l in m.split("\n"):
             if "Pattern" in l:
                 p_idx = int(l.split()[-1])-1
-                ret.append(indexed_ces[p_idx])
+                ret.append("Matches for Pattern {num} from\n        {finfo}".format(num=p_idx+1,finfo=repr(indexed_ces[p_idx])))
             else:
                 ret.append(l)
         return '\n'.join(ret)
