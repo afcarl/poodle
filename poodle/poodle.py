@@ -24,7 +24,7 @@ from collections import OrderedDict
 import os
 import datetime
 import logging
-import sys
+import sys, time
 
 # import wrapt
 # import infix
@@ -1086,6 +1086,8 @@ class PlannedAction():
     parameterList = []
     problem = None
     template = None
+    _clips_rhs = []
+    _clips_lhs = []
 
     def __init__(self, **kwargs):
         self._planned_objects_dict = kwargs
@@ -1175,6 +1177,8 @@ class PlannedAction():
     
     @classmethod
     def get_clips_lhs_rhs(cls, problem):
+        if cls._clips_rhs:
+            return cls._clips_lhs, cls._clips_rhs
         cls.compile(problem)
         lhs = copy.copy(cls.collected_predicates)
         rhs = []
@@ -1184,9 +1188,12 @@ class PlannedAction():
                 retracting_predicate = p.replace("(not","")[:-1].strip()
                 lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
                 cl = "(retract %s)" % fname
+                print("Retracting", p, retracting_predicate, cl, lhs, cls.collected_predicates)
             else:
                 cl = "(assert {ce})".format(ce=p)
             rhs.append(cl)
+        cls._clips_lhs = lhs
+        cls._clips_rhs = rhs
         return lhs, rhs
     
     @classmethod
@@ -1412,23 +1419,33 @@ class Problem:
         
     def check_solution(self):
         "run debugging session over the solution"
-        work_facts = self.facts() # TODO HERE
-        i=0
-        for act in self.solution():
-            c = CLIPSExecutor()
-            lhs, rhs = act.get_clips_lhs_rhs(self)
-            c.load_rule(act.__name__, lhs=lhs, rhs=rhs)
-            c.load_facts(work_facts)
-            try:
-                print("Executing", act)
-                c.run()
-                work_facts = c.get_facts()
-            except MatchError:
-                match_struct = c.check_match() # TODO HERE
-                raise SolutionCheckError(("Executing %s - %s\n" % (i, act)) + match_struct)
-                print(match_struct)
-                return match_struct
-            i+=1
+        step_completed = False
+        for tryCount in range(5):
+            i=0
+            work_facts = self.facts() # TODO HERE
+            for act in self.solution():
+                step_completed = False
+                lhs, rhs = act.get_clips_lhs_rhs(self)
+                c = CLIPSExecutor()
+                c.load_rule(act.__name__, lhs=lhs, rhs=rhs)
+                c.load_facts(work_facts)
+                try:
+                    print("Executing", act)
+                    c.run() # throws MatchError
+                    work_facts = c.get_facts()
+                    step_completed = True
+                    i+=1
+                except MatchError:
+                    break
+            if i == len(self.solution())-1:
+                break
+        if not step_completed:
+            match_struct = c.check_match() # TODO HERE
+            # TODO HERE: translate all facts to objects, all CEs to LOCs and Select()s
+            print(match_struct)
+            print(c.gen_match_problem())
+            raise SolutionCheckError(("Executing %s - %s\n" % (i, act.__name__)) + match_struct)
+            return match_struct
         # TODO HERE: check if goal is satisfied!
         return work_facts
 
@@ -1477,12 +1494,14 @@ class CLIPSExecutor:
         facts = self.render_assert_facts()
         return """
         {defrules}
+        (seed {seed})
+        (set-strategy random)
         (watch facts)
         {facts}
         (printout t "--- RUN ---" crlf)
         (run 1)
         (exit)
-        """.format(defrules=defrules, facts=facts)
+        """.format(defrules=defrules, facts=facts, seed=str(int(time.time())))
         
     def gen_match_problem(self):
         defrules = str(self.rules[0])

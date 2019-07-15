@@ -74,10 +74,11 @@ class SimpleTestProblem1(NetworkGoal):
             # Select(Packet.at_interface_input in self.host1.has_interface),
             CreateRoute,
             HopToRoute,
-            Hinted( # hints are required to select the correct match
-                action=ForwardPacketToInterface, 
-                hints=(ForwardPacketToInterface.interface2 == self.interface2)
-            ),
+            ForwardPacketToInterface,
+            #Hinted( # hints are required to select the correct match
+            #    action=ForwardPacketToInterface, 
+            #    hints=(ForwardPacketToInterface.interface2 == self.interface2)
+            #),
             ConsumePacketSelect
         ]
 
