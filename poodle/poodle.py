@@ -1448,7 +1448,7 @@ class Problem:
     def check_solution(self):
         "run debugging session over the solution"
         step_completed = False
-        for tryCount in range(5):
+        for tryCount in range(20):
             i=0
             work_facts = self.facts() # TODO HERE
             for act in self.solution():
@@ -1596,18 +1596,29 @@ class CLIPSExecutor:
             for ph in all_selected_objects_histories:
                 if ce.split("<-")[-1].strip() in ph["text_predicates"]:
                     found = True
+                    # print("MY CHECK found in preds",ce,":", ph["text_predicates"])
                     indexed_ces.append("{code}, in {file}:{line}".format(code=ph["frame"]["code"],file=os.path.basename(ph["frame"]["file"]),line=ph["frame"]["line"]))
+                    break
             if not found:
                 print("MY CHECK NOT FOUND", ce.split("<-")[-1].strip(), "from", actClass)
-                indexed_ces.append("unknown") # 
+                indexed_ces.append("unknown "+ce) # 
             # assert found
         ret = []
+        col_fs = []
+        state_pm = False
         for l in m.split("\n"):
             if "Pattern" in l:
                 p_idx = int(l.split()[-1])-1
-                ret.append("Matches for Pattern {num} from\n        {finfo}".format(num=p_idx+1,finfo=repr(indexed_ces[p_idx])))
+                ret.append("CE-{num}: {mamt} match(es) {finfo}".format(mamt=len(col_fs),num=p_idx+1,finfo=repr(indexed_ces[p_idx])))
+                if col_fs:
+                    # ret.append(','.join(col_fs))
+                    col_fs = []
             else:
-                ret.append(l)
+                if "Partial" in l or state_pm:
+                    state_pm = True
+                    ret.append(l)
+                else:
+                    col_fs.append(l)
         return '\n'.join(ret)
         
 
