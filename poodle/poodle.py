@@ -1448,7 +1448,7 @@ class Problem:
     def check_solution(self):
         "run debugging session over the solution"
         step_completed = False
-        for tryCount in range(20):
+        for tryCount in range(100):
             i=0
             work_facts = self.facts() # TODO HERE
             for act in self.solution():
@@ -1472,7 +1472,7 @@ class Problem:
             # TODO HERE: translate all facts to objects, all CEs to LOCs and Select()s
             print(match_struct)
             print(c.gen_match_problem())
-            raise SolutionCheckError(("Executing %s - %s\n" % (i, act.__name__)) + match_struct)
+            raise SolutionCheckError(("Executing %s - \n%s:\n" % (i, act.__name__)) + match_struct)
             return match_struct
         # TODO HERE: check if goal is satisfied!
         return work_facts
@@ -1603,20 +1603,39 @@ class CLIPSExecutor:
                 print("MY CHECK NOT FOUND", ce.split("<-")[-1].strip(), "from", actClass)
                 indexed_ces.append("unknown "+ce) # 
             # assert found
+        allmatch=["     *"]
+        acc = []
+        other_out = "Partial".join(m.split("Partial")[1:])+"\nPartial"
+        for l in other_out.split("\n"):
+            if "Partial" in l:
+                if acc and 'None' in acc[0]:
+                    allmatch.append("!!   0")
+                elif acc:
+                    print("MY CHECK ASXX", acc)
+                    allmatch.append("  "+str(len((','.join(acc)).split(","))).rjust(4))
+                    acc = []
+                else:
+                    allmatch.append("!!   0")
+            else:
+                acc.append(l)
+        print("MY CHECK ALLMARCH", allmatch)
         ret = []
         col_fs = []
         state_pm = False
+        i=0
         for l in m.split("\n"):
             if "Pattern" in l:
                 p_idx = int(l.split()[-1])-1
-                ret.append("CE-{num}: {mamt} match(es) {finfo}".format(mamt=len(col_fs),num=p_idx+1,finfo=repr(indexed_ces[p_idx])))
+                print("MY CHECK i", i)
+                ret.append("{mm}/{mamt} match(es) {finfo}".format(mm=allmatch[i],mamt=len(col_fs),finfo=repr(indexed_ces[p_idx])))
                 if col_fs:
                     # ret.append(','.join(col_fs))
                     col_fs = []
+                i+=1
             else:
                 if "Partial" in l or state_pm:
                     state_pm = True
-                    ret.append(l)
+                    # ret.append(l)
                 else:
                     col_fs.append(l)
         return '\n'.join(ret)
