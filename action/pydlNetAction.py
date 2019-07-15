@@ -84,7 +84,8 @@ class ConsumePacketSelect(PlannedActionJinja2):
     def selector(self):
         # TODO: when implementing and/or protection - compilation mode should switch to return True
         print("------ MY CHECK TRUE")
-        return Select(self.packet.dst_ipaddr == self.interface_any.has_ipaddr and self.packet.current_packet == True)
+        # return Select(self.packet.dst_ipaddr == self.interface_any.has_ipaddr and self.packet.current_packet == True)
+        return Select(self.packet.current_packet == True and self.packet.dst_ipaddr == self.interface_any.has_ipaddr)
                 # and self.interface1.has_ipaddr == self.packet.dst_ipaddr) # incorrect, add to unit test
     
     def effect(self):

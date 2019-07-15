@@ -94,6 +94,9 @@ def Select(what):
     "Selector decorator"
     # WARNING! This is very thread unsafe!!!
     global _selector_out
+    global _compilation
+    if not _compilation and type(_selector_out) == type([]):
+        raise AssertionError("Complex selector outside of selector() classmethod compilation phase!")
     ret = _selector_out
     _selector_out = None
     if not ret: return True
@@ -145,6 +148,17 @@ def class_or_hash(var_name, class_name):
     if HASHNUM_VAR_NAME in var_name:
         return HASHNUM_CLASS_NAME
     return class_name
+    
+def push_selector_object(obj):
+    global _selector_out
+    if _selector_out:
+        log.debug("CHECK - selector output not null")
+        if type(_selector_out) == type([]):
+            _selector_out.append(obj)
+        else:
+            _selector_out = [_selector_out, obj]
+    else:
+        _selector_out = obj
     
 def get_property_class_name(prop):
     # PART 2.
@@ -579,6 +593,14 @@ class Property(object):
                 else:
                     log.warning("WARNING! Not setting other variable to {0} as it already has {1}".format(other_genvar, other._class_variable))
 
+        frame = inspect.getouterframes(inspect.currentframe())[3]
+        for f in inspect.getouterframes(inspect.currentframe()):
+            frameinfo = inspect.getframeinfo(f[0])
+            if frameinfo.code_context and  "Select(" in frameinfo.code_context[0].strip().replace(" ",""):
+                frame = f
+                break
+        frameinfo = inspect.getframeinfo(frame[0])
+        c_string = frameinfo.code_context[0].strip()
         if not _problem_compilation: # prevents leak of goal into predicates...
             obj._parse_history.append({
                 "operator": operator, 
@@ -589,7 +611,12 @@ class Property(object):
                 "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
                 "class_variables": { my_class_name: myclass_genvar },
                 "text_predicates": [text_predicate, text_predicate_2],
-                "parameters": collected_parameters
+                "parameters": collected_parameters,
+                "frame": {
+                    "code": c_string,
+                    "line": frameinfo.lineno,
+                    "file": frameinfo.filename
+                }
             })
         #print("OPERATOR-HIST-2", _parse_history)
 
@@ -611,12 +638,11 @@ class Property(object):
         return self.operator(other, "equals")
 
     def __eq__(self, other):
-        global _selector_out
         if hasattr(self, "_property_of_inst") and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
             log.warning("!!!!!! ALT BEH 1 - me is {0} {1} other is {2} ".format(self, self._property_of_inst, other))
-            _selector_out = other.equals(self)
+            push_selector_object(other.equals(self))
         else:
-            _selector_out = self.equals(other)
+            push_selector_object(self.equals(other))
         return True
     
     # TODO: write a setter operator to call this 
@@ -739,8 +765,7 @@ class Relation(Property):
         super().unset(what)
 
     def __contains__(self, what):
-        global _selector_out
-        _selector_out = self.contains(what)
+        push_selector_object(self.contains(what))
         return True
 
 # class BidirectionalRelation(Relation):
@@ -796,6 +821,7 @@ class StateFact(Property):
 
     def __eq__(self, other):
         "StateFact can only be compared to True or False"
+        print("MY CHECK EQ")
         assert other == True or other == False, "Only True or False for StateFact"
         global _collected_effects
         if other == False:
@@ -804,14 +830,16 @@ class StateFact(Property):
             raise NotImplementedError("Comparing StateFact to False is not supported")
         global _problem_compilation
         if _problem_compilation:
+            print("MY CHECK EQ - PC")
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
             # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
-            _collected_effects.append(text_predicate)
+            _collected_predicates.append(text_predicate)
         else:
+            print("MY CHECK EQ - NOT PC")
             self._prepare() # not sure if this is needed here???
             # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
-            _collected_effects.append(text_predicate)
+            _collected_predicates.append(text_predicate)
         return True
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
@@ -1133,7 +1161,7 @@ class PlannedAction():
         _collected_effects = []
         _compilation = True
         cls.problem = problem
-        log.info("{0}".format(cls.selector(cls))) # this fills globals above
+        cls.selector_objects = cls.selector(cls)
         _effect_compilation = True
         log.info("{0}".format(cls.effect(cls)))
         _effect_compilation = False
@@ -1440,7 +1468,7 @@ class Problem:
             if i == len(self.solution())-1:
                 break
         if not step_completed:
-            match_struct = c.check_match() # TODO HERE
+            match_struct = c.check_match(act) # TODO HERE
             # TODO HERE: translate all facts to objects, all CEs to LOCs and Select()s
             print(match_struct)
             print(c.gen_match_problem())
@@ -1452,8 +1480,8 @@ class Problem:
 class CLIPSRule:
     def __init__(self, name, lhs, rhs):
         self.name = name
-        self.lhs = lhs
-        self.rhs = rhs
+        self.lhs = copy.copy(lhs)
+        self.rhs = copy.copy(rhs)
         
     def compile(self):
         return """
@@ -1551,9 +1579,29 @@ class CLIPSExecutor:
         if len(self.run_result.split("--- RUN ---")[-1]) < 10:
             raise MatchError("Rule %s does not match its selector")
     
-    def check_match(self):
+    def check_match(self, actClass):
         self.run_get_result(self.gen_match_problem())
-        return self.run_result.split("--- RUN ---")[-1]
+        m = self.run_result.split("--- RUN ---")[-1]
+        all_selected_objects_histories = list(filter(None, [ getattr(actClass,n)._parse_history[-1] if getattr(actClass,n)._parse_history else None for n in dir(actClass) if isinstance(getattr(actClass,n), Object)] + actClass.selector_objects))
+        indexed_ces = []
+        for ce in self.rules[0].lhs:
+            found = False
+            for ph in all_selected_objects_histories:
+                if ce in ph["text_predicates"]:
+                    found = True
+                    print("MY CHECK FOUND")
+                    indexed_ces.append(ph["frame"])
+            if not found:
+                print("MY CHECK NOT FOUND", ce)
+            assert found
+        ret = []
+        for l in m.split("\n"):
+            if "Pattern" in l:
+                p_idx = int(l.split()[-1])-1
+                ret.append(indexed_ces[p_idx])
+            else:
+                ret.append(l)
+        return '\n'.join(ret)
         
 
 class ActionClassLoader:
