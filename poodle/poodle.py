@@ -336,12 +336,11 @@ class Property(object):
         
     def find_parameter_variable(self):
         "finds the variable that holds the class or our value"
-        my_class_name = self._value.__name__ # _value is always a class
         myclass_genvar = None
-        for ph in reversed(self._property_of_inst._parse_history):
-            if my_class_name in ph["variables"]:
-                myclass_genvar = ph["variables"][my_class_name]
-                break
+        for ph in reversed(self._property_of_inst._parse_history_self):
+            print("MY CHECK PH IS", ph)
+            myclass_genvar = ph["prop_variables"].get(self._property_name)
+            if myclass_genvar: break
         return myclass_genvar
     
     
@@ -640,24 +639,43 @@ class Property(object):
             ph_entry["variables"][other_property_class_name] = other_property_genvar
         if not _problem_compilation: # prevents leak of goal into predicates...
             obj._parse_history.append(ph_entry)
-            obj._parse_history_self.append(ph_entry)
         # add self parse history for optimization
-        # in case of Class.prop == inst: <how to identify>:
+        # 1 in case of Class.prop == inst: <how to identify>:
         #       - we know variable of obj property "prop" and its name is other._class_variable
-        # in case of inst.prop == Class: <how?>
+        if has_po and not has_poi and isinstance(other, Object):
+            obj._parse_history_self.append({"prop_variables": {self._property_name: other._class_variable}})
+        # 2 in case of inst.prop == Class: <how?>
         #       - we know variable of prop of self._property_of_inst and self._property_name is obj._class_variable
-        # in case of Class.prop == inst.prop <>
-        #       - we know variable of prop self._property_of_inst (obj) and its name is generated other_property_genvar
-        #       - we know variable of prop other._property_name of other._property_of_inst and its name is also other_property_genvar
-        # in case of inst.prop == Class.prop <>
-        # in case of inst.prop == inst2
-        # in case of inst.prop == inst2.prop
+        elif has_poi and inspect.isclass(other) and issubclass(other, Object):
+            self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: obj._class_variable}})
+        # 3 in case of Class.prop == inst.prop <>
+        #       - we know variable of prop self._property_name on self._property_of() (obj) and its name is generated other_property_genvar
+        #       - we know variable of prop other._property_name on other._property_of_inst and its name is also other_property_genvar
+        elif has_po and not has_poi and isinstance(other, Property):
+            obj._parse_history_self.append({"prop_variables": {self._property_name: other_property_genvar}})
+            other._property_of_inst._parse_history_self.append({"prop_variables": {other._property_name: other_property_genvar}})
+        # 4 in case of inst.prop == Class.prop <>
+        #       - we know variable of prop self._property_name on self._property_of_inst and its name is generated other_property_genvar
+        #       - we know variable of prop other._property_name of other._property_of() (obj) and its name is also other_property_genvar
+        elif has_poi and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
+            self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: other_property_genvar}})
+            obj._parse_history_self.append({"prop_variables": {other._property_name: other_property_genvar}})
+        # 5 in case of inst.prop == inst2
+        #       - we know variable of self._property_name on self._property_of_inst and it is other._class_variable
+        elif has_poi and isinstance(other, Object):
+            self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: other._class_variable}})
+        # 6 in case of inst.prop == inst2.prop
+        #       - we know variable of self._property_name on self._property_of_inst and it is generated other_property_genvar
+        #       - we know variable of other._property_name on other._property_of_inst and its name is other_property_genvar
+        elif has_poi and isinstance(other, Property) and hasattr(other, "_property_of_inst"):
+            self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: other_property_genvar}})
+            other._property_of_inst._parse_history_self.append({"prop_variables": {other._property_name: other_property_genvar}})
+        else:
+            raise AssertionError("Not supported.")
+            
+        # 7 in case of inst1 == inst2
+        #       - in this case no variables are created
         # add set initial
-        if who_instantinating == "self": # means obj is instance of self and we are now its property
-            obj._parse_history_self.append[{
-                "prop_variables": {self._property_name: myclass_genvar}
-            }]
-        
         #print("OPERATOR-HIST-2", _parse_history)
 
         # this is required for the variables to become available at selector compilation
@@ -704,6 +722,13 @@ class Property(object):
         
     def set(self, value):
         global _problem_compilation
+        init_mode = False
+        if not self._unset and not _problem_compilation: 
+            try:
+                self.unset(_force=True)
+            except AssertionError:
+                # assume init mode
+                init_mode = True
         assert type(value) == self._value, "Type mismatch: setting %s to %s.%s expecting %s" % (value, self._property_of_inst.__class__.__name__, self._property_name, self._value)
         if not isinstance(self, Relation): self._property_value = value # protect from re-setting value as Relation did same above...
         if _problem_compilation:
@@ -717,15 +742,47 @@ class Property(object):
         text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, value.class_variable(), value.__class__.__name__)
         # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
         _collected_effects.append(text_predicate)
+        if init_mode:
+            if issubclass(self._value, Imaginary):
+                text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, gen_var_imaginary(value.__class__.__name__), value.__class__.__name__)
+            else:
+                text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, gen_var(value.__class__.__name__), value.__class__.__name__)
+            _collected_predicates.append("(not %s)" % text_predicate)
+            
+            ph = {
+                    "operator": "set", 
+                    "self": self, 
+                    "self-propname": self._property_name, 
+                    "other": None, 
+                    "other-propname": None, 
+                    "otherClass": None,
+                    "self-prop": self._value, 
+                    #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+                    "variables": {}, # TODO: what if we have two same classes?
+                    "class_variables": { },
+                    "text_predicates": [ text_predicate ],
+                    "parameters": {}, # unknown
+                    "frame": { "code": "<property setter>", "line": -1, "file": "<unknown>" } # TODO
+                }
+            if hasattr(self, "_property_of_inst") and self._property_of_inst:
+                if self._property_of_inst._parse_history:
+                    self._property_of_inst._parse_history.append(ph)
+                else:
+                    self._property_of_inst._parse_history=[ph]
+            else:
+                raise AssertionError("Setting of an uninitialized variable is not supported")
+            
         
-    def unset(self, what = None):
+    def unset(self, what = None, _force = False):
         # we need to unset the value that we selected for us
         self._prepare()
         global _collected_effects
         if what is None: 
             log.warning("WARNING! Using experimental support for what=None")
-
-            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, self.find_parameter_variable(), self._value.__name__)
+            my_parameter_var = self.find_parameter_variable()
+            if my_parameter_var is None:
+                raise AssertionError("Variable for %s was not previously selected, nothing to unset. Please select or specify explicitly." % (self._property_name))
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, my_parameter_var, self._value.__name__)
             # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+self.find_parameter_variable()+"))")
             _collected_effects.append("(not %s)" % text_predicate)
         else:
@@ -794,7 +851,8 @@ class Relation(Property):
     def set(self, what):
         raise NotImplementedError("Usage error: Relation can not be set to one value. Use .add() instead")
         
-    def unset(self, what=None):
+    def unset(self, what=None, _force=False):
+        if _force: return super().unset(what)
         raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
     
     def add(self, what):
