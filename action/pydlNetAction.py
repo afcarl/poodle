@@ -83,7 +83,9 @@ class ConsumePacketSelect(PlannedActionJinja2):
     
     def selector(self):
         # TODO: when implementing and/or protection - compilation mode should switch to return True
-        return Select(self.packet.dst_ipaddr == self.interface_any.has_ipaddr)
+        print("------ MY CHECK TRUE")
+        # return Select(self.packet.dst_ipaddr == self.interface_any.has_ipaddr and self.packet.current_packet == True)
+        return Select(self.packet.current_packet == True and self.packet.dst_ipaddr == self.interface_any.has_ipaddr)
                 # and self.interface1.has_ipaddr == self.packet.dst_ipaddr) # incorrect, add to unit test
     
     def effect(self):
@@ -102,7 +104,7 @@ class ForwardPacketToInterface(PlannedAction):
     packet = Packet() # any packet
     
     def selector(self):
-        return self.packet.at_interface_output |EQ| self.interface1
+        return Select(self.packet.at_interface_output == self.interface1)
         
     def effect(self):
         # TODO: we can auto-detect what to unset in property
@@ -114,7 +116,7 @@ class ForwardPacketToInterface(PlannedAction):
         # TODO: set() could automatically issue an unset()
         self.packet.at_interface_input.set(self.interface2)
 
-#print(ForwardPacketToInterface.compile(None))
+print(ForwardPacketToInterface.compile_clips(None))
         
 class ForwardPacketInSwitch(PlannedAction):
 
@@ -205,6 +207,7 @@ class TestABCSelect(PlannedAction):
     def effect(self):
         self.packet.src_ipaddr = self.ipaddr
 print(TestABCSelect.compile(Problem()))
+print(TestABCSelect.compile_clips(Problem()))
 
 class TestABCRSelect(PlannedAction):
     packet = Packet()
@@ -342,18 +345,3 @@ class CreateRoute(PlannedAction):
         return "Custom rendered {cls} for packet -> {packet} and host interfaces -> {host_ifs}".format(\
                 cls=self.__class__.__name__,host_ifs=self.host.has_interface,**d)
 
-class Cando():
-    pass
-
-class Model1(Cando):
-    def __init__(self):
-        self.actionModel = [
-                Packet.at_interface_input == Host.has_interface,
-                CreateRoute,
-                HopToRoute,
-                ForwardPacketToInterface,
-                ConsumePacket
-        ]
-
-
-    

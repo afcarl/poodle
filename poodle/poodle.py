@@ -19,12 +19,12 @@ from jinja2 import Template
 import string
 import random
 import inspect
-import copy, subprocess
+import copy, subprocess, tempfile
 from collections import OrderedDict
 import os
 import datetime
 import logging
-import sys
+import sys, time
 
 # import wrapt
 # import infix
@@ -94,6 +94,9 @@ def Select(what):
     "Selector decorator"
     # WARNING! This is very thread unsafe!!!
     global _selector_out
+    global _compilation
+    if not _compilation and type(_selector_out) == type([]):
+        raise AssertionError("Complex selector outside of selector() classmethod compilation phase!")
     ret = _selector_out
     _selector_out = None
     if not ret: return True
@@ -116,6 +119,21 @@ def Unselect(what):
 # https://stackoverflow.com/a/2257449
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
+
+def get_source_frame_dict():
+    frame = inspect.getouterframes(inspect.currentframe())[4]
+    for f in inspect.getouterframes(inspect.currentframe()):
+        frameinfo = inspect.getframeinfo(f[0])
+        if frameinfo.code_context and  "Select(" in frameinfo.code_context[0].strip().replace(" ",""):
+            frame = f
+            break
+    frameinfo = inspect.getframeinfo(frame[0])
+    c_string = frameinfo.code_context[0].strip()
+    return {
+                    "code": c_string,
+                    "line": frameinfo.lineno,
+                    "file": frameinfo.filename
+            }
 
 id_counter = 0
 def new_id():
@@ -145,6 +163,17 @@ def class_or_hash(var_name, class_name):
     if HASHNUM_VAR_NAME in var_name:
         return HASHNUM_CLASS_NAME
     return class_name
+    
+def push_selector_object(obj):
+    global _selector_out
+    if _selector_out:
+        log.debug("CHECK - selector output not null")
+        if type(_selector_out) == type([]):
+            _selector_out.append(obj)
+        else:
+            _selector_out = [_selector_out, obj]
+    else:
+        _selector_out = obj
     
 def get_property_class_name(prop):
     # PART 2.
@@ -579,17 +608,37 @@ class Property(object):
                 else:
                     log.warning("WARNING! Not setting other variable to {0} as it already has {1}".format(other_genvar, other._class_variable))
 
+        frame = inspect.getouterframes(inspect.currentframe())[3]
+        for f in inspect.getouterframes(inspect.currentframe()):
+            frameinfo = inspect.getframeinfo(f[0])
+            if frameinfo.code_context and  "Select(" in frameinfo.code_context[0].strip().replace(" ",""):
+                frame = f
+                break
+        frameinfo = inspect.getframeinfo(frame[0])
+        c_string = frameinfo.code_context[0].strip()
+        if isinstance(other, Property):
+            otherPropName = other._property_name
+        else:
+            otherPropName = None
         if not _problem_compilation: # prevents leak of goal into predicates...
             obj._parse_history.append({
                 "operator": operator, 
-                "self": self, 
-                "other": subjObjectClass, 
+                "self-propname": self._property_name,
+                "other-propname": otherPropName,
+                "self": self,
+                "other": other,
+                "otherClass": subjObjectClass, 
                 "self-prop": self._value, 
                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
                 "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
                 "class_variables": { my_class_name: myclass_genvar },
                 "text_predicates": [text_predicate, text_predicate_2],
-                "parameters": collected_parameters
+                "parameters": collected_parameters,
+                "frame": {
+                    "code": c_string,
+                    "line": frameinfo.lineno,
+                    "file": frameinfo.filename
+                }
             })
         #print("OPERATOR-HIST-2", _parse_history)
 
@@ -611,12 +660,11 @@ class Property(object):
         return self.operator(other, "equals")
 
     def __eq__(self, other):
-        global _selector_out
         if hasattr(self, "_property_of_inst") and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
             log.warning("!!!!!! ALT BEH 1 - me is {0} {1} other is {2} ".format(self, self._property_of_inst, other))
-            _selector_out = other.equals(self)
+            push_selector_object(other.equals(self))
         else:
-            _selector_out = self.equals(other)
+            push_selector_object(self.equals(other))
         return True
     
     # TODO: write a setter operator to call this 
@@ -740,8 +788,7 @@ class Relation(Property):
         super().unset(what)
 
     def __contains__(self, what):
-        global _selector_out
-        _selector_out = self.contains(what)
+        push_selector_object(self.contains(what))
         return True
 
 # class BidirectionalRelation(Relation):
@@ -787,6 +834,7 @@ class StateFact(Property):
             self._prepare()
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_effects.append(text_predicate)
+        self._value = True
     def unset(self):
         self._prepare()
         global _collected_effects
@@ -794,11 +842,13 @@ class StateFact(Property):
         text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
         # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
         _collected_effects.append("(not %s)" % text_predicate)
+        self._value = False
 
     def __eq__(self, other):
         "StateFact can only be compared to True or False"
         assert other == True or other == False, "Only True or False for StateFact"
         global _collected_effects
+        global _collected_predicates 
         if other == False:
             # TODO: could call self.unset() if run in effect compilation, not problem compilation!!
             # (add below...)
@@ -807,13 +857,37 @@ class StateFact(Property):
         if _problem_compilation:
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
             # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
-            _collected_effects.append(text_predicate)
+            # _collected_predicates.append(text_predicate)
+            _collected_effects.append(text_predicate) # in problem compilation, we collect effects...
         else:
             self._prepare() # not sure if this is needed here???
             # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
-            _collected_effects.append(text_predicate)
-        return True
+            _collected_predicates.append(text_predicate)
+        
+        ph = {
+                "operator": "check_bool", 
+                "self": self, 
+                "self-propname": self._property_name, 
+                "other": None, 
+                "other-propname": None, 
+                "otherClass": None,
+                "self-prop": self._value, 
+                #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+                "variables": {}, # TODO: what if we have two same classes?
+                "class_variables": { },
+                "text_predicates": [ text_predicate ],
+                "parameters": {}, # unknown
+                "frame": get_source_frame_dict()
+            }
+        if hasattr(self, "_property_of_inst") and self._property_of_inst:
+            if self._property_of_inst._parse_history:
+                self._property_of_inst._parse_history.append(ph)
+            else:
+                self._property_of_inst._parse_history=[ph]
+        else:
+            raise AssertionError("Selecting a variable by StateFact is not supported; please use selector() syntax")
+        return self
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
 
@@ -1087,6 +1161,8 @@ class PlannedAction():
     parameterList = []
     problem = None
     template = None
+    _clips_rhs = []
+    _clips_lhs = []
 
     def __init__(self, **kwargs):
         self._planned_objects_dict = kwargs
@@ -1132,7 +1208,7 @@ class PlannedAction():
         _collected_effects = []
         _compilation = True
         cls.problem = problem
-        log.info("{0}".format(cls.selector(cls))) # this fills globals above
+        cls.selector_objects = [item for sublist in [[cls.selector(cls)]] for item in sublist]
         _effect_compilation = True
         log.info("{0}".format(cls.effect(cls)))
         _effect_compilation = False
@@ -1144,6 +1220,8 @@ class PlannedAction():
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
         cls.collected_parameters = _collected_parameters
+        cls.collected_predicates = _collected_predicates
+        cls.collected_effects = _collected_effects
         for ob in _collected_parameters:
             if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
@@ -1171,6 +1249,39 @@ class PlannedAction():
             effect='\n            '.join(_collected_effects),
             cost='(increase (total-cost) {0})'.format(cls.cost)
         )
+    
+    @classmethod
+    def get_clips_lhs_rhs(cls, problem):
+        if cls._clips_rhs:
+            return cls._clips_lhs, cls._clips_rhs
+        cls.compile(problem)
+        lhs = copy.copy(cls.collected_predicates)
+        rhs = []
+        for p in cls.collected_effects:
+            if p.startswith("(not"):
+                fname = "?f"+str(new_id())
+                retracting_predicate = p.replace("(not","")[:-1].strip()
+                lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
+                cl = "(retract %s)" % fname
+                # print("Retracting", p, retracting_predicate, cl, lhs, cls.collected_predicates)
+            else:
+                cl = "(assert {ce})".format(ce=p)
+            rhs.append(cl)
+        cls._clips_lhs = lhs
+        cls._clips_rhs = rhs
+        return lhs, rhs
+    
+    @classmethod
+    def compile_clips(cls, problem):
+        lhs, rhs = cls.get_clips_lhs_rhs(problem)
+        return """
+    (defrule {name}
+        {lhs}
+        =>
+        {rhs}
+    )
+        """.format(name=cls.__name__,lhs='\n        '.join(lhs),
+                    rhs='\n        '.join(rhs))
     
     def selector(self):
         raise NotImplementedError
@@ -1209,6 +1320,7 @@ class Problem:
     def __init__(self):
         self._has_imaginary = False
         self._plan = None
+        self._compiled_problem = ""
     def getFolderName(self):
         return self.folder_name
     
@@ -1233,7 +1345,7 @@ class Problem:
 
     def run(self):
         global _collected_parameters
-        print(_collected_parameters)
+        # print(_collected_parameters)
         counter = 0
         try:
             with open("./.counter", "r") as fd:
@@ -1330,6 +1442,7 @@ class Problem:
 
 
     def compile_problem(self):
+        if self._compiled_problem: return self._compiled_problem
         global _problem_compilation
         global _compilation
         global _collected_objects
@@ -1348,11 +1461,14 @@ class Problem:
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal
         _collected_effects = []
+        _collected_predicates = []
+        # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         self.goal()
         # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         global _selector_out
         _selector_out = None # cleaner goal
-        self.collected_goal = list(filter(None, _collected_effects)) # filtering is not required...
+        self.collected_goal = list(filter(None, _collected_predicates + _collected_effects)) # filtering is not required...
+        assert len(self.collected_goal), "No goal was generated"
         _collected_predicates = []
         _collected_effects = []
         
@@ -1361,7 +1477,7 @@ class Problem:
         txt_objects = ""
         for cls in self.collected_objects:
             txt_objects += " ".join(list(set(self.collected_objects[cls]))) + " - " + cls + " "
-        return """
+        self._compiled_problem =  """
 (define (problem poodle-generated)
     (:domain poodle-generated)
     (:objects
@@ -1376,6 +1492,200 @@ class Problem:
     (:metric minimize (total-cost))
 )
 """.format(objects=txt_objects, facts='\n        '.join(self.collected_facts), goal='\n            '.join(self.collected_goal))
+        return self._compiled_problem
+
+    def facts(self):
+        self.compile_problem()
+        return self.collected_facts
+        
+    def check_solution(self):
+        "run debugging session over the solution"
+        step_completed = False
+        for tryCount in range(150):
+            i=0
+            work_facts = self.facts() # TODO HERE
+            for act in self.solution():
+                step_completed = False
+                lhs, rhs = act.get_clips_lhs_rhs(self)
+                c = CLIPSExecutor()
+                c.load_rule(act.__name__, lhs=lhs, rhs=rhs)
+                c.load_facts(work_facts)
+                try:
+                    # print("Executing", act)
+                    c.run() # throws MatchError
+                    work_facts = c.get_facts()
+                    step_completed = True
+                    i+=1
+                except MatchError:
+                    break
+            if step_completed: break
+        if not step_completed:
+            match_struct = c.check_match(act) # TODO HERE
+            # TODO HERE: translate all facts to objects, all CEs to LOCs and Select()s
+            # print(match_struct)
+            # print(c.gen_match_problem())
+            raise SolutionCheckError(("Checking...\n...  %s\n...  %s:\n" % ('\n...  '.join("%s: ... ok"%t.__name__ for t in self.solution()[:i]), act.__name__)) + match_struct)
+            return match_struct
+        # TODO HERE: check if goal is satisfied!
+        return work_facts
+
+class CLIPSRule:
+    def __init__(self, name, lhs, rhs):
+        self.name = name
+        self.lhs = copy.copy(lhs)
+        self.rhs = copy.copy(rhs)
+        
+    def compile(self):
+        return """
+    (defrule {name}
+        {lhs}
+        =>
+        {rhs}
+    )
+        """.format(name=self.name,lhs='\n        '.join(self.lhs),
+                    rhs='\n        '.join(self.rhs))
+    
+    def __str__(self):
+        return self.compile()
+
+class MatchError(Exception):
+    pass
+
+class SolutionCheckError(Exception):
+    pass
+
+class CLIPSExecutor:
+    CLIPS_BINARY = "clips"
+    def __init__(self):
+        self.rules = []
+    
+    def load_rule(self, name, lhs, rhs):
+        self.rules.append(CLIPSRule(name, lhs, rhs))
+        
+    def load_facts(self, facts):
+        # print("loading facts", facts)
+        self.facts = facts
+
+    def render_assert_facts(self):
+        return '\n'.join("(assert %s)" % f for f in self.facts)
+        
+    def gen_run_problem(self):
+        defrules = str(self.rules[0])
+        facts = self.render_assert_facts()
+        return """
+        {defrules}
+        (seed {seed})
+        (set-strategy random)
+        (watch facts)
+        {facts}
+        (printout t "--- RUN ---" crlf)
+        (run 1)
+        (exit)
+        """.format(defrules=defrules, facts=facts, seed=str(int(time.time())))
+        
+    def gen_match_problem(self):
+        defrules = str(self.rules[0])
+        rname = self.rules[0].name
+        facts = self.render_assert_facts()
+        return """
+        {defrules}
+        (watch facts)
+        {facts}
+        (printout t "--- RUN ---" crlf)
+        (matches {rname})
+        (exit)
+        """.format(defrules=defrules, facts=facts, rname=rname)
+    
+    
+    def get_facts(self):
+        run_result = self.run_result.split("--- RUN ---")[-1]
+        # print("RUN RES", run_result)
+        new_facts = []
+        del_facts = []
+        for l in run_result.split("\n"):
+            if not "==" in l: continue
+            fact = l.split("  ")[-1].strip()
+            if "<==" in l:
+                # print("DEL fct", l)
+                del_facts.append(fact)
+            else:
+                # print("NEW fct", l)
+                new_facts.append(fact)
+        # print("NEW facts", new_facts)
+        return list(set(self.facts)-set(del_facts))+new_facts
+            
+    def run_clips_file(self, fn):
+        p = subprocess.run([self.CLIPS_BINARY, "-f2", fn], stdout=subprocess.PIPE)
+        return p.stdout.decode("utf-8")
+        
+    def run_get_result(self, prg):
+        with tempfile.NamedTemporaryFile() as fp:
+            fp.write(prg.encode('utf-8'))
+            fp.flush()
+            fn = fp.name
+            self.run_result = self.run_clips_file(fn)
+            fp.close()
+            
+    def run(self):
+        self.run_get_result(self.gen_run_problem())
+        if len(self.run_result.split("--- RUN ---")[-1]) < 10:
+            raise MatchError("Rule %s does not match its selector")
+    
+    def check_match(self, actClass):
+        self.run_get_result(self.gen_match_problem())
+        m = self.run_result.split("--- RUN ---")[-1]
+        all_selected_objects_histories = []
+        for n in dir(actClass):
+            if not isinstance(getattr(actClass,n), Object): continue
+            if getattr(actClass,n)._parse_history:
+                all_selected_objects_histories += getattr(actClass,n)._parse_history
+        for phl in [ob._parse_history for ob in actClass.selector_objects]:
+            all_selected_objects_histories += phl
+        indexed_ces = []
+        for ce in self.rules[0].lhs:
+            found = False
+            for ph in all_selected_objects_histories:
+                if ce.split("<-")[-1].strip() in ph["text_predicates"]:
+                    found = True
+                    indexed_ces.append("{code}, {op1}<>{op2} in {file}:{line}".format(op1=ph["self-propname"],op2=ph["other-propname"],code=ph["frame"]["code"],file=os.path.basename(ph["frame"]["file"]),line=ph["frame"]["line"]))
+                    break
+            if not found:
+                indexed_ces.append("unknown "+ce) # 
+            # assert found
+        allmatch=["     *"]
+        acc = []
+        other_out = "Partial".join(m.split("Partial")[1:])+"\nPartial"
+        for l in other_out.split("\n"):
+            if "Partial" in l:
+                if acc and 'None' in acc[0]:
+                    allmatch.append("!!   0")
+                elif acc:
+                    allmatch.append("  "+str(len((','.join(acc)).split(","))).rjust(4))
+                    acc = []
+                else:
+                    allmatch.append("!!   0")
+            else:
+                acc.append(l)
+        ret = []
+        col_fs = []
+        state_pm = False
+        i=0
+        for l in m.split("\n"):
+            if "Pattern" in l:
+                p_idx = int(l.split()[-1])-1
+                ret.append("{mm}/{mamt} match(es) {finfo}".format(mm=allmatch[i],mamt=len(col_fs),finfo=repr(indexed_ces[p_idx])))
+                if col_fs:
+                    # ret.append(','.join(col_fs))
+                    col_fs = []
+                i+=1
+            else:
+                if "Partial" in l or state_pm:
+                    state_pm = True
+                    # ret.append(l)
+                else:
+                    col_fs.append(l)
+        return '\n'.join(ret)
+        
 
 class ActionClassLoader:
     actionList = [] #list of the ActionPlanned type

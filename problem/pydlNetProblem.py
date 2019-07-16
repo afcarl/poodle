@@ -14,7 +14,12 @@ class IPFactory():
             self.ip_addresses[ipaddr_text] = new_ipaddr_object
             return new_ipaddr_object
 
-class SimpleTestProblem1(Problem):
+class NetworkGoal(Problem):
+    def goal(self):
+        return self.packet.is_consumed == True
+        
+
+class SimpleTestProblem1(NetworkGoal):
 
     def actions(self):
         return [ ConsumePacketSelect, ForwardPacketToInterface, CreateRoute, HopToRoute ]
@@ -28,6 +33,7 @@ class SimpleTestProblem1(Problem):
         packet2 = self.addObject(Packet())
         packet2.is_consumed = True
         self.packet.next = packet2
+        self.packet.current_packet = True
         
         self.packet.dst_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.3"))
         self.host1 = self.addObject(Host())
@@ -61,11 +67,26 @@ class SimpleTestProblem1(Problem):
         # self.packet.at_interface_output = interface
         # Imaginary test:
         self.packet.at_interface_input = self.interface_dummyinput
-
-    def goal(self):
-        return self.packet.is_consumed == True
+    
+    def solution(self):
+        # solution and goal must not exist in same definition of class
+        # need to have another check for that - TODO
+        return [ # TODO: check if the list here is fully included in actions
+            # Select(Packet.at_interface_input in self.host1.has_interface),
+            CreateRoute,
+            HopToRoute,
+            ForwardPacketToInterface,
+            #Hinted( # hints are required to select the correct match
+            #    action=ForwardPacketToInterface, 
+            #    hints=(ForwardPacketToInterface.interface2 == self.interface2)
+            #),
+            ConsumePacketSelect
+        ]
 
 p = SimpleTestProblem1()
+
+p.check_solution()
+
 retCode = p.run()
 log.info("fast downward retcode {0}".format(retCode))
 
