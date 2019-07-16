@@ -120,6 +120,21 @@ def Unselect(what):
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
+def get_source_frame_dict():
+    frame = inspect.getouterframes(inspect.currentframe())[4]
+    for f in inspect.getouterframes(inspect.currentframe()):
+        frameinfo = inspect.getframeinfo(f[0])
+        if frameinfo.code_context and  "Select(" in frameinfo.code_context[0].strip().replace(" ",""):
+            frame = f
+            break
+    frameinfo = inspect.getframeinfo(frame[0])
+    c_string = frameinfo.code_context[0].strip()
+    return {
+                    "code": c_string,
+                    "line": frameinfo.lineno,
+                    "file": frameinfo.filename
+            }
+
 id_counter = 0
 def new_id():
     global id_counter
@@ -601,11 +616,18 @@ class Property(object):
                 break
         frameinfo = inspect.getframeinfo(frame[0])
         c_string = frameinfo.code_context[0].strip()
+        if isinstance(other, Property):
+            otherPropName = other._property_name
+        else:
+            otherPropName = None
         if not _problem_compilation: # prevents leak of goal into predicates...
             obj._parse_history.append({
                 "operator": operator, 
-                "self": self, 
-                "other": subjObjectClass, 
+                "self-propname": self._property_name,
+                "other-propname": otherPropName,
+                "self": self,
+                "other": other,
+                "otherClass": subjObjectClass, 
                 "self-prop": self._value, 
                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
                 "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
@@ -811,6 +833,7 @@ class StateFact(Property):
             self._prepare()
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_effects.append(text_predicate)
+        self._value = True
     def unset(self):
         self._prepare()
         global _collected_effects
@@ -818,6 +841,7 @@ class StateFact(Property):
         text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
         # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
         _collected_effects.append("(not %s)" % text_predicate)
+        self._value = False
 
     def __eq__(self, other):
         "StateFact can only be compared to True or False"
@@ -840,7 +864,30 @@ class StateFact(Property):
             # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_predicates.append(text_predicate)
-        return True
+        
+        ph = {
+                "operator": "check_bool", 
+                "self": self, 
+                "self-propname": self._property_name, 
+                "other": None, 
+                "other-propname": None, 
+                "otherClass": None,
+                "self-prop": self._value, 
+                #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+                "variables": {}, # TODO: what if we have two same classes?
+                "class_variables": { },
+                "text_predicates": [ text_predicate ],
+                "parameters": {}, # unknown
+                "frame": get_source_frame_dict()
+            }
+        if hasattr(self, "_property_of_inst") and self._property_of_inst:
+            if self._property_of_inst._parse_history:
+                self._property_of_inst._parse_history.append(ph)
+            else:
+                self._property_of_inst._parse_history=[ph]
+        else:
+            raise AssertionError("Selecting a variable by StateFact is not supported; please use selector() syntax")
+        return self
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
 
@@ -1448,7 +1495,7 @@ class Problem:
     def check_solution(self):
         "run debugging session over the solution"
         step_completed = False
-        for tryCount in range(100):
+        for tryCount in range(5):
             i=0
             work_facts = self.facts() # TODO HERE
             for act in self.solution():
@@ -1465,14 +1512,17 @@ class Problem:
                     i+=1
                 except MatchError:
                     break
-            if i == len(self.solution())-1:
-                break
+            # print("MY CHECK EXITING", i)
+            if step_completed: break
+            # if step_completed and i >= len(self.solution())-1:
+                # print("MY CHECK EXITING", i)
+                # break
         if not step_completed:
             match_struct = c.check_match(act) # TODO HERE
             # TODO HERE: translate all facts to objects, all CEs to LOCs and Select()s
             print(match_struct)
             print(c.gen_match_problem())
-            raise SolutionCheckError(("Executing %s - \n%s:\n" % (i, act.__name__)) + match_struct)
+            raise SolutionCheckError(("Checking...\n...  %s\n...  %s:\n" % ('\n...  '.join("%s: ... ok"%t.__name__ for t in self.solution()[:i]), act.__name__)) + match_struct)
             return match_struct
         # TODO HERE: check if goal is satisfied!
         return work_facts
@@ -1597,7 +1647,7 @@ class CLIPSExecutor:
                 if ce.split("<-")[-1].strip() in ph["text_predicates"]:
                     found = True
                     # print("MY CHECK found in preds",ce,":", ph["text_predicates"])
-                    indexed_ces.append("{code}, in {file}:{line}".format(code=ph["frame"]["code"],file=os.path.basename(ph["frame"]["file"]),line=ph["frame"]["line"]))
+                    indexed_ces.append("{code}, {op1}<>{op2} in {file}:{line}".format(op1=ph["self-propname"],op2=ph["other-propname"],code=ph["frame"]["code"],file=os.path.basename(ph["frame"]["file"]),line=ph["frame"]["line"]))
                     break
             if not found:
                 print("MY CHECK NOT FOUND", ce.split("<-")[-1].strip(), "from", actClass)

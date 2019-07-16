@@ -33,6 +33,7 @@ class SimpleTestProblem1(NetworkGoal):
         packet2 = self.addObject(Packet())
         packet2.is_consumed = True
         self.packet.next = packet2
+        self.packet.current_packet = True
         
         self.packet.dst_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.3"))
         self.host1 = self.addObject(Host())
