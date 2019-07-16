@@ -845,21 +845,20 @@ class StateFact(Property):
 
     def __eq__(self, other):
         "StateFact can only be compared to True or False"
-        print("MY CHECK EQ")
         assert other == True or other == False, "Only True or False for StateFact"
         global _collected_effects
+        global _collected_predicates 
         if other == False:
             # TODO: could call self.unset() if run in effect compilation, not problem compilation!!
             # (add below...)
             raise NotImplementedError("Comparing StateFact to False is not supported")
         global _problem_compilation
         if _problem_compilation:
-            print("MY CHECK EQ - PC")
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
             # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
-            _collected_predicates.append(text_predicate)
+            # _collected_predicates.append(text_predicate)
+            _collected_effects.append(text_predicate) # in problem compilation, we collect effects...
         else:
-            print("MY CHECK EQ - NOT PC")
             self._prepare() # not sure if this is needed here???
             # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
@@ -1263,7 +1262,7 @@ class PlannedAction():
                 retracting_predicate = p.replace("(not","")[:-1].strip()
                 lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
                 cl = "(retract %s)" % fname
-                print("Retracting", p, retracting_predicate, cl, lhs, cls.collected_predicates)
+                # print("Retracting", p, retracting_predicate, cl, lhs, cls.collected_predicates)
             else:
                 cl = "(assert {ce})".format(ce=p)
             rhs.append(cl)
@@ -1320,6 +1319,7 @@ class Problem:
     def __init__(self):
         self._has_imaginary = False
         self._plan = None
+        self._compiled_problem = ""
     def getFolderName(self):
         return self.folder_name
     
@@ -1344,7 +1344,7 @@ class Problem:
 
     def run(self):
         global _collected_parameters
-        print(_collected_parameters)
+        # print(_collected_parameters)
         counter = 0
         try:
             with open("./.counter", "r") as fd:
@@ -1441,6 +1441,7 @@ class Problem:
 
 
     def compile_problem(self):
+        if self._compiled_problem: return self._compiled_problem
         global _problem_compilation
         global _compilation
         global _collected_objects
@@ -1459,11 +1460,14 @@ class Problem:
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal
         _collected_effects = []
+        _collected_predicates = []
+        # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         self.goal()
         # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         global _selector_out
         _selector_out = None # cleaner goal
-        self.collected_goal = list(filter(None, _collected_effects)) # filtering is not required...
+        self.collected_goal = list(filter(None, _collected_predicates + _collected_effects)) # filtering is not required...
+        assert len(self.collected_goal), "No goal was generated"
         _collected_predicates = []
         _collected_effects = []
         
@@ -1472,7 +1476,7 @@ class Problem:
         txt_objects = ""
         for cls in self.collected_objects:
             txt_objects += " ".join(list(set(self.collected_objects[cls]))) + " - " + cls + " "
-        return """
+        self._compiled_problem =  """
 (define (problem poodle-generated)
     (:domain poodle-generated)
     (:objects
@@ -1487,6 +1491,7 @@ class Problem:
     (:metric minimize (total-cost))
 )
 """.format(objects=txt_objects, facts='\n        '.join(self.collected_facts), goal='\n            '.join(self.collected_goal))
+        return self._compiled_problem
 
     def facts(self):
         self.compile_problem()
@@ -1495,7 +1500,7 @@ class Problem:
     def check_solution(self):
         "run debugging session over the solution"
         step_completed = False
-        for tryCount in range(5):
+        for tryCount in range(150):
             i=0
             work_facts = self.facts() # TODO HERE
             for act in self.solution():
@@ -1505,23 +1510,19 @@ class Problem:
                 c.load_rule(act.__name__, lhs=lhs, rhs=rhs)
                 c.load_facts(work_facts)
                 try:
-                    print("Executing", act)
+                    # print("Executing", act)
                     c.run() # throws MatchError
                     work_facts = c.get_facts()
                     step_completed = True
                     i+=1
                 except MatchError:
                     break
-            # print("MY CHECK EXITING", i)
             if step_completed: break
-            # if step_completed and i >= len(self.solution())-1:
-                # print("MY CHECK EXITING", i)
-                # break
         if not step_completed:
             match_struct = c.check_match(act) # TODO HERE
             # TODO HERE: translate all facts to objects, all CEs to LOCs and Select()s
-            print(match_struct)
-            print(c.gen_match_problem())
+            # print(match_struct)
+            # print(c.gen_match_problem())
             raise SolutionCheckError(("Checking...\n...  %s\n...  %s:\n" % ('\n...  '.join("%s: ... ok"%t.__name__ for t in self.solution()[:i]), act.__name__)) + match_struct)
             return match_struct
         # TODO HERE: check if goal is satisfied!
@@ -1561,7 +1562,7 @@ class CLIPSExecutor:
         self.rules.append(CLIPSRule(name, lhs, rhs))
         
     def load_facts(self, facts):
-        print("loading facts", facts)
+        # print("loading facts", facts)
         self.facts = facts
 
     def render_assert_facts(self):
@@ -1597,19 +1598,19 @@ class CLIPSExecutor:
     
     def get_facts(self):
         run_result = self.run_result.split("--- RUN ---")[-1]
-        print("RUN RES", run_result)
+        # print("RUN RES", run_result)
         new_facts = []
         del_facts = []
         for l in run_result.split("\n"):
             if not "==" in l: continue
             fact = l.split("  ")[-1].strip()
             if "<==" in l:
-                print("DEL fct", l)
+                # print("DEL fct", l)
                 del_facts.append(fact)
             else:
-                print("NEW fct", l)
+                # print("NEW fct", l)
                 new_facts.append(fact)
-        print("NEW facts", new_facts)
+        # print("NEW facts", new_facts)
         return list(set(self.facts)-set(del_facts))+new_facts
             
     def run_clips_file(self, fn):
@@ -1640,17 +1641,14 @@ class CLIPSExecutor:
         for phl in [ob._parse_history for ob in actClass.selector_objects]:
             all_selected_objects_histories += phl
         indexed_ces = []
-        print("MY CHECK searching in", [o["text_predicates"] for o in all_selected_objects_histories])
         for ce in self.rules[0].lhs:
             found = False
             for ph in all_selected_objects_histories:
                 if ce.split("<-")[-1].strip() in ph["text_predicates"]:
                     found = True
-                    # print("MY CHECK found in preds",ce,":", ph["text_predicates"])
                     indexed_ces.append("{code}, {op1}<>{op2} in {file}:{line}".format(op1=ph["self-propname"],op2=ph["other-propname"],code=ph["frame"]["code"],file=os.path.basename(ph["frame"]["file"]),line=ph["frame"]["line"]))
                     break
             if not found:
-                print("MY CHECK NOT FOUND", ce.split("<-")[-1].strip(), "from", actClass)
                 indexed_ces.append("unknown "+ce) # 
             # assert found
         allmatch=["     *"]
@@ -1661,14 +1659,12 @@ class CLIPSExecutor:
                 if acc and 'None' in acc[0]:
                     allmatch.append("!!   0")
                 elif acc:
-                    print("MY CHECK ASXX", acc)
                     allmatch.append("  "+str(len((','.join(acc)).split(","))).rjust(4))
                     acc = []
                 else:
                     allmatch.append("!!   0")
             else:
                 acc.append(l)
-        print("MY CHECK ALLMARCH", allmatch)
         ret = []
         col_fs = []
         state_pm = False
@@ -1676,7 +1672,6 @@ class CLIPSExecutor:
         for l in m.split("\n"):
             if "Pattern" in l:
                 p_idx = int(l.split()[-1])-1
-                print("MY CHECK i", i)
                 ret.append("{mm}/{mamt} match(es) {finfo}".format(mm=allmatch[i],mamt=len(col_fs),finfo=repr(indexed_ces[p_idx])))
                 if col_fs:
                     # ret.append(','.join(col_fs))
