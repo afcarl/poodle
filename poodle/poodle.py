@@ -350,11 +350,12 @@ class Property(object):
         my_class_name = self.get_property_class_name()
         myclass_genvar = None
         if self._property_of_inst._class_variable: return self._property_of_inst._class_variable
-        for ph in reversed(self._property_of_inst._parse_history):
-            if my_class_name in ph["variables"]:
-                myclass_genvar = ph["variables"][my_class_name]
-                break
-        return myclass_genvar
+        raise AssertionError("ProgrammingError: Class has no variable defined; refusing to continue")
+        # for ph in reversed(self._property_of_inst._parse_history):
+        #     if my_class_name in ph["variables"]:
+        #         myclass_genvar = ph["variables"][my_class_name]
+        #         break
+        # return myclass_genvar
     
     def operator(self, other, operator="equals", dir_hint="straight"):
         assert operator == "equals" or operator == "contains"
@@ -536,17 +537,17 @@ class Property(object):
             log.debug("OPERATOR: generating new var for other! {0}".format(other_genvar))
         
         collected_parameters = {other_genvar: class_or_hash(other_genvar, other_class_name), myclass_genvar: class_or_hash(myclass_genvar, my_class_name)}
-        
+        other_property_class_name = None
+        other_property_genvar = None
         if property_property_comparison:
             other_property_class_name = get_property_class_name(other)
             other_property_class = other.get_parent_class()
-            other_property_genvar = None
             if hasattr(other, "_property_of_inst") and other._property_of_inst: other_property_genvar = other._property_of_inst._class_variable
-            if not other_property_genvar and _parse_history: # must not fire?
-                for ph in reversed(_parse_history):
-                    if other_property_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
-                        other_property_genvar = ph["variables"][other_property_class_name]
-                        break
+            # if not other_property_genvar and _parse_history: # must not fire?
+            #     for ph in reversed(_parse_history):
+            #         if other_property_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
+            #             other_property_genvar = ph["variables"][other_property_class_name]
+            #             break
             if other_property_genvar is None: 
                 if issubclass(other_property_class, Imaginary):
                     other_property_genvar = gen_var_imaginary(other_property_class_name)
@@ -615,8 +616,7 @@ class Property(object):
             otherPropName = other._property_name
         else:
             otherPropName = None
-        if not _problem_compilation: # prevents leak of goal into predicates...
-            obj._parse_history.append({
+        ph_entry = {
                 "operator": operator, 
                 "self-propname": self._property_name,
                 "other-propname": otherPropName,
@@ -626,6 +626,7 @@ class Property(object):
                 "self-prop": self._value, 
                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
                 "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
+                # "prop_variables": {self._property_name: 
                 "class_variables": { my_class_name: myclass_genvar },
                 "text_predicates": [text_predicate, text_predicate_2],
                 "parameters": collected_parameters,
@@ -634,7 +635,29 @@ class Property(object):
                     "line": frameinfo.lineno,
                     "file": frameinfo.filename
                 }
-            })
+            }
+        if not other_property_class_name is None and not other_property_genvar is None:
+            ph_entry["variables"][other_property_class_name] = other_property_genvar
+        if not _problem_compilation: # prevents leak of goal into predicates...
+            obj._parse_history.append(ph_entry)
+            obj._parse_history_self.append(ph_entry)
+        # add self parse history for optimization
+        # in case of Class.prop == inst: <how to identify>:
+        #       - we know variable of obj property "prop" and its name is other._class_variable
+        # in case of inst.prop == Class: <how?>
+        #       - we know variable of prop of self._property_of_inst and self._property_name is obj._class_variable
+        # in case of Class.prop == inst.prop <>
+        #       - we know variable of prop self._property_of_inst (obj) and its name is generated other_property_genvar
+        #       - we know variable of prop other._property_name of other._property_of_inst and its name is also other_property_genvar
+        # in case of inst.prop == Class.prop <>
+        # in case of inst.prop == inst2
+        # in case of inst.prop == inst2.prop
+        # add set initial
+        if who_instantinating == "self": # means obj is instance of self and we are now its property
+            obj._parse_history_self.append[{
+                "prop_variables": {self._property_name: myclass_genvar}
+            }]
+        
         #print("OPERATOR-HIST-2", _parse_history)
 
         # this is required for the variables to become available at selector compilation
@@ -952,6 +975,7 @@ class BaseObjectMeta(type):
 class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
+        self._parse_history_self = [] # Self, non-merged parse history
         self._sealed = False
         global _effect_compilation
         global _problem_compilation
