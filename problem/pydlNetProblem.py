@@ -29,8 +29,8 @@ class SimpleTestProblem1(NetworkGoal):
         self.ip_factory = self.addObject(IPFactory()) # need IP factory as all new objects would be different
         ip_factory = self.ip_factory
         
-        self.packet = self.addObject(Packet())
-        packet2 = self.addObject(Packet())
+        self.packet = self.addObject(Packet("pkt1"))
+        packet2 = self.addObject(Packet("pkt2"))
         packet2.is_consumed = True
         self.packet.next = packet2
         self.packet.current_packet = True

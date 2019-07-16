@@ -149,6 +149,9 @@ class Packet(Object):
     at_interface_output = StateProperty(Interface)
     # can also be manually derived (as it is now manually written in PDDL)
     related_to = Relation(Interface) # TODO: REMOVE!!
+    
+    def __str__(self):
+        return "I AM PACKET: "+self.value
 # Packet.next = Property(Packet) # next packet in chain
 Packet.validation_packet = Property(Packet)
 
