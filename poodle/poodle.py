@@ -214,7 +214,6 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
         class_name = None
     #if not imaginary:
         # text_predicate = "(" + predicate_name + " " + var1 + " - " + var1_class + " " + var2 + " - " + var2_class + ")" # preconditions with classes not supported
-    # TODO HERE: looks like we can match the class by "id" which is N-hashnum variable
     text_predicate = "(" + predicate_name + " " + var1 + " " + var2 + ")"
     if " " in var1 and not " " in var2:
         _collected_predicate_templates.append("(" + predicate_name + " " + gen_hashnum_templates(var1) + " ?var2 - " + var2_class + ")")
@@ -228,10 +227,6 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
     else:
         _collected_predicate_templates.append("(" + predicate_name + " ?var1 - " + var1_class + " ?var2 - " + var2_class + ")")
         _collected_object_classes.update([class_name, var1_class, var2_class])
-    #else:
-        #TODO HERE
-    #    obj_predicate_id = get_imaginary_object_id()
-    #    text_predicate = "(" + predicate_name + " " + obj_predicate_id + " " + var1 + " " + var2 + ")"
 
     return text_predicate
 
@@ -443,7 +438,7 @@ class Property(object):
             # The following is the fix for scenario Select(Class.prop1 in inst.prop2)
             #    in this scenario, without this fix return value and class name are wrong
             if hasattr(other, "_value") and subjObjectClass == other._value:
-                obj = other._property_of() # TODO HERE - think what should happen next...
+                obj = other._property_of() 
                 who_instantiating_fix = True # Fix for bug with instantiating Class.prop in inst.prop2
             else:
                 obj = subjObjectClass()
@@ -1208,7 +1203,11 @@ class PlannedAction():
         _collected_effects = []
         _compilation = True
         cls.problem = problem
-        cls.selector_objects = [item for sublist in [[cls.selector(cls)]] for item in sublist]
+        sel_ret = cls.selector(cls)
+        if type(sel_ret) == type([]):
+            cls.selector_objects = sel_ret
+        else:
+            cls.selector_objects = [sel_ret]
         _effect_compilation = True
         log.info("{0}".format(cls.effect(cls)))
         _effect_compilation = False
@@ -1503,7 +1502,7 @@ class Problem:
         step_completed = False
         for tryCount in range(150):
             i=0
-            work_facts = self.facts() # TODO HERE
+            work_facts = self.facts()
             for act in self.solution():
                 step_completed = False
                 lhs, rhs = act.get_clips_lhs_rhs(self)
@@ -1520,13 +1519,9 @@ class Problem:
                     break
             if step_completed: break
         if not step_completed:
-            match_struct = c.check_match(act) # TODO HERE
-            # TODO HERE: translate all facts to objects, all CEs to LOCs and Select()s
-            # print(match_struct)
-            # print(c.gen_match_problem())
+            match_struct = c.check_match(act)
             raise SolutionCheckError(("Checking...\n...  %s\n...  %s:\n" % ('\n...  '.join("%s: ... ok"%t.__name__ for t in self.solution()[:i]), act.__name__)) + match_struct)
             return match_struct
-        # TODO HERE: check if goal is satisfied!
         return work_facts
 
 class CLIPSRule:
