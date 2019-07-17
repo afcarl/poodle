@@ -1123,7 +1123,7 @@ class Object(metaclass=BaseObjectMeta):
         if (_compilation or _problem_compilation) and isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             # print("EXEC SET ---------------------------------------", name, value)
             getattr(self, name).set(value)
-        elif _problem_compilation and isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+        elif (_effect_compilation or _problem_compilation) and isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             if value == True:
                 getattr(self, name).set()
             else:
