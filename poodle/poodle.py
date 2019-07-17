@@ -743,14 +743,15 @@ class Property(object):
         # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
         _collected_effects.append(text_predicate)
         if init_mode:
-            if issubclass(self._value, Imaginary):
-                other_genvar = gen_var_imaginary(value.__class__.__name__)
-                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
-            else:
-                other_genvar = gen_var(value.__class__.__name__)
-                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
-            _collected_predicates.append(text_predicate)
-            _collected_parameters.update({other_genvar: value.__class__.__name__})
+            log.warning("PREDICATE in INIT mode:", repr(self._property_of_inst), repr(self))
+            # if issubclass(self._value, Imaginary):
+            #     other_genvar = gen_var_imaginary(value.__class__.__name__)
+            #     text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+            # else:
+            #     other_genvar = gen_var(value.__class__.__name__)
+            #     text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+            # _collected_predicates.append(text_predicate)
+            # _collected_parameters.update({other_genvar: value.__class__.__name__})
         
     def unset(self, what = None, _force = False):
         # we need to unset the value that we selected for us
