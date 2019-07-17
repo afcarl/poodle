@@ -14,6 +14,19 @@ class IPFactory():
             self.ip_addresses[ipaddr_text] = new_ipaddr_object
             return new_ipaddr_object
 
+class RouteExistsReturn(PlannedAction):
+    cost = 100
+    host = Host()
+    table = Select(Table in host.has_table)
+    route = Select(Route in table.has_route)
+    packet = Select(Packet.at_interface_input in host.has_interface)
+    def selector(self):
+        return self.route
+    def effect(self):
+        self.packet.is_consumed = True
+        
+        
+
 class PacketAtOutputReturn(PlannedAction):
     cost = 100
     packet = Packet()
@@ -41,7 +54,11 @@ class SimpleTestProblem1(NetworkGoal):
 
     def actions(self):
         return [ ConsumePacketSelect, ForwardPacketToInterface, CreateRoute, 
-                HopToRoute, PacketAtOutputReturn, PacketAtOutputReturnInput]
+                HopToRoute, 
+                PacketAtOutputReturn,
+                # PacketAtOutputReturnInput
+                RouteExistsReturn
+                ]
 
     def problem(self):
         
