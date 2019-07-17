@@ -1750,12 +1750,12 @@ class CLIPSExecutor:
         
 
 class ActionClassLoader:
-    actionList = [] #list of the ActionPlanned type
-    _plan = [] #list instances of the ActionPlanned type
-    problem = None
     
     # put as argument for constructor list of the ActionPlanned type which got from Problem.actions()
     def __init__(self, actionList, problem):
+        self.actionList = [] #list of the ActionPlanned type
+        self._plan = [] #list instances of the ActionPlanned type
+        self.problem = None
         self.actionList = actionList
         self.problem = problem
 
@@ -1786,4 +1786,5 @@ class ActionClassLoader:
         log.debug("load action from file {0}".format(outPlanFile))
         with open(outPlanFile, "r") as fd:
             for planLine in fd:
+                if ";" in planLine: continue
                 self.load(planLine.replace("(", "").replace(")", ""))
