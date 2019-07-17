@@ -949,17 +949,24 @@ class StateFact(Property):
 
 
 class ActionMeta(type):
-    def __new__(mcls, name, bases, attrs):
-        # attempt to make in-action counter
-        # complicated by having compilation after class gen
-        # meaning that compilation must cause counter to restart
-        #global id_counter
-        #id_counter = 0
-        cls = super(ActionMeta, mcls).__new__(mcls, name, bases, attrs)
-        #for attr, obj in attrs.items():
-        #    if isinstance(obj, Property):
-        #        obj.__set_name__(cls, attr)
-        return cls
+    # def __new__(mcls, name, bases, attrs):
+    #     # attempt to make in-action counter
+    #     # complicated by having compilation after class gen
+    #     # meaning that compilation must cause counter to restart
+    #     #global id_counter
+    #     #id_counter = 0
+    #     cls = super(ActionMeta, mcls).__new__(mcls, name, bases, attrs)
+    #     #for attr, obj in attrs.items():
+    #     #    if isinstance(obj, Property):
+    #     #        obj.__set_name__(cls, attr)
+    #     return cls
+    def __init__(cls, name, bases, dct):
+        super(ActionMeta, cls).__init__(name, bases, dct)
+        cls._class_collected_predicates = []
+        # for ob in dct:
+        #     if isinstance(dct[ob], Object):
+        #         for ph in dct[ob]._parse_history:
+        #             cls._class_collected_predicates += list(filter(None, ph["text_predicates"]))
 
 class BaseObjectMeta(type):
     def __new__(mcls, name, bases, attrs):
@@ -1214,8 +1221,8 @@ class PoodleHashnum(Object):
 ##
 
 
-#class PlannedAction(metaclass=ActionMeta):
-class PlannedAction():
+class PlannedAction(metaclass=ActionMeta):
+# class PlannedAction():
     cost = 1
     argumentList = []
     parameterList = []
@@ -1280,7 +1287,7 @@ class PlannedAction():
         _compilation = False
         
         # _collected_predicates = filter(None, list(set(_collected_predicates)))
-        _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(_collected_predicates))))
+        _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(cls._class_collected_predicates + _collected_predicates))))
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
