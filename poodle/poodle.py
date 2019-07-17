@@ -719,6 +719,10 @@ class Property(object):
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
         
+    def init(self, value):
+        self._unset = True
+        return self.set(value)
+        
     def set(self, value):
         global _problem_compilation
         global _effect_compilation 
@@ -743,6 +747,8 @@ class Property(object):
         # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
         _collected_effects.append(text_predicate)
         if init_mode:
+            if issubclass(type(value), Imaginary):
+                raise NotImplementedError("For imaginary objects that were not Select()'ed, please unset() first, or use `.init()`")
             # log.warning("PREDICATE in INIT mode:", repr(self._property_of_inst), repr(self))
             if issubclass(self._value, Imaginary):
                 other_genvar = gen_var_imaginary(value.__class__.__name__)
@@ -837,6 +843,7 @@ class Relation(Property):
     
     def add(self, what):
         if isinstance(what, Object): self._property_value.append(what)
+        self._unset = True
         super().set(what)
         
     def remove(self, what):
@@ -1301,8 +1308,10 @@ class PlannedAction(metaclass=ActionMeta):
             if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
                 # WARNING! this is because of how imaginary variables are implemented
-                collected_parameters += "%s - %s " % (ob.split()[0], _collected_parameters[ob])
-                collected_parameters += "%s - %s " % (ob.split()[1], _collected_parameters[ob])
+                # collected_parameters += "%s - %s " % (ob.split()[0], _collected_parameters[ob])
+                # collected_parameters += "%s - %s " % (ob.split()[1], _collected_parameters[ob])
+                collected_parameters += "%s - %s " % (ob.split()[0], HASHNUM_CLASS_NAME)
+                collected_parameters += "%s - %s " % (ob.split()[1], HASHNUM_CLASS_NAME)
             else:
                 collected_parameters += "%s - %s " % (ob, _collected_parameters[ob])
         
