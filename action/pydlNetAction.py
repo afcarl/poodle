@@ -114,7 +114,7 @@ class ForwardPacketToInterface(PlannedAction):
         # self.packet.at_interface_output.unset()
         # TODO: set() could automatically issue an unset()
         print("MY CHECK 11111")
-        self.packet.at_interface_input.set(self.interface2)
+        self.packet.at_interface_input.init_unsafe(self.interface2)
 
 print(ForwardPacketToInterface.compile_clips(None))
 class ForwardingProblem(Problem):
@@ -207,8 +207,8 @@ class ForwardPacketToRouteInTable(PlannedAction):
         # self.packet.at_table = None # TODO not supported yet
         self.packet.at_table.unset(self.table)
         # self.packet.at_interface_output = self.route.interface # TODO support this
-        self.packet.at_interface_output = self.interface # TODO remove when above is supported
-        self.packet.dst_macaddr = self.interface_dest
+        self.packet.at_interface_output.init_unsafe(self.interface) # TODO remove when above is supported
+        self.packet.dst_macaddr.init_unsafe(self.interface_dest)
 
 print(ForwardPacketToRouteInTable.compile(Problem()))
 
@@ -221,7 +221,7 @@ class TestABCSelect(PlannedAction):
         return self.packet
         
     def effect(self):
-        self.packet.src_ipaddr = self.ipaddr
+        self.packet.src_ipaddr.init_unsafe(self.ipaddr)
 print(TestABCSelect.compile(Problem()))
 print(TestABCSelect.compile_clips(Problem()))
 
@@ -236,7 +236,7 @@ class TestABCRSelect(PlannedAction):
         return Select(self.packet.at_interface_output in self.host.has_interface)
         
     def effect(self):
-        self.packet.src_ipaddr = self.ipaddr
+        self.packet.src_ipaddr.init_unsafe(self.ipaddr)
 print(TestABCRSelect.compile(Problem()))
 
 class TestImaginaryCreate(PlannedAction):
@@ -284,7 +284,7 @@ class TestStaticObject(PlannedAction):
             and Unselect(self.host.has_interface == self.interface)
 
     def effect(self):
-        self.packet.at_interface_input = self.problem.testif
+        self.packet.at_interface_input.init_unsafe(self.problem.testif)
 
 class StaticObjectProblem(Problem):
     def actions(self):
@@ -320,7 +320,7 @@ class HopToRoute(PlannedAction):
 
     def effect(self):
         self.packet.at_interface_input.unset()
-        self.packet.at_interface_output = self.route_dot_interface
+        self.packet.at_interface_output.init_unsafe(self.route_dot_interface)
         
 print(HopToRoute.compile(Problem()))
 # raise AssertionError("TEST")
