@@ -1170,6 +1170,13 @@ class Object(metaclass=BaseObjectMeta):
         if isinstance(v, Property): 
             v._dot_from = self
         return v
+    
+    def __str__(self):
+        try:
+            return repr(self)+"(name=%s, value=%s)" % (self.name, self.value)
+        except:
+            return repr(self)+"(Additionally, there was an error during standard __str__)"
+            
 
     
     # def __getattr__(self, attr):
