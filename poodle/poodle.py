@@ -338,7 +338,6 @@ class Property(object):
         "finds the variable that holds the class or our value"
         myclass_genvar = None
         for ph in reversed(self._property_of_inst._parse_history_self):
-            print("MY CHECK PH IS", ph)
             myclass_genvar = ph["prop_variables"].get(self._property_name)
             if myclass_genvar: break
         return myclass_genvar
@@ -648,18 +647,18 @@ class Property(object):
         #       - we know variable of prop of self._property_of_inst and self._property_name is obj._class_variable
         elif has_poi and inspect.isclass(other) and issubclass(other, Object):
             self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: obj._class_variable}})
-        # 3 in case of Class.prop == inst.prop <>
+        # 3 in case of Class.prop == inst.prop <> REVERSED! for _contains_
         #       - we know variable of prop self._property_name on self._property_of() (obj) and its name is generated other_property_genvar
         #       - we know variable of prop other._property_name on other._property_of_inst and its name is also other_property_genvar
         elif has_po and not has_poi and isinstance(other, Property):
-            obj._parse_history_self.append({"prop_variables": {self._property_name: other_property_genvar}})
-            other._property_of_inst._parse_history_self.append({"prop_variables": {other._property_name: other_property_genvar}})
-        # 4 in case of inst.prop == Class.prop <>
+            obj._parse_history_self.append({"prop_variables": {self._property_name: other_genvar}})
+            other._property_of_inst._parse_history_self.append({"prop_variables": {other._property_name: other_genvar}})
+        # 4 in case of inst.prop == Class.prop <> REVERSED! for _contains_
         #       - we know variable of prop self._property_name on self._property_of_inst and its name is generated other_property_genvar
         #       - we know variable of prop other._property_name of other._property_of() (obj) and its name is also other_property_genvar
         elif has_poi and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
-            self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: other_property_genvar}})
-            obj._parse_history_self.append({"prop_variables": {other._property_name: other_property_genvar}})
+            self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: other_genvar}})
+            obj._parse_history_self.append({"prop_variables": {other._property_name: other_genvar}})
         # 5 in case of inst.prop == inst2
         #       - we know variable of self._property_name on self._property_of_inst and it is other._class_variable
         elif has_poi and isinstance(other, Object):
@@ -668,8 +667,8 @@ class Property(object):
         #       - we know variable of self._property_name on self._property_of_inst and it is generated other_property_genvar
         #       - we know variable of other._property_name on other._property_of_inst and its name is other_property_genvar
         elif has_poi and isinstance(other, Property) and hasattr(other, "_property_of_inst"):
-            self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: other_property_genvar}})
-            other._property_of_inst._parse_history_self.append({"prop_variables": {other._property_name: other_property_genvar}})
+            self._property_of_inst._parse_history_self.append({"prop_variables": {self._property_name: other_genvar}})
+            other._property_of_inst._parse_history_self.append({"prop_variables": {other._property_name: other_genvar}})
         else:
             raise AssertionError("Not supported.")
             
@@ -722,8 +721,9 @@ class Property(object):
         
     def set(self, value):
         global _problem_compilation
+        global _effect_compilation 
         init_mode = False
-        if not self._unset and not _problem_compilation: 
+        if not self._unset and not _problem_compilation and not _effect_compilation: 
             try:
                 self.unset(_force=True)
             except AssertionError:
@@ -744,10 +744,10 @@ class Property(object):
         _collected_effects.append(text_predicate)
         if init_mode:
             if issubclass(self._value, Imaginary):
-                text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, gen_var_imaginary(value.__class__.__name__), value.__class__.__name__)
+                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, gen_var_imaginary(value.__class__.__name__), value.__class__.__name__)
             else:
-                text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, gen_var(value.__class__.__name__), value.__class__.__name__)
-            _collected_predicates.append("(not %s)" % text_predicate)
+                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, gen_var(value.__class__.__name__), value.__class__.__name__)
+            _collected_predicates.append(text_predicate)
             
             ph = {
                     "operator": "set", 
@@ -1286,6 +1286,7 @@ class PlannedAction():
         _compilation = True
         cls.problem = problem
         sel_ret = cls.selector(cls)
+        assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value"
         if type(sel_ret) == type([]):
             cls.selector_objects = sel_ret
         else:
@@ -1342,9 +1343,9 @@ class PlannedAction():
             if p.startswith("(not"):
                 fname = "?f"+str(new_id())
                 retracting_predicate = p.replace("(not","")[:-1].strip()
+                assert retracting_predicate in lhs, "ProgrammingError: retracting predicate %s not found in precondition of %s" % (p, repr(cls)) 
                 lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
                 cl = "(retract %s)" % fname
-                # print("Retracting", p, retracting_predicate, cl, lhs, cls.collected_predicates)
             else:
                 cl = "(assert {ce})".format(ce=p)
             rhs.append(cl)
@@ -1710,6 +1711,7 @@ class CLIPSExecutor:
     
     def check_match(self, actClass):
         self.run_get_result(self.gen_match_problem())
+        assert not "[" in self.run_result, "Error in creating debugger problem: %s" % self.run_result
         m = self.run_result.split("--- RUN ---")[-1]
         all_selected_objects_histories = []
         for n in dir(actClass):

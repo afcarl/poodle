@@ -83,7 +83,6 @@ class ConsumePacketSelect(PlannedActionJinja2):
     
     def selector(self):
         # TODO: when implementing and/or protection - compilation mode should switch to return True
-        print("------ MY CHECK TRUE")
         # return Select(self.packet.dst_ipaddr == self.interface_any.has_ipaddr and self.packet.current_packet == True)
         return Select(self.packet.current_packet == True and self.packet.dst_ipaddr == self.interface_any.has_ipaddr)
                 # and self.interface1.has_ipaddr == self.packet.dst_ipaddr) # incorrect, add to unit test
@@ -202,7 +201,7 @@ class TestABCSelect(PlannedAction):
     packet = Packet.Select(at_interface_input=host.has_interface, dst_ipaddr=ipaddr)
     
     def selector(self):
-        return True
+        return self.packet
         
     def effect(self):
         self.packet.src_ipaddr = self.ipaddr
@@ -295,14 +294,12 @@ class HopToRoute(PlannedAction):
     # 2. selector that we do is two-fold:
     #    2.1 
     # 3. class variable on returning object must be from Packet 
-    print("PREDICATE1 ------------------------")
     table = Select(Table in host.has_table)
-    print("PREDICATE2 ------------------------")
     route = Select(Route in table.has_route)
     route_dot_interface = Select(Interface == route.interface)
 
     def selector(self):
-        return True
+        return self.route
 
     def effect(self):
         self.packet.at_interface_input.unset()
