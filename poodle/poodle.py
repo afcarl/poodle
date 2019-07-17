@@ -1277,7 +1277,7 @@ class PlannedAction(metaclass=ActionMeta):
         _compilation = True
         cls.problem = problem
         sel_ret = cls.selector(cls)
-        assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value"
+        assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value in %s" % repr(cls)
         if type(sel_ret) == type([]):
             cls.selector_objects = sel_ret
         else:
