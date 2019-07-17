@@ -23,6 +23,15 @@ class PacketAtOutputReturn(PlannedAction):
     def effect(self):
         self.packet.is_consumed = True
 
+class PacketAtOutputReturnInput(PlannedAction):
+    cost = 100
+    packet = Packet()
+    iface = Interface()
+    def selector(self):
+        return Select(self.packet.at_interface_input == self.iface)
+    def effect(self):
+        self.packet.is_consumed = True
+
 class NetworkGoal(Problem):
     def goal(self):
         return self.packet.is_consumed == True
@@ -31,7 +40,8 @@ class NetworkGoal(Problem):
 class SimpleTestProblem1(NetworkGoal):
 
     def actions(self):
-        return [ ConsumePacketSelect, ForwardPacketToInterface, CreateRoute, HopToRoute, PacketAtOutputReturn]
+        return [ ConsumePacketSelect, ForwardPacketToInterface, CreateRoute, 
+                HopToRoute, PacketAtOutputReturn, PacketAtOutputReturnInput]
 
     def problem(self):
         
