@@ -748,7 +748,7 @@ class Property(object):
         _collected_effects.append(text_predicate)
         if init_mode:
             # if issubclass(type(value), Imaginary):
-                raise NotImplementedError("For imaginary objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
+                raise NotImplementedError("For objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
             # log.warning("PREDICATE in INIT mode:", repr(self._property_of_inst), repr(self))
             # if issubclass(self._value, Imaginary):
             #     other_genvar = gen_var_imaginary(value.__class__.__name__)
