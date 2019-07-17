@@ -20,8 +20,7 @@ class RouteExistsReturn(PlannedAction):
     table = Select(Table in host.has_table)
     route = Select(Route in table.has_route)
     packet = Select(Packet.at_interface_input in host.has_interface)
-    def selector(self):
-        return self.route
+    
     def effect(self):
         self.packet.is_consumed = True
         

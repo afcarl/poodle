@@ -743,15 +743,15 @@ class Property(object):
         # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
         _collected_effects.append(text_predicate)
         if init_mode:
-            log.warning("PREDICATE in INIT mode:", repr(self._property_of_inst), repr(self))
-            # if issubclass(self._value, Imaginary):
-            #     other_genvar = gen_var_imaginary(value.__class__.__name__)
-            #     text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
-            # else:
-            #     other_genvar = gen_var(value.__class__.__name__)
-            #     text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
-            # _collected_predicates.append(text_predicate)
-            # _collected_parameters.update({other_genvar: value.__class__.__name__})
+            # log.warning("PREDICATE in INIT mode:", repr(self._property_of_inst), repr(self))
+            if issubclass(self._value, Imaginary):
+                other_genvar = gen_var_imaginary(value.__class__.__name__)
+                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+            else:
+                other_genvar = gen_var(value.__class__.__name__)
+                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+            _collected_predicates.append(text_predicate)
+            _collected_parameters.update({other_genvar: value.__class__.__name__})
         
     def unset(self, what = None, _force = False):
         # we need to unset the value that we selected for us
@@ -964,10 +964,10 @@ class ActionMeta(type):
     def __init__(cls, name, bases, dct):
         super(ActionMeta, cls).__init__(name, bases, dct)
         cls._class_collected_predicates = []
-        # for ob in dct:
-        #     if isinstance(dct[ob], Object):
-        #         for ph in dct[ob]._parse_history:
-        #             cls._class_collected_predicates += list(filter(None, ph["text_predicates"]))
+        for ob in dct:
+            if isinstance(dct[ob], Object):
+                for ph in dct[ob]._parse_history:
+                    cls._class_collected_predicates += list(filter(None, ph["text_predicates"]))
 
 class BaseObjectMeta(type):
     def __new__(mcls, name, bases, attrs):
@@ -1277,11 +1277,13 @@ class PlannedAction(metaclass=ActionMeta):
         _compilation = True
         cls.problem = problem
         sel_ret = cls.selector(cls)
-        assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value in %s" % repr(cls)
-        if type(sel_ret) == type([]):
-            cls.selector_objects = sel_ret
-        else:
-            cls.selector_objects = [sel_ret]
+        cls.selector_objects = []
+        if sel_ret != "DEFAULT": 
+            assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value in %s" % repr(cls)
+            if type(sel_ret) == type([]):
+                cls.selector_objects = sel_ret
+            else:
+                cls.selector_objects = [sel_ret]
         _effect_compilation = True
         log.info("{0}".format(cls.effect(cls)))
         _effect_compilation = False
@@ -1357,10 +1359,11 @@ class PlannedAction(metaclass=ActionMeta):
                     rhs='\n        '.join(rhs))
     
     def selector(self):
-        raise NotImplementedError
+        return "DEFAULT"
+        # raise NotImplementedError
         
     def effect(self):
-        raise NotImplementedError
+        raise NotImplementedError("effect() in %s not implemented" % repr(self))
     
 
 class PlannedActionJinja2(PlannedAction):
