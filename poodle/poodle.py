@@ -723,7 +723,7 @@ class Property(object):
         global _problem_compilation
         global _effect_compilation 
         init_mode = False
-        if not self._unset and not _problem_compilation and not _effect_compilation: 
+        if not self._unset and not _problem_compilation and not self._property_of_inst._new_fresh: 
             try:
                 self.unset(_force=True)
             except AssertionError:
@@ -744,34 +744,13 @@ class Property(object):
         _collected_effects.append(text_predicate)
         if init_mode:
             if issubclass(self._value, Imaginary):
-                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, gen_var_imaginary(value.__class__.__name__), value.__class__.__name__)
+                other_genvar = gen_var_imaginary(value.__class__.__name__)
+                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
             else:
-                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, gen_var(value.__class__.__name__), value.__class__.__name__)
+                other_genvar = gen_var(value.__class__.__name__)
+                text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
             _collected_predicates.append(text_predicate)
-            
-            ph = {
-                    "operator": "set", 
-                    "self": self, 
-                    "self-propname": self._property_name, 
-                    "other": None, 
-                    "other-propname": None, 
-                    "otherClass": None,
-                    "self-prop": self._value, 
-                    #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
-                    "variables": {}, # TODO: what if we have two same classes?
-                    "class_variables": { },
-                    "text_predicates": [ text_predicate ],
-                    "parameters": {}, # unknown
-                    "frame": { "code": "<property setter>", "line": -1, "file": "<unknown>" } # TODO
-                }
-            if hasattr(self, "_property_of_inst") and self._property_of_inst:
-                if self._property_of_inst._parse_history:
-                    self._property_of_inst._parse_history.append(ph)
-                else:
-                    self._property_of_inst._parse_history=[ph]
-            else:
-                raise AssertionError("Setting of an uninitialized variable is not supported")
-            
+            _collected_parameters.update({other_genvar: value.__class__.__name__})
         
     def unset(self, what = None, _force = False):
         # we need to unset the value that we selected for us
@@ -925,6 +904,7 @@ class StateFact(Property):
         assert other == True or other == False, "Only True or False for StateFact"
         global _collected_effects
         global _collected_predicates 
+        global _collected_parameters
         if other == False:
             # TODO: could call self.unset() if run in effect compilation, not problem compilation!!
             # (add below...)
@@ -939,6 +919,7 @@ class StateFact(Property):
             self._prepare() # not sure if this is needed here???
             # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+            _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
             _collected_predicates.append(text_predicate)
         
         ph = {
@@ -1035,6 +1016,7 @@ class Object(metaclass=BaseObjectMeta):
         self._parse_history = [] # Experimentally setting to fix #78
         self._parse_history_self = [] # Self, non-merged parse history
         self._sealed = False
+        self._new_fresh = False # will only become fresh and new if it is imaginary in effect compilation
         global _effect_compilation
         global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
@@ -1205,6 +1187,7 @@ class Imaginary(Object):
         global _collected_effects
         global _collected_parameters
         if _effect_compilation:
+            self._new_fresh = True
             self._parse_history = []
             self._class_variable = gen_var_imaginary(self.__class__.__name__)
             exists_predicate = gen_one_predicate(self.__class__.__name__+HASHNUM_EXISTS_PFX, self._class_variable, self.__class__.__name__)

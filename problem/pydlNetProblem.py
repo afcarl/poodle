@@ -14,6 +14,15 @@ class IPFactory():
             self.ip_addresses[ipaddr_text] = new_ipaddr_object
             return new_ipaddr_object
 
+class PacketAtOutputReturn(PlannedAction):
+    cost = 100
+    packet = Packet()
+    iface = Interface()
+    def selector(self):
+        return Select(self.packet.at_interface_output == self.iface)
+    def effect(self):
+        self.packet.is_consumed = True
+
 class NetworkGoal(Problem):
     def goal(self):
         return self.packet.is_consumed == True
@@ -22,7 +31,7 @@ class NetworkGoal(Problem):
 class SimpleTestProblem1(NetworkGoal):
 
     def actions(self):
-        return [ ConsumePacketSelect, ForwardPacketToInterface, CreateRoute, HopToRoute ]
+        return [ ConsumePacketSelect, ForwardPacketToInterface, CreateRoute, HopToRoute, PacketAtOutputReturn]
 
     def problem(self):
         
@@ -85,7 +94,8 @@ class SimpleTestProblem1(NetworkGoal):
 
 p = SimpleTestProblem1()
 
-p.check_solution()
+if p.check_solution():
+    print("PLAN CHECK OK")
 
 retCode = p.run()
 log.info("fast downward retcode {0}".format(retCode))

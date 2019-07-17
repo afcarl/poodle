@@ -113,10 +113,27 @@ class ForwardPacketToInterface(PlannedAction):
         # this also works but experimentally:
         # self.packet.at_interface_output.unset()
         # TODO: set() could automatically issue an unset()
+        print("MY CHECK 11111")
         self.packet.at_interface_input.set(self.interface2)
 
 print(ForwardPacketToInterface.compile_clips(None))
-        
+class ForwardingProblem(Problem):
+    def actions(self):
+        return [ ForwardPacketToInterface]
+    def problem(self):
+        self.testif1 = self.addObject(Interface("test0"))
+        self.testif2 = self.addObject(Interface("test0"))
+        self.testif1.adjacent_interface.add(self.testif2)
+        self.testif2.adjacent_interface.add(self.testif1)
+        self.packet = self.addObject(Packet("GOOD_PACKET"))
+        self.packet.at_interface_output = self.testif1
+    def goal(self):
+        return self.packet.at_interface_input == self.testif2
+
+p = ForwardingProblem()
+p.run()
+for i in p.plan: print(i)
+  
 class ForwardPacketInSwitch(PlannedAction):
 
     switch = Host()
