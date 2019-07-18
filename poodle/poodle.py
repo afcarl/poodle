@@ -1355,6 +1355,8 @@ class PlannedAction(metaclass=ActionMeta):
                 assert retracting_predicate in lhs, "ProgrammingError: retracting predicate %s not found in precondition of %s" % (p, repr(cls)) 
                 lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
                 cl = "(retract %s)" % fname
+            elif p.startswith("(="):
+                cl = "(test %s)" % p.replace("=", "eq")
             else:
                 cl = "(assert {ce})".format(ce=p)
             rhs.append(cl)
