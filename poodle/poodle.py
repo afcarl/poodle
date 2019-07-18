@@ -25,6 +25,9 @@ import os
 import datetime
 import logging
 import sys, time
+import requests
+import base64 
+import json
 
 # import wrapt
 # import infix
@@ -1438,42 +1441,27 @@ class Problem:
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
 
     def run(self):
-        global _collected_parameters
-        # print(_collected_parameters)
-        counter = 0
-        try:
-            with open("./.counter", "r") as fd:
-                counter = int(fd.read())
-        except:
-            counter = 0
- 
-        counter += 1
-        with open("./.counter", "w") as fd:
-            fd.write(str(counter))
+         
+        problem_pddl_base64 = self.compile_problem()#base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
+        domain_pddl_base64 = self.compile_domain()#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
         
+        url = 'http://35.222.104.225:8082/solve'    
+        data_pddl = {'domain': domain_pddl_base64, 'problem': problem_pddl_base64}
 
-        rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, self.__class__.__name__, str(datetime.date.today()),rnd)
-        os.makedirs(self.folder_name, exist_ok=True)
-        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_problem())
-        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_domain())
-        max_time = 10000
-        # TODO: create "debug" mode to run in os command and show output in real time
-        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
-        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
-        retcode = "-1"
-        for line in std:
-            if line.find('search exit code:') != -1:
-                retcode = line.rstrip("\n").split()[3]
-            log.info(line.rstrip("\n"))
-        if retcode == "0" :
-            if self.getFolderName() != None:
-                actionClassLoader = ActionClassLoader(self.actions(), self)
-                actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
-                self._plan = actionClassLoader._plan
-        return retcode
+        response = requests.post(url, data=data_pddl)   
+        print(response.content)
+        response_json = json.loads(str(response.content)) 
+        response_std = response_json['stdout']
+        print(response_std)
+        response_plan = response_json['plan']
+        actionClassLoader = ActionClassLoader(self.actions(), self)
+        actionClassLoader.loadFromStr(str(response.content))
+        self._plan = actionClassLoader._plan
+        print(self._plan)
+        #else:
+        #    return -1
+        
+        return 0
         
     @property
     def plan(self):
@@ -1817,3 +1805,9 @@ class ActionClassLoader:
             for planLine in fd:
                 if ";" in planLine: continue
                 self.load(planLine.replace("(", "").replace(")", ""))
+
+    def loadFromStr(self, outPlanStr):
+        log.debug("load action from str")
+        for planLine in outPlanStr.splitlines():
+            if ";" in planLine: continue
+            self.load(planLine.replace("(", "").replace(")", ""))
