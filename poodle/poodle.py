@@ -1348,6 +1348,7 @@ class PlannedAction(metaclass=ActionMeta):
         cls.compile(problem)
         lhs = copy.copy(cls.collected_predicates)
         rhs = []
+        lhs = [ "(test %s)" % r.replace("=", "eq") if r.startswith("(=") else r for r in lhs ]
         for p in cls.collected_effects:
             if p.startswith("(not"):
                 fname = "?f"+str(new_id())
@@ -1355,8 +1356,6 @@ class PlannedAction(metaclass=ActionMeta):
                 assert retracting_predicate in lhs, "ProgrammingError: retracting predicate %s not found in precondition of %s" % (p, repr(cls)) 
                 lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
                 cl = "(retract %s)" % fname
-            elif p.startswith("(="):
-                cl = "(test %s)" % p.replace("=", "eq")
             else:
                 cl = "(assert {ce})".format(ce=p)
             rhs.append(cl)
@@ -1595,7 +1594,7 @@ class Problem:
     def check_solution(self):
         "run debugging session over the solution"
         step_completed = False
-        for tryCount in range(150):
+        for tryCount in range(3):
             i=0
             work_facts = self.facts()
             for act in self.solution():
@@ -1709,6 +1708,8 @@ class CLIPSExecutor:
         return p.stdout.decode("utf-8")
         
     def run_get_result(self, prg):
+        print(prg)
+        open("./CPLTEST.clp","w+").write(prg)
         with tempfile.NamedTemporaryFile() as fp:
             fp.write(prg.encode('utf-8'))
             fp.flush()
