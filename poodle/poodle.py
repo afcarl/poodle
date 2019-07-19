@@ -1678,7 +1678,7 @@ class CLIPSExecutor:
         facts = self.render_assert_facts()
         return """
         {defrules}
-        (watch facts)
+        ; (watch facts)
         {facts}
         (printout t "--- RUN ---" crlf)
         (matches {rname})
@@ -1708,7 +1708,6 @@ class CLIPSExecutor:
         return p.stdout.decode("utf-8")
         
     def run_get_result(self, prg):
-        print(prg)
         open("./CPLTEST.clp","w+").write(prg)
         with tempfile.NamedTemporaryFile() as fp:
             fp.write(prg.encode('utf-8'))
@@ -1716,6 +1715,7 @@ class CLIPSExecutor:
             fn = fp.name
             self.run_result = self.run_clips_file(fn)
             fp.close()
+        open("./CPLTEST_RES.clp","w+").write(self.run_result)
             
     def run(self):
         self.run_get_result(self.gen_run_problem())
