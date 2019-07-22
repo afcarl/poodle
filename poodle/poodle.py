@@ -99,10 +99,9 @@ def Select(what):
     global _selector_out
     global _compilation
     if not _compilation and type(_selector_out) == type([]):
-        raise AssertionError("Complex selector outside of selector() classmethod compilation phase!")
+        raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method")
     ret = _selector_out
     _selector_out = None
-    if not ret: return True
     return ret
     
 def Unselect(what):
@@ -911,6 +910,10 @@ class StateFact(Property):
         self._value = False
 
     def __eq__(self, other):
+        push_selector_object(self.equals(other))
+        return True
+
+    def equals(self, other):
         "StateFact can only be compared to True or False"
         assert other == True or other == False, "Only True or False for StateFact"
         global _collected_effects
@@ -945,7 +948,7 @@ class StateFact(Property):
                 "variables": {}, # TODO: what if we have two same classes?
                 "class_variables": { },
                 "text_predicates": [ text_predicate ],
-                "parameters": {}, # unknown
+                "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
                 "frame": get_source_frame_dict()
             }
         if hasattr(self, "_property_of_inst") and self._property_of_inst:
@@ -955,7 +958,7 @@ class StateFact(Property):
                 self._property_of_inst._parse_history=[ph]
         else:
             raise AssertionError("Selecting a variable by StateFact is not supported; please use selector() syntax")
-        return self
+        return self._property_of_inst
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
 
@@ -974,10 +977,12 @@ class ActionMeta(type):
     def __init__(cls, name, bases, dct):
         super(ActionMeta, cls).__init__(name, bases, dct)
         cls._class_collected_predicates = []
+        cls._class_collected_parameters = {}
         for ob in dct:
             if isinstance(dct[ob], Object):
                 for ph in dct[ob]._parse_history:
                     cls._class_collected_predicates += list(filter(None, ph["text_predicates"]))
+                    cls._class_collected_parameters.update(ph["parameters"])
 
 class BaseObjectMeta(type):
     def __new__(mcls, name, bases, attrs):
@@ -1116,7 +1121,7 @@ class Object(metaclass=BaseObjectMeta):
             ret = v.operator(getattr(ret,k),dir_hint="reverse")
         _compilation = False
         return ret
-        
+    
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
@@ -1127,7 +1132,8 @@ class Object(metaclass=BaseObjectMeta):
             _collected_predicates.append("(= %s %s)" % (self._class_variable, other._class_variable))
             _collected_parameters.update({self._class_variable: self.__class__.__name__, other._class_variable: other.__class__.__name__}) # TODO: could be done easier if we added them on init...
             # raise NotImplementedError("Object-Object selector is not supported")
-            return True
+            push_selector_object(self)
+            return self
         else:
             return super().__eq__(other)
     
@@ -1248,6 +1254,7 @@ class PlannedAction(metaclass=ActionMeta):
     template = None
     _clips_rhs = []
     _clips_lhs = []
+    collected_parameters = {}
 
     def __init__(self, **kwargs):
         self._planned_objects_dict = kwargs
@@ -1296,7 +1303,7 @@ class PlannedAction(metaclass=ActionMeta):
         sel_ret = cls.selector(cls)
         cls.selector_objects = []
         if sel_ret != "DEFAULT": 
-            assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value in %s" % repr(cls)
+            assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value in %s (value was %s)" % (repr(cls), repr(sel_ret))
             if type(sel_ret) == type([]):
                 cls.selector_objects = sel_ret
             else:
@@ -1311,10 +1318,12 @@ class PlannedAction(metaclass=ActionMeta):
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
-        cls.collected_parameters = _collected_parameters
+        cls.collected_parameters = {}
+        cls.collected_parameters.update(_collected_parameters)
+        cls.collected_parameters.update(cls._class_collected_parameters)
         cls.collected_predicates = _collected_predicates
         cls.collected_effects = _collected_effects
-        for ob in _collected_parameters:
+        for ob in cls.collected_parameters:
             if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
                 # WARNING! this is because of how imaginary variables are implemented
@@ -1323,7 +1332,7 @@ class PlannedAction(metaclass=ActionMeta):
                 collected_parameters += "%s - %s " % (ob.split()[0], HASHNUM_CLASS_NAME)
                 collected_parameters += "%s - %s " % (ob.split()[1], HASHNUM_CLASS_NAME)
             else:
-                collected_parameters += "%s - %s " % (ob, _collected_parameters[ob])
+                collected_parameters += "%s - %s " % (ob, cls.collected_parameters[ob])
         
         assert len(collected_parameters) > 0
         return """
@@ -1351,6 +1360,7 @@ class PlannedAction(metaclass=ActionMeta):
         cls.compile(problem)
         lhs = copy.copy(cls.collected_predicates)
         rhs = []
+        lhs = [ "(test %s)" % r.replace("=", "eq") if r.startswith("(=") else r for r in lhs ]
         for p in cls.collected_effects:
             if p.startswith("(not"):
                 fname = "?f"+str(new_id())
@@ -1358,8 +1368,6 @@ class PlannedAction(metaclass=ActionMeta):
                 assert retracting_predicate in lhs, "ProgrammingError: retracting predicate %s not found in precondition of %s" % (p, repr(cls)) 
                 lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
                 cl = "(retract %s)" % fname
-            elif p.startswith("(="):
-                cl = "(test %s)" % p.replace("=", "eq")
             else:
                 cl = "(assert {ce})".format(ce=p)
             rhs.append(cl)
@@ -1583,7 +1591,7 @@ class Problem:
     def check_solution(self):
         "run debugging session over the solution"
         step_completed = False
-        for tryCount in range(150):
+        for tryCount in range(3):
             i=0
             work_facts = self.facts()
             for act in self.solution():
@@ -1661,18 +1669,18 @@ class CLIPSExecutor:
         (exit)
         """.format(defrules=defrules, facts=facts, seed=str(int(time.time())))
         
-    def gen_match_problem(self):
+    def gen_match_problem(self, factFileName):
         defrules = str(self.rules[0])
         rname = self.rules[0].name
-        facts = self.render_assert_facts()
+        # facts = self.render_assert_facts()
         return """
         {defrules}
-        (watch facts)
-        {facts}
+        (load-facts "{ffn}")
+        ; (watch facts)
         (printout t "--- RUN ---" crlf)
         (matches {rname})
         (exit)
-        """.format(defrules=defrules, facts=facts, rname=rname)
+        """.format(defrules=defrules, rname=rname, ffn=factFileName)
     
     
     def get_facts(self):
@@ -1697,12 +1705,14 @@ class CLIPSExecutor:
         return p.stdout.decode("utf-8")
         
     def run_get_result(self, prg):
+        # open("./CPLTEST.clp","w+").write(prg)
         with tempfile.NamedTemporaryFile() as fp:
             fp.write(prg.encode('utf-8'))
             fp.flush()
             fn = fp.name
             self.run_result = self.run_clips_file(fn)
             fp.close()
+        # open("./CPLTEST_RES.clp","w+").write(self.run_result)
             
     def run(self):
         self.run_get_result(self.gen_run_problem())
@@ -1710,7 +1720,10 @@ class CLIPSExecutor:
             raise MatchError("Rule %s does not match its selector")
     
     def check_match(self, actClass):
-        self.run_get_result(self.gen_match_problem())
+        with tempfile.NamedTemporaryFile() as fp:
+            fp.write('\n'.join(self.facts).encode("ascii"))
+            fp.flush()
+            self.run_get_result(self.gen_match_problem(fp.name))
         assert not "[" in self.run_result, "Error in creating debugger problem: %s" % self.run_result
         m = self.run_result.split("--- RUN ---")[-1]
         all_selected_objects_histories = []
