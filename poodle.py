@@ -1467,8 +1467,7 @@ class Problem:
         
         return 0
     
-    def run(self):
-        url = 'http://35.222.104.225:8082/solve' 
+    def run(self, url = 'http://127.0.0.1:8082/solve'):
         return self.run_cloud(url)   
         
     @property
