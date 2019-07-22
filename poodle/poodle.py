@@ -50,6 +50,8 @@ _collected_objects = {} # format: { "class": [ ... objects ... ] }
 _collected_facts = []
 _poodle_object_classes = {}
 
+_none_objects = {}
+
 HASHNUM_VAR_NAME = "hashnum"
 HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
 HASHNUM_CLASS_NAME = "PoodleHashnum"
@@ -990,6 +992,12 @@ class BaseObjectMeta(type):
             if isinstance(obj, Property):
                 obj.__set_name__(cls, attr)
         return cls
+        
+    def __init__(cls, name, bases, dct):
+        super(BaseObjectMeta, cls).__init__(name, bases, dct)
+        global _none_objects
+        _none_objects[name] = cls()
+            
     def __getattribute__(self, what):
         # print("WHAT IS", what)
         if what == "_type_of_property":
@@ -1063,6 +1071,7 @@ class Object(metaclass=BaseObjectMeta):
                     _collected_objects[self.__class__.__name__] = [ self.name ]
                 else:
                     _collected_objects[self.__class__.__name__].append(self.name)
+        # TODO HERE: in effect, do the same if we are imaginary!
         # when class is instantiated, make sure to "proxy" all properties
         for key in type(self).__dict__:
             # print(key)
