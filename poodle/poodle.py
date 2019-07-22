@@ -1311,10 +1311,12 @@ class PlannedAction(metaclass=ActionMeta):
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
-        cls.collected_parameters = _collected_parameters.update(cls._class_collected_parameters)
+        cls.collected_parameters = {}
+        cls.collected_parameters.update(_collected_parameters)
+        cls.collected_parameters.update(cls._class_collected_parameters)
         cls.collected_predicates = _collected_predicates
         cls.collected_effects = _collected_effects
-        for ob in _collected_parameters:
+        for ob in cls.collected_parameters:
             if not "?" in ob: continue # hack fix for object name leak into params
             if " " in ob:
                 # WARNING! this is because of how imaginary variables are implemented
@@ -1323,7 +1325,7 @@ class PlannedAction(metaclass=ActionMeta):
                 collected_parameters += "%s - %s " % (ob.split()[0], HASHNUM_CLASS_NAME)
                 collected_parameters += "%s - %s " % (ob.split()[1], HASHNUM_CLASS_NAME)
             else:
-                collected_parameters += "%s - %s " % (ob, _collected_parameters[ob])
+                collected_parameters += "%s - %s " % (ob, cls.collected_parameters[ob])
         
         assert len(collected_parameters) > 0
         return """
@@ -1796,7 +1798,6 @@ class ActionClassLoader:
     def load(self, planString):
         actionString = str(planString).split()[0]
         for action in self.actionList:
-            print("MY CHECK", action.collected_parameters)
             if action.__name__.lower() == actionString.lower():
                 argumentList = []
                 for argStr in str(planString).split()[1:]:
