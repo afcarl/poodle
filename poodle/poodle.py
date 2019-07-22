@@ -1677,18 +1677,18 @@ class CLIPSExecutor:
         (exit)
         """.format(defrules=defrules, facts=facts, seed=str(int(time.time())))
         
-    def gen_match_problem(self):
+    def gen_match_problem(self, factFileName):
         defrules = str(self.rules[0])
         rname = self.rules[0].name
-        facts = self.render_assert_facts()
+        # facts = self.render_assert_facts()
         return """
         {defrules}
+        (load-facts "{ffn}")
         ; (watch facts)
-        {facts}
         (printout t "--- RUN ---" crlf)
         (matches {rname})
         (exit)
-        """.format(defrules=defrules, facts=facts, rname=rname)
+        """.format(defrules=defrules, rname=rname, ffn=factFileName)
     
     
     def get_facts(self):
@@ -1713,14 +1713,14 @@ class CLIPSExecutor:
         return p.stdout.decode("utf-8")
         
     def run_get_result(self, prg):
-        open("./CPLTEST.clp","w+").write(prg)
+        # open("./CPLTEST.clp","w+").write(prg)
         with tempfile.NamedTemporaryFile() as fp:
             fp.write(prg.encode('utf-8'))
             fp.flush()
             fn = fp.name
             self.run_result = self.run_clips_file(fn)
             fp.close()
-        open("./CPLTEST_RES.clp","w+").write(self.run_result)
+        # open("./CPLTEST_RES.clp","w+").write(self.run_result)
             
     def run(self):
         self.run_get_result(self.gen_run_problem())
@@ -1728,7 +1728,10 @@ class CLIPSExecutor:
             raise MatchError("Rule %s does not match its selector")
     
     def check_match(self, actClass):
-        self.run_get_result(self.gen_match_problem())
+        with tempfile.NamedTemporaryFile() as fp:
+            fp.write('\n'.join(self.facts).encode("ascii"))
+            fp.flush()
+            self.run_get_result(self.gen_match_problem(fp.name))
         assert not "[" in self.run_result, "Error in creating debugger problem: %s" % self.run_result
         m = self.run_result.split("--- RUN ---")[-1]
         all_selected_objects_histories = []
