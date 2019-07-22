@@ -12,6 +12,7 @@ import logging
 import random
 import datetime
 
+
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
@@ -71,16 +72,16 @@ def solve():
             if line.find('search exit code:') != -1:
                 retcode = line.rstrip("\n").split()[3]
             log.info(line.rstrip("\n"))
-        plan = ''    
+            
         if retcode == "0" :
             if folder_name != None:
                 f = open("{0}/out.plan".format(folder_name),'r')
-                plan = make_response(f.read()) 
+                response_text = f.read()
                 f.close()
             #    actionClassLoader = ActionClassLoader(self.actions(), self)
             #    actionClassLoader.loadFromFile("{0}/out.plan".format(folder_name))
             #    self._plan = actionClassLoader._plan
-        response = make_response("{'stdout': '" +response_text+ "', 'plan': '"+plan+"'}")    
+        response = make_response(response_text)    
         response.headers.set('Content-Type', 'text/plain')
         return response
     return '''
