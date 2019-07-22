@@ -1119,10 +1119,6 @@ class Object(metaclass=BaseObjectMeta):
         _compilation = False
         return ret
     
-    # def __eq__(self, other):
-    #     push_selector_object(self.equals(other))
-    #     return True
-        
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
@@ -1133,6 +1129,7 @@ class Object(metaclass=BaseObjectMeta):
             _collected_predicates.append("(= %s %s)" % (self._class_variable, other._class_variable))
             _collected_parameters.update({self._class_variable: self.__class__.__name__, other._class_variable: other.__class__.__name__}) # TODO: could be done easier if we added them on init...
             # raise NotImplementedError("Object-Object selector is not supported")
+            push_selector_object(self)
             return self
         else:
             return super().__eq__(other)
