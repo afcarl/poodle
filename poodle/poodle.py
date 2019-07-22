@@ -99,7 +99,6 @@ def Select(what):
         raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method")
     ret = _selector_out
     _selector_out = None
-    if not ret: return True
     return ret
     
 def Unselect(what):
@@ -908,6 +907,10 @@ class StateFact(Property):
         self._value = False
 
     def __eq__(self, other):
+        push_selector_object(self.equals(other))
+        return True
+
+    def equals(self, other):
         "StateFact can only be compared to True or False"
         assert other == True or other == False, "Only True or False for StateFact"
         global _collected_effects
@@ -952,7 +955,7 @@ class StateFact(Property):
                 self._property_of_inst._parse_history=[ph]
         else:
             raise AssertionError("Selecting a variable by StateFact is not supported; please use selector() syntax")
-        return self
+        return self._property_of_inst
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
 
@@ -1115,6 +1118,10 @@ class Object(metaclass=BaseObjectMeta):
             ret = v.operator(getattr(ret,k),dir_hint="reverse")
         _compilation = False
         return ret
+    
+    # def __eq__(self, other):
+    #     push_selector_object(self.equals(other))
+    #     return True
         
     def __eq__(self, other):
         if isinstance(other, Property):
@@ -1126,7 +1133,7 @@ class Object(metaclass=BaseObjectMeta):
             _collected_predicates.append("(= %s %s)" % (self._class_variable, other._class_variable))
             _collected_parameters.update({self._class_variable: self.__class__.__name__, other._class_variable: other.__class__.__name__}) # TODO: could be done easier if we added them on init...
             # raise NotImplementedError("Object-Object selector is not supported")
-            return True
+            return self
         else:
             return super().__eq__(other)
     
@@ -1296,7 +1303,7 @@ class PlannedAction(metaclass=ActionMeta):
         sel_ret = cls.selector(cls)
         cls.selector_objects = []
         if sel_ret != "DEFAULT": 
-            assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value in %s" % repr(cls)
+            assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value in %s (value was %s)" % (repr(cls), repr(sel_ret))
             if type(sel_ret) == type([]):
                 cls.selector_objects = sel_ret
             else:
