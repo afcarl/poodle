@@ -104,6 +104,8 @@ def Select(what):
 def Unselect(what):
     global _collected_predicates
     ret = Select(what)
+    if type(ret) == type([]):
+        raise AssertionError("Complex Unselect()'s are not supported")
     if ret._parse_history[-1]["text_predicates"][-1] != None:
         raise AssertionError("Complex Unselect()'s are not supported")
     if _collected_predicates[-1] != None:
