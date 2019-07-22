@@ -96,7 +96,7 @@ def Select(what):
     global _selector_out
     global _compilation
     if not _compilation and type(_selector_out) == type([]):
-        raise AssertionError("Complex selector outside of selector() classmethod compilation phase!")
+        raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method")
     ret = _selector_out
     _selector_out = None
     if not ret: return True
