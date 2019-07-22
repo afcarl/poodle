@@ -942,7 +942,7 @@ class StateFact(Property):
                 "variables": {}, # TODO: what if we have two same classes?
                 "class_variables": { },
                 "text_predicates": [ text_predicate ],
-                "parameters": {}, # unknown
+                "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
                 "frame": get_source_frame_dict()
             }
         if hasattr(self, "_property_of_inst") and self._property_of_inst:
@@ -971,10 +971,12 @@ class ActionMeta(type):
     def __init__(cls, name, bases, dct):
         super(ActionMeta, cls).__init__(name, bases, dct)
         cls._class_collected_predicates = []
+        cls._class_collected_parameters = {}
         for ob in dct:
             if isinstance(dct[ob], Object):
                 for ph in dct[ob]._parse_history:
                     cls._class_collected_predicates += list(filter(None, ph["text_predicates"]))
+                    cls._class_collected_parameters.update(ph["parameters"])
 
 class BaseObjectMeta(type):
     def __new__(mcls, name, bases, attrs):
@@ -1245,6 +1247,7 @@ class PlannedAction(metaclass=ActionMeta):
     template = None
     _clips_rhs = []
     _clips_lhs = []
+    collected_parameters = {}
 
     def __init__(self, **kwargs):
         self._planned_objects_dict = kwargs
@@ -1308,7 +1311,7 @@ class PlannedAction(metaclass=ActionMeta):
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
-        cls.collected_parameters = _collected_parameters
+        cls.collected_parameters = _collected_parameters.update(cls._class_collected_parameters)
         cls.collected_predicates = _collected_predicates
         cls.collected_effects = _collected_effects
         for ob in _collected_parameters:
@@ -1793,6 +1796,7 @@ class ActionClassLoader:
     def load(self, planString):
         actionString = str(planString).split()[0]
         for action in self.actionList:
+            print("MY CHECK", action.collected_parameters)
             if action.__name__.lower() == actionString.lower():
                 argumentList = []
                 for argStr in str(planString).split()[1:]:
