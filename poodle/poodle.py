@@ -49,6 +49,7 @@ _collected_object_classes = set()
 _collected_objects = {} # format: { "class": [ ... objects ... ] }
 _collected_facts = []
 _poodle_object_classes = {}
+_replaced_predicates = {}
 
 _none_objects = {}
 
@@ -105,16 +106,23 @@ def Select(what):
     
 def Unselect(what):
     global _collected_predicates
+    global _replaced_predicates
     ret = Select(what)
-    if ret._parse_history[-1]["text_predicates"][-1] != None:
+    if type(ret) == type([]):
         raise AssertionError("Complex Unselect()'s are not supported")
+    # WARNING BELOW! we can not rely on _parse_history anymore as returned objects may be anything
+    # if ret._parse_history[-1]["text_predicates"][-1] != None:
+    #     raise AssertionError("Complex Unselect()'s are not supported")
     if _collected_predicates[-1] != None:
-        raise AssertionError("Complex Unselect()'s are not supported")
-    search_pred = ret._parse_history[-1]["text_predicates"][0]
-    assert search_pred == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
+        raise AssertionError("Unselect()'s with subproperty comparisons are not supported")
+    # search_pred = ret._parse_history[-1]["text_predicates"][0]
+    search_pred = _collected_predicates[-2] # WARNING! this depends on order of added stuff to _collected_predicates
     replace_pred = "(not %s)" % search_pred
-    _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
-    if not ret: return True
+    # while search_pred in _collected_predicates: _collected_predicates.remove(search_pred)
+    # _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
+    # _collected_predicates.append(replace_pred)
+    _replaced_predicates[search_pred] = replace_pred
+    if not ret: return None
     return ret
 
 # https://stackoverflow.com/a/2257449
@@ -690,6 +698,7 @@ class Property(object):
             for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
+        _collected_predicates += [text_predicate, text_predicate_2] # this is required for Unselect() to work as it depends on order of output
         return obj
         
     def equals(self, other):
@@ -947,6 +956,7 @@ class StateFact(Property):
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
             _collected_predicates.append(text_predicate)
+            _collected_predicates.append(None) # WARNING! last None has secret meaning for Unselect checks
         
         ph = {
                 "operator": "check_bool", 
@@ -959,7 +969,7 @@ class StateFact(Property):
                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
                 "variables": {}, # TODO: what if we have two same classes?
                 "class_variables": { },
-                "text_predicates": [ text_predicate ],
+                "text_predicates": [ text_predicate, None ], # WARNING! last None has secret meaning for Unselect checks
                 "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
                 "frame": get_source_frame_dict()
             }
@@ -1337,6 +1347,10 @@ class PlannedAction(metaclass=ActionMeta):
         
         # _collected_predicates = filter(None, list(set(_collected_predicates)))
         _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(cls._class_collected_predicates + _collected_predicates))))
+        for k in _replaced_predicates:
+            if not k in _collected_predicates: continue
+            _collected_predicates.remove(k)
+            _collected_predicates.append(_replaced_predicates[k])
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
@@ -1495,6 +1509,7 @@ class Problem:
         max_time = 10000
         # TODO: create "debug" mode to run in os command and show output in real time
         runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
+        log.debug("run line is {0}".format(runscript))
         std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
         retcode = "-1"
         for line in std:
