@@ -1453,7 +1453,7 @@ class Problem:
         problem_pddl_base64 = self.compile_problem()#base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
         domain_pddl_base64 = self.compile_domain()#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
         
-        data_pddl = {'domain': domain_pddl_base64, 'problem': problem_pddl_base64}
+        data_pddl = {'domain': domain_pddl_base64, 'problem': problem_pddl_base64, 'pddl_name': self.__class__.__name__ }
 
         response = requests.post(url, data=data_pddl)   
         print(response.content)

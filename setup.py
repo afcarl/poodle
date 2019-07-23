@@ -12,7 +12,7 @@ setup(
     keywords="Poodle, Pddl, CriticalHop",
     license=open('LICENSE').read(),
     platforms=['linux'],
-    packages=find_packages(exclude=['sandbox*', 'tests*']),
+    packages=find_packages(),
     include_package_data=True,
     # See http://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
