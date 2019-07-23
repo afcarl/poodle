@@ -107,6 +107,8 @@ def Select(what):
 def Unselect(what):
     global _collected_predicates
     ret = Select(what)
+    if type(ret) == type([]):
+        raise AssertionError("Complex Unselect()'s are not supported")
     if ret._parse_history[-1]["text_predicates"][-1] != None:
         raise AssertionError("Complex Unselect()'s are not supported")
     if _collected_predicates[-1] != None:
@@ -935,6 +937,7 @@ class StateFact(Property):
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
             _collected_predicates.append(text_predicate)
+            _collected_predicates.append(None) # WARNING! last None has secret meaning for Unselect checks
         
         ph = {
                 "operator": "check_bool", 
@@ -947,7 +950,7 @@ class StateFact(Property):
                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
                 "variables": {}, # TODO: what if we have two same classes?
                 "class_variables": { },
-                "text_predicates": [ text_predicate ],
+                "text_predicates": [ text_predicate, None ], # WARNING! last None has secret meaning for Unselect checks
                 "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
                 "frame": get_source_frame_dict()
             }
@@ -1454,7 +1457,7 @@ class Problem:
         domain_pddl_base64 = self.compile_domain()#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
         
         data_pddl = {'domain': domain_pddl_base64, 'problem': problem_pddl_base64, 'pddl_name': self.__class__.__name__ }
-
+        
         response = requests.post(url, data=data_pddl)   
         print(response.content)
         response_plan = response.content.decode("utf-8")
@@ -1469,6 +1472,7 @@ class Problem:
     
     def run(self, url = 'http://127.0.0.1:8082/solve'):
         return self.run_cloud(url)   
+
         
     @property
     def plan(self):
