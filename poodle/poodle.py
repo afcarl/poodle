@@ -934,6 +934,7 @@ class StateFact(Property):
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
             _collected_predicates.append(text_predicate)
+            _collected_predicates.append(None) # WARNING! last None has secret meaning for Unselect checks
         
         ph = {
                 "operator": "check_bool", 
@@ -946,7 +947,7 @@ class StateFact(Property):
                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
                 "variables": {}, # TODO: what if we have two same classes?
                 "class_variables": { },
-                "text_predicates": [ text_predicate ],
+                "text_predicates": [ text_predicate, None ], # WARNING! last None has secret meaning for Unselect checks
                 "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
                 "frame": get_source_frame_dict()
             }
