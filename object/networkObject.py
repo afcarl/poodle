@@ -102,19 +102,6 @@ class RuleTo(Imaginary):
 # class SPortDPortRule(RuleTo):
 #     rule_to = Property(ipaddr=IPAddr, src_port=Port, dst_port=Port)
 
-class ProtectedProperty(Property):
-    def _check(self):
-        global _problem_compilation
-        global _compilation
-        assert _problem_compilation, "Property %s is protected!" % self
-        assert not _compilation, "Property %s is protected!" % self
-    def set(self, what):
-        self._check()
-        super().set(what)
-    def unset(self, what):
-        self._check()
-        super().unset(what)
-
 class Packet(Object):
     
     is_consumed = StateFact()

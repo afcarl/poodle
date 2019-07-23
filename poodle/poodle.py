@@ -821,7 +821,20 @@ class Property(object):
         else:
             raise AttributeError('%s object has no attribute %s' % (self.__value, attr))
         
-        
+
+class ProtectedProperty(Property):
+    def _check(self):
+        global _problem_compilation
+        global _compilation
+        assert _problem_compilation, "Property %s is protected!" % self
+        assert not _compilation, "Property %s is protected!" % self
+    def set(self, what):
+        self._check()
+        super().set(what)
+    def unset(self, what):
+        self._check()
+        super().unset(what)
+
     
 class Relation(Property):
     "a property that can have multiple values"
@@ -1084,6 +1097,9 @@ class Object(metaclass=BaseObjectMeta):
                 #    - indicate that we are now a property of instantiated object
                 #    - have a reference to the mother instance of Object
                 getattr(self, key)._property_of_inst = self
+                if not self.__imaginary__ and _problem_compilation and not getattr(self,key)._value is None and not isinstance(getattr(self, key), Relation):
+                    print("MY CHECK", self, key, getattr(self,key), getattr(self,key)._value)
+                    getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
         self.__unlock_setter = False
     def gen_name(self, name):
         return ''.join([x if x in (string.ascii_letters+string.digits) else '-' for x in name])
