@@ -760,8 +760,8 @@ class Property(object):
         # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
         _collected_effects.append(text_predicate)
         if init_mode:
-            if issubclass(type(value), Imaginary):
-                raise NotImplementedError("For Imaginary objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
+            # if issubclass(type(value), Imaginary):
+            #     raise NotImplementedError("For Imaginary objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
             log.warning("PREDICATE in INIT mode: %s %s" % (repr(self._property_of_inst), repr(self)))
             if issubclass(self._value, Imaginary):
                 other_genvar = gen_var_imaginary(value.__class__.__name__)
@@ -1619,8 +1619,17 @@ class Problem:
         _collected_facts = []
         self.problem()
         if self.has_imaginary(): self.gen_hashnums()
-        self.collected_objects = _collected_objects
         self.collected_object_classes = _collected_object_classes
+        self.collected_objects = _collected_objects
+        for k in _none_objects:
+            on = _none_objects[k].name.split()[0]
+            if not k in self.collected_object_classes: continue
+            if on == "p-null-Imaginary": continue
+            if k in self.collected_objects:
+                self.collected_objects[k].append(on)
+            else:
+                self.collected_objects[k] = [ on ]
+        self.collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal
         _collected_effects = []
