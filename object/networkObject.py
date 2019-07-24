@@ -138,7 +138,7 @@ class Packet(Object):
     related_to = Relation(Interface) # TODO: REMOVE!!
     
     def __str__(self):
-        return "I AM PACKET: "+self.value
+        return "I AM PACKET: " + self.value
 # Packet.next = Property(Packet) # next packet in chain
 Packet.validation_packet = Property(Packet)
 

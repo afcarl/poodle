@@ -750,7 +750,14 @@ class Property(object):
             text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
             if not isinstance(value, Imaginary): 
                 text_predicate_none = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, _none_objects[value.__class__.__name__].name, value.__class__.__name__)
-                while text_predicate_none in _collected_facts: _collected_facts.remove(text_predicate_none)
+                text_predicate_beg_match = ' '.join(text_predicate_none.split()[:2])
+                rmlist = []
+                for fct in _collected_facts:
+                    if fct.startswith(text_predicate_beg_match):
+                        rmlist.append(fct)
+                for fct in rmlist:
+                    _collected_facts.remove(fct)
+                # while text_predicate_none in _collected_facts: _collected_facts.remove(text_predicate_none)
             _collected_facts.append(text_predicate)
             # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
             return
@@ -1129,9 +1136,11 @@ class Object(metaclass=BaseObjectMeta):
                 getattr(self, key)._property_of_inst = self
                 if not self.__imaginary__ and _problem_compilation and \
                         not getattr(self,key)._value is None and \
-                        not isinstance(getattr(self, key), Relation):
-                    print("MY CHECK", self, key, getattr(self,key), getattr(self,key)._value)
-                    getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
+                        not isinstance(getattr(self, key), Relation) and \
+                        not value == "POODLE-NULL":
+                    print("MY CHECK", self, key, getattr(self,key), repr(getattr(self,key)._value))
+                    # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
+                    getattr(self,key).init_unsafe(getattr(self,key)._value("POODLE-NULL"))
         self.__unlock_setter = False
     def gen_name(self, name):
         return ''.join([x if x in (string.ascii_letters+string.digits) else '-' for x in name])
@@ -1259,9 +1268,9 @@ class Imaginary(Object):
         else:
             return super().gen_name(name)
     
-    def __init__(self):
+    def __init__(self, value=None):
         self.__imaginary__ = True
-        super().__init__()
+        super().__init__(value)
         self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-default-")
         global _effect_compilation
         global _collected_predicates
@@ -1648,7 +1657,7 @@ class Problem:
         _problem_compilation = False
         txt_objects = ""
         for cls in self.collected_objects:
-            txt_objects += " ".join(list(set(self.collected_objects[cls]))) + " - " + cls + " "
+            txt_objects += "\n        ".join(list(set(self.collected_objects[cls]))) + " - " + cls + "\n        "
         self._compiled_problem =  """
 (define (problem poodle-generated)
     (:domain poodle-generated)
@@ -1670,10 +1679,10 @@ class Problem:
         self.compile_problem()
         return self.collected_facts
         
-    def check_solution(self):
+    def check_solution(self, attempts=3):
         "run debugging session over the solution"
         step_completed = False
-        for tryCount in range(3):
+        for tryCount in range(attempts):
             i=0
             work_facts = self.facts()
             for act in self.solution():
@@ -1807,6 +1816,7 @@ class CLIPSExecutor:
             fp.flush()
             self.run_get_result(self.gen_match_problem(fp.name))
         assert not "[" in self.run_result, "Error in creating debugger problem: %s" % self.run_result
+        print("MY CHECK", self.run_result)
         m = self.run_result.split("--- RUN ---")[-1]
         all_selected_objects_histories = []
         for n in dir(actClass):
@@ -1829,8 +1839,13 @@ class CLIPSExecutor:
         allmatch=["     *"]
         acc = []
         other_out = "Partial".join(m.split("Partial")[1:])+"\nPartial"
+        first_partial = True
         for l in other_out.split("\n"):
-            if "Partial" in l:
+            if "Partial" in l or "Activations" in l:
+                if first_partial: 
+                    acc = []
+                    first_partial = False
+                    continue
                 if acc and 'None' in acc[0]:
                     allmatch.append("!!   0")
                 elif acc:

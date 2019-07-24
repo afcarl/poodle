@@ -120,7 +120,7 @@ class SimpleTestProblem1(NetworkGoal):
 
 p = SimpleTestProblem1()
 
-if p.check_solution():
+if p.check_solution(250):
     print("PLAN CHECK OK")
 
 retCode = p.run()
