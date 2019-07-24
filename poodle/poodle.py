@@ -748,8 +748,11 @@ class Property(object):
         if _problem_compilation:
             global _collected_facts
             text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
-            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            if not isinstance(value, Imaginary): 
+                text_predicate_none = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, _none_objects[value.__class__.__name__].name, value.__class__.__name__)
+                while text_predicate_none in _collected_facts: _collected_facts.remove(text_predicate_none)
             _collected_facts.append(text_predicate)
+            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
             return
         self._prepare(value)
         global _collected_effects
@@ -757,17 +760,21 @@ class Property(object):
         # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
         _collected_effects.append(text_predicate)
         if init_mode:
-            # if issubclass(type(value), Imaginary):
-                raise NotImplementedError("For objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
-            # log.warning("PREDICATE in INIT mode:", repr(self._property_of_inst), repr(self))
-            # if issubclass(self._value, Imaginary):
-            #     other_genvar = gen_var_imaginary(value.__class__.__name__)
-            #     text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
-            # else:
-            #     other_genvar = gen_var(value.__class__.__name__)
-            #     text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
-            # _collected_predicates.append(text_predicate)
-            # _collected_parameters.update({other_genvar: value.__class__.__name__})
+            if issubclass(type(value), Imaginary):
+                raise NotImplementedError("For Imaginary objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
+            log.warning("PREDICATE in INIT mode: %s %s" % (repr(self._property_of_inst), repr(self)))
+            if issubclass(self._value, Imaginary):
+                other_genvar = gen_var_imaginary(value.__class__.__name__)
+                text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+                text_predicate_effect = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+            else:
+                other_genvar = gen_var(value.__class__.__name__)
+                text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+                text_predicate_effect = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+            _collected_predicates.append(text_predicate)
+            _collected_effects.append(text_predicate_effect)
+            _collected_parameters.update({other_genvar: value.__class__.__name__})
+        self._unset = False
         
     def unset(self, what = None, _force = False):
         # we need to unset the value that we selected for us
@@ -1019,7 +1026,20 @@ class BaseObjectMeta(type):
     def __init__(cls, name, bases, dct):
         super(BaseObjectMeta, cls).__init__(name, bases, dct)
         global _none_objects
-        _none_objects[name] = cls()
+        if name == "Imaginary":
+            _none_objects[name] = cls()
+            _none_objects[name].name = "p-null-%s" % name
+            _none_objects[name]._class_variable = gen_var(name, prefix="null-")
+            
+        if not name in ["Object", "Imaginary"]:
+            _none_objects[name] = cls()
+            if not issubclass(cls, Imaginary):
+                _none_objects[name].name = "p-null-%s" % name
+                _none_objects[name]._class_variable = gen_var(name, prefix="null-")
+            else:
+                _none_objects[name].name = ' '.join(["p-null-Imaginary"] * HASHNUM_DEPTH_DEFAULT) # HASHNUM_DEPTH_DEFAULT fix! 
+                _none_objects[name]._class_variable = gen_var_imaginary(name, prefix="null-")
+        
             
     def __getattribute__(self, what):
         # print("WHAT IS", what)
@@ -1107,7 +1127,9 @@ class Object(metaclass=BaseObjectMeta):
                 #    - indicate that we are now a property of instantiated object
                 #    - have a reference to the mother instance of Object
                 getattr(self, key)._property_of_inst = self
-                if not self.__imaginary__ and _problem_compilation and not getattr(self,key)._value is None and not isinstance(getattr(self, key), Relation):
+                if not self.__imaginary__ and _problem_compilation and \
+                        not getattr(self,key)._value is None and \
+                        not isinstance(getattr(self, key), Relation):
                     print("MY CHECK", self, key, getattr(self,key), getattr(self,key)._value)
                     getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
         self.__unlock_setter = False
@@ -1226,10 +1248,6 @@ class Object(metaclass=BaseObjectMeta):
     #         print("has top", attr)
     #     return super().__getattr__(self, attr)
 
-# A static object initializes itself with instances static_values
-class StaticObject(Object):
-    # TODO
-    pass
 
 class Imaginary(Object):
     
@@ -1262,7 +1280,10 @@ class Imaginary(Object):
             _collected_effects.append(exists_predicate)
             _collected_parameters[self._class_variable] = HASHNUM_CLASS_NAME
 
-
+# A static object initializes itself with instances static_values
+class StaticObject(Object):
+    # TODO
+    pass
 
 class Digit(Object):
     pass
@@ -1609,7 +1630,7 @@ class Problem:
         # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         global _selector_out
         _selector_out = None # cleaner goal
-        self.collected_goal = list(filter(None, _collected_predicates + _collected_effects)) # filtering is not required...
+        self.collected_goal = list(filter(None, list(OrderedDict.fromkeys(_collected_predicates + _collected_effects))))
         assert len(self.collected_goal), "No goal was generated"
         _collected_predicates = []
         _collected_effects = []
