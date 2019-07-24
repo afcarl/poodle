@@ -748,7 +748,7 @@ class Property(object):
         if _problem_compilation:
             global _collected_facts
             text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
-            if not isinstance(value, Imaginary): 
+            if not isinstance(value, Imaginary) and not isinstance(self, Relation): 
                 text_predicate_none = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, _none_objects[value.__class__.__name__].name, value.__class__.__name__)
                 text_predicate_beg_match = ' '.join(text_predicate_none.split()[:2])
                 rmlist = []
@@ -1138,7 +1138,7 @@ class Object(metaclass=BaseObjectMeta):
                         not getattr(self,key)._value is None and \
                         not isinstance(getattr(self, key), Relation) and \
                         not value == "POODLE-NULL":
-                    print("MY CHECK", self, key, getattr(self,key), repr(getattr(self,key)._value))
+                    # print("MY CHECK", self, key, getattr(self,key), repr(getattr(self,key)._value))
                     # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
                     getattr(self,key).init_unsafe(getattr(self,key)._value("POODLE-NULL"))
         self.__unlock_setter = False
@@ -1816,7 +1816,7 @@ class CLIPSExecutor:
             fp.flush()
             self.run_get_result(self.gen_match_problem(fp.name))
         assert not "[" in self.run_result, "Error in creating debugger problem: %s" % self.run_result
-        print("MY CHECK", self.run_result)
+        # print("MY CHECK", self.run_result)
         m = self.run_result.split("--- RUN ---")[-1]
         all_selected_objects_histories = []
         for n in dir(actClass):
