@@ -25,6 +25,9 @@ import os
 import datetime
 import logging
 import sys, time
+import requests
+import base64 
+import json
 
 # import wrapt
 # import infix
@@ -49,6 +52,7 @@ _collected_object_classes = set()
 _collected_objects = {} # format: { "class": [ ... objects ... ] }
 _collected_facts = []
 _poodle_object_classes = {}
+_replaced_predicates = {}
 
 HASHNUM_VAR_NAME = "hashnum"
 HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
@@ -103,16 +107,23 @@ def Select(what):
     
 def Unselect(what):
     global _collected_predicates
+    global _replaced_predicates
     ret = Select(what)
-    if ret._parse_history[-1]["text_predicates"][-1] != None:
+    if type(ret) == type([]):
         raise AssertionError("Complex Unselect()'s are not supported")
+    # WARNING BELOW! we can not rely on _parse_history anymore as returned objects may be anything
+    # if ret._parse_history[-1]["text_predicates"][-1] != None:
+    #     raise AssertionError("Complex Unselect()'s are not supported")
     if _collected_predicates[-1] != None:
-        raise AssertionError("Complex Unselect()'s are not supported")
-    search_pred = ret._parse_history[-1]["text_predicates"][0]
-    assert search_pred == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
+        raise AssertionError("Unselect()'s with subproperty comparisons are not supported")
+    # search_pred = ret._parse_history[-1]["text_predicates"][0]
+    search_pred = _collected_predicates[-2] # WARNING! this depends on order of added stuff to _collected_predicates
     replace_pred = "(not %s)" % search_pred
-    _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
-    if not ret: return True
+    # while search_pred in _collected_predicates: _collected_predicates.remove(search_pred)
+    # _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
+    # _collected_predicates.append(replace_pred)
+    _replaced_predicates[search_pred] = replace_pred
+    if not ret: return None
     return ret
 
 # https://stackoverflow.com/a/2257449
@@ -688,6 +699,7 @@ class Property(object):
             for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
+        _collected_predicates += [text_predicate, text_predicate_2] # this is required for Unselect() to work as it depends on order of output
         return obj
         
     def equals(self, other):
@@ -932,6 +944,7 @@ class StateFact(Property):
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
             _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
             _collected_predicates.append(text_predicate)
+            _collected_predicates.append(None) # WARNING! last None has secret meaning for Unselect checks
         
         ph = {
                 "operator": "check_bool", 
@@ -944,7 +957,7 @@ class StateFact(Property):
                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
                 "variables": {}, # TODO: what if we have two same classes?
                 "class_variables": { },
-                "text_predicates": [ text_predicate ],
+                "text_predicates": [ text_predicate, None ], # WARNING! last None has secret meaning for Unselect checks
                 "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
                 "frame": get_source_frame_dict()
             }
@@ -1312,6 +1325,10 @@ class PlannedAction(metaclass=ActionMeta):
         
         # _collected_predicates = filter(None, list(set(_collected_predicates)))
         _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(cls._class_collected_predicates + _collected_predicates))))
+        for k in _replaced_predicates:
+            if not k in _collected_predicates: continue
+            _collected_predicates.remove(k)
+            _collected_predicates.append(_replaced_predicates[k])
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
@@ -1445,43 +1462,28 @@ class Problem:
     def goal(self):
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
 
-    def run(self):
-        global _collected_parameters
-        # print(_collected_parameters)
-        counter = 0
-        try:
-            with open("./.counter", "r") as fd:
-                counter = int(fd.read())
-        except:
-            counter = 0
- 
-        counter += 1
-        with open("./.counter", "w") as fd:
-            fd.write(str(counter))
+    def run_cloud(self, url):
+         
+        problem_pddl_base64 = self.compile_problem()#base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
+        domain_pddl_base64 = self.compile_domain()#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
         
+        data_pddl = {'domain': domain_pddl_base64, 'problem': problem_pddl_base64, 'pddl_name': self.__class__.__name__ }
+        
+        response = requests.post(url, data=data_pddl)   
+        print(response.content)
+        response_plan = response.content.decode("utf-8")
+        print(response_plan)
+        
+        actionClassLoader = ActionClassLoader(self.actions(), self)
+        actionClassLoader.loadFromStr(response_plan)
+        self._plan = actionClassLoader._plan
+        print(self._plan)
+        
+        return 0
+    
+    def run(self, url = 'http://127.0.0.1:8082/solve'):
+        return self.run_cloud(url)   
 
-        rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, self.__class__.__name__, str(datetime.date.today()),rnd)
-        os.makedirs(self.folder_name, exist_ok=True)
-        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_problem())
-        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_domain())
-        max_time = 10000
-        # TODO: create "debug" mode to run in os command and show output in real time
-        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
-        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
-        retcode = "-1"
-        for line in std:
-            if line.find('search exit code:') != -1:
-                retcode = line.rstrip("\n").split()[3]
-            log.info(line.rstrip("\n"))
-        if retcode == "0" :
-            if self.getFolderName() != None:
-                actionClassLoader = ActionClassLoader(self.actions(), self)
-                actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
-                self._plan = actionClassLoader._plan
-        return retcode
         
     @property
     def plan(self):
@@ -1830,3 +1832,9 @@ class ActionClassLoader:
             for planLine in fd:
                 if ";" in planLine: continue
                 self.load(planLine.replace("(", "").replace(")", ""))
+
+    def loadFromStr(self, outPlanStr):
+        log.debug("load action from str")
+        for planLine in outPlanStr.splitlines():
+            if ";" in planLine: continue
+            self.load(planLine.replace("(", "").replace(")", ""))
