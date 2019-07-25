@@ -1141,9 +1141,9 @@ class Object(metaclass=BaseObjectMeta):
                         not isinstance(getattr(self, key), Relation) and \
                         not value == "POODLE-NULL":
                     # print("MY CHECK", self, key, getattr(self,key), repr(getattr(self,key)._value))
-                    # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
-                    null_object = getattr(self,key)._value("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
-                    getattr(self,key).init_unsafe_internal(null_object)
+                    getattr(self,key).init_unsafe_internal(_none_objects[getattr(self,key)._value.__name__])
+                    # null_object = getattr(self,key)._value("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
+                    # getattr(self,key).init_unsafe_internal(null_object)
         self.__unlock_setter = False
     def gen_name(self, name):
         return ''.join([x if x in (string.ascii_letters+string.digits) else '-' for x in name])
