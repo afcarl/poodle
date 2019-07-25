@@ -119,7 +119,7 @@ class SimpleTestProblem1(NetworkGoal):
 
 p = SimpleTestProblem1()
 
-if p.check_solution(50): print("PLAN CHECK OK")
+# if p.check_solution(50): print("PLAN CHECK OK")
 
 retCode = p.run()
 log.info("fast downward retcode {0}".format(retCode))

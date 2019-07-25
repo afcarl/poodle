@@ -1090,7 +1090,7 @@ class BaseObjectMeta(type):
         
 
 class Object(metaclass=BaseObjectMeta):
-    def __init__(self, value=None): # WARNING! name is too dangerous to put here!
+    def __init__(self, value=None, _force_name=None): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
         self._parse_history_self = [] # Self, non-merged parse history
         self._sealed = False
@@ -1110,6 +1110,8 @@ class Object(metaclass=BaseObjectMeta):
                 frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
                 name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
             self.name = self.gen_name(name) # object name when instantiating..
+        if not _force_name is None:
+            self.name = _force_name
         global _collected_objects
         global _collected_object_classes
         if _problem_compilation:
@@ -1140,7 +1142,8 @@ class Object(metaclass=BaseObjectMeta):
                         not value == "POODLE-NULL":
                     # print("MY CHECK", self, key, getattr(self,key), repr(getattr(self,key)._value))
                     # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
-                    getattr(self,key).init_unsafe(getattr(self,key)._value("POODLE-NULL"))
+                    null_object = getattr(self,key)._value("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
+                    getattr(self,key).init_unsafe(null_object)
         self.__unlock_setter = False
     def gen_name(self, name):
         return ''.join([x if x in (string.ascii_letters+string.digits) else '-' for x in name])
@@ -1268,9 +1271,9 @@ class Imaginary(Object):
         else:
             return super().gen_name(name)
     
-    def __init__(self, value=None):
+    def __init__(self, value=None, _force_name=None):
         self.__imaginary__ = True
-        super().__init__(value)
+        super().__init__(value, _force_name)
         self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-default-")
         global _effect_compilation
         global _collected_predicates
