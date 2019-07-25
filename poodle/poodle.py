@@ -52,6 +52,7 @@ _collected_object_classes = set()
 _collected_objects = {} # format: { "class": [ ... objects ... ] }
 _collected_facts = []
 _poodle_object_classes = {}
+_replaced_predicates = {}
 
 HASHNUM_VAR_NAME = "hashnum"
 HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
@@ -106,18 +107,23 @@ def Select(what):
     
 def Unselect(what):
     global _collected_predicates
+    global _replaced_predicates
     ret = Select(what)
     if type(ret) == type([]):
         raise AssertionError("Complex Unselect()'s are not supported")
-    if ret._parse_history[-1]["text_predicates"][-1] != None:
-        raise AssertionError("Complex Unselect()'s are not supported")
+    # WARNING BELOW! we can not rely on _parse_history anymore as returned objects may be anything
+    # if ret._parse_history[-1]["text_predicates"][-1] != None:
+    #     raise AssertionError("Complex Unselect()'s are not supported")
     if _collected_predicates[-1] != None:
-        raise AssertionError("Complex Unselect()'s are not supported")
-    search_pred = ret._parse_history[-1]["text_predicates"][0]
-    assert search_pred == _collected_predicates[-2], "Internal Error: Could not find what to unselect"
+        raise AssertionError("Unselect()'s with subproperty comparisons are not supported")
+    # search_pred = ret._parse_history[-1]["text_predicates"][0]
+    search_pred = _collected_predicates[-2] # WARNING! this depends on order of added stuff to _collected_predicates
     replace_pred = "(not %s)" % search_pred
-    _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
-    if not ret: return True
+    # while search_pred in _collected_predicates: _collected_predicates.remove(search_pred)
+    # _collected_predicates = [replace_pred if x==search_pred else x for x in _collected_predicates]
+    # _collected_predicates.append(replace_pred)
+    _replaced_predicates[search_pred] = replace_pred
+    if not ret: return None
     return ret
 
 # https://stackoverflow.com/a/2257449
@@ -693,6 +699,7 @@ class Property(object):
             for ph in obj._parse_history + _parse_history: # WARNING! why do we need to add ph here??
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
+        _collected_predicates += [text_predicate, text_predicate_2] # this is required for Unselect() to work as it depends on order of output
         return obj
         
     def equals(self, other):
@@ -1318,6 +1325,10 @@ class PlannedAction(metaclass=ActionMeta):
         
         # _collected_predicates = filter(None, list(set(_collected_predicates)))
         _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(cls._class_collected_predicates + _collected_predicates))))
+        for k in _replaced_predicates:
+            if not k in _collected_predicates: continue
+            _collected_predicates.remove(k)
+            _collected_predicates.append(_replaced_predicates[k])
         collected_parameters = ""
         assert len(_collected_effects) > 0, "Action %s has no effect" % cls.__name__
         assert len(_collected_predicates) > 0, "Action %s has nothing to select" % cls.__name__
