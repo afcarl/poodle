@@ -59,6 +59,8 @@ class SimpleTestProblem1(NetworkGoal):
                 ]
 
     def problem(self):
+        self.null_interface = Interface("NULL")
+        self.null_table = Table("NULL")
         
         self.ip_factory = self.addObject(IPFactory()) # need IP factory as all new objects would be different
         ip_factory = self.ip_factory
@@ -119,7 +121,7 @@ class SimpleTestProblem1(NetworkGoal):
 
 p = SimpleTestProblem1()
 
-# if p.check_solution(50): print("PLAN CHECK OK")
+if p.check_solution(50): print("PLAN CHECK OK")
 
 retCode = p.run()
 log.info("fast downward retcode {0}".format(retCode))

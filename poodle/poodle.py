@@ -729,7 +729,7 @@ class Property(object):
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
         
-    def init_unsafe(self, value):
+    def init_unsafe_internal(self, value):
         self._unset = True
         return self.set(value)
         
@@ -739,7 +739,7 @@ class Property(object):
         init_mode = False
         if not self._unset and not _problem_compilation and not self._property_of_inst._new_fresh: 
             try:
-                self.unset(_force=True)
+                self.unset_internal(_force=True)
             except AssertionError:
                 # assume init mode
                 init_mode = True
@@ -783,7 +783,7 @@ class Property(object):
             _collected_parameters.update({other_genvar: value.__class__.__name__})
         self._unset = False
         
-    def unset(self, what = None, _force = False):
+    def unset_internal(self, what = None, _force = False):
         # we need to unset the value that we selected for us
         self._prepare()
         global _collected_effects
@@ -821,8 +821,6 @@ class Property(object):
         if "_" == attr[0] or attr in [ "_property_of_inst", "_value", "_property_name" ]:
             # return super().__getattr__(self, attr)
             return super().__getattribute__(attr)
-        if hasattr(self, "_dot_from") and isinstance(self._dot_from, Object):
-            raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
         if hasattr(self, "_property_of_inst") and not me_has_attr:
             try:
                 super().__getattribute__("_value")
@@ -831,6 +829,8 @@ class Property(object):
                 pass
             if me_has_value:
                 if hasattr(self._value, attr):
+                    if hasattr(self, "_dot_from") and isinstance(self._dot_from, Object):
+                        raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
                     ob = copy.copy(getattr(self._value, attr))
                     ob._orig_object = getattr(self._value, attr)
                     ob._property_of_inst = self._value # WARNING! property_of_inst is a PROPERTY!! i.e. TYPE of PROP
@@ -854,9 +854,9 @@ class ProtectedProperty(Property):
     def set(self, what):
         self._check()
         super().set(what)
-    def unset(self, what):
+    def unset_internal(self, what):
         self._check()
-        super().unset(what)
+        super().unset_internal(what)
 
     
 class Relation(Property):
@@ -874,9 +874,9 @@ class Relation(Property):
     def set(self, what):
         raise NotImplementedError("Usage error: Relation can not be set to one value. Use .add() instead")
         
-    def unset(self, what=None, _force=False):
-        if _force: return super().unset(what)
-        raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
+    # def unset(self, what=None, _force=False):
+    #     if _force: return super().unset(what)
+    #     raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
     
     def add(self, what):
         if isinstance(what, Object): self._property_value.append(what)
@@ -885,7 +885,7 @@ class Relation(Property):
         
     def remove(self, what):
         if isinstance(what, Object) and what in self._property_value: self._property_value.remove(what)
-        super().unset(what)
+        super().unset_internal(what)
 
     def __contains__(self, what):
         push_selector_object(self.contains(what))
@@ -904,7 +904,7 @@ class StateProperty(Property):
     # nothing special for now...
     pass
 
-class StateFact(Property):
+class StateFact(Property): # TODO HERE Rename to Bool()
     "state fact can only be set or unset and contains no relaitons"
 
     # TODO: remove this method as we have same one in base Property class!!
@@ -1143,7 +1143,7 @@ class Object(metaclass=BaseObjectMeta):
                     # print("MY CHECK", self, key, getattr(self,key), repr(getattr(self,key)._value))
                     # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
                     null_object = getattr(self,key)._value("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
-                    getattr(self,key).init_unsafe(null_object)
+                    getattr(self,key).init_unsafe_internal(null_object)
         self.__unlock_setter = False
     def gen_name(self, name):
         return ''.join([x if x in (string.ascii_letters+string.digits) else '-' for x in name])
@@ -1216,8 +1216,10 @@ class Object(metaclass=BaseObjectMeta):
         elif (_effect_compilation or _problem_compilation) and isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             if value == True:
                 getattr(self, name).set()
+            elif value == False:
+                getattr(self, name).unset()
             else:
-                raise NotImplementedError("Boolean False is not supported")
+                raise AssertionError("Something is wrong")
         else:
             # WARNING! please check the proper usage of __unlock_setter
             # setter must probably unlock only for non-existent class attributes or only for existing properties

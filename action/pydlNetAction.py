@@ -31,11 +31,10 @@ class ConsumePacket(PlannedActionJinja2):
                 and self.interface1.has_ipaddr |EQ| self.packet.dst_ipaddr
     
     def effect(self):
-        self.packet_next.current_packet.set() # = True
-        # self.packet.next.current_packet.set() # = True # TODO: support for dot-dot
+        self.packet_next.current_packet = True # = True
         # (Packet-current_packet )
-        self.packet.is_consumed.set() # = False
-        self.packet.current_packet.unset()
+        self.packet.is_consumed = True # = False
+        self.packet.current_packet = False
 
 #print('"'+ConsumePacket.compile(None).strip()+'"')
 
@@ -59,11 +58,10 @@ class ConsumePacketSelectInv(PlannedAction):
                 and self.interface1.has_ipaddr == self.packet.dst_ipaddr)
     
     def effect(self):
-        self.packet_next.current_packet.set() # = True
-        # self.packet.next.current_packet.set() # = True # TODO: support for dot-dot
+        self.packet_next.current_packet = True # = True
         # (Packet-current_packet )
-        self.packet.is_consumed.set() # = False
-        self.packet.current_packet.unset()
+        self.packet.is_consumed = True # = False
+        self.packet.current_packet = False
 
 #print('"'+ConsumePacketSelectInv.compile(None).strip()+'"')
 
@@ -88,11 +86,10 @@ class ConsumePacketSelect(PlannedActionJinja2):
                 # and self.interface1.has_ipaddr == self.packet.dst_ipaddr) # incorrect, add to unit test
     
     def effect(self):
-        self.packet_next.current_packet.set() # = True
-        # self.packet.next.current_packet.set() # = True # TODO: support for dot-dot
+        self.packet_next.current_packet = True
         # (Packet-current_packet )
-        self.packet.is_consumed.set() # = False
-        self.packet.current_packet.unset()
+        self.packet.is_consumed = True
+        self.packet.current_packet = False
 
 #print('"'+ConsumePacketSelect.compile().strip()+'"')
 
@@ -109,18 +106,18 @@ class ForwardPacketToInterface(PlannedAction):
         # TODO: we can auto-detect what to unset in property
         #       as property can only have one variable
         #       just select the variable first of the class that has the variable
-        self.packet.at_interface_output.unset(self.interface1)
+        self.packet.at_interface_output = self.problem.null_interface
         # this also works but experimentally:
         # self.packet.at_interface_output.unset()
         # TODO: set() could automatically issue an unset()
         print("MY CHECK 11111")
-        self.packet.at_interface_input.set(self.interface2)
+        self.packet.at_interface_input = self.interface2
 
-print(ForwardPacketToInterface.compile_clips(None))
 class ForwardingProblem(Problem):
     def actions(self):
         return [ ForwardPacketToInterface]
     def problem(self):
+        self.null_interface = Interface("NULL")
         self.testif1 = self.addObject(Interface("test0"))
         self.testif2 = self.addObject(Interface("test0"))
         self.testif1.adjacent_interface.add(self.testif2)
@@ -131,6 +128,7 @@ class ForwardingProblem(Problem):
         return self.packet.at_interface_input == self.testif2
 
 p = ForwardingProblem()
+# print(ForwardPacketToInterface.compile_clips(p))
 p.run()
 for i in p.plan: print(i)
   
@@ -205,12 +203,12 @@ class ForwardPacketToRouteInTable(PlannedAction):
 
     def effect(self):
         # self.packet.at_table = None # TODO not supported yet
-        self.packet.at_table.unset(self.table)
+        self.packet.at_table = self.problem.null_table
         # self.packet.at_interface_output = self.route.interface # TODO support this
-        self.packet.at_interface_output.set(self.interface) # TODO remove when above is supported
-        self.packet.dst_macaddr.set(self.interface_dest)
+        self.packet.at_interface_output = self.interface # TODO remove when above is supported
+        self.packet.dst_macaddr = self.interface_dest
 
-print(ForwardPacketToRouteInTable.compile(Problem()))
+# print(ForwardPacketToRouteInTable.compile(Problem()))
 
 class TestABCSelect(PlannedAction):
     host = Host()
@@ -221,7 +219,7 @@ class TestABCSelect(PlannedAction):
         return self.packet
         
     def effect(self):
-        self.packet.src_ipaddr.set(self.ipaddr)
+        self.packet.src_ipaddr = self.ipaddr
 print(TestABCSelect.compile(Problem()))
 print(TestABCSelect.compile_clips(Problem()))
 
@@ -236,7 +234,7 @@ class TestABCRSelect(PlannedAction):
         return Select(self.packet.at_interface_output in self.host.has_interface)
         
     def effect(self):
-        self.packet.src_ipaddr.set(self.ipaddr)
+        self.packet.src_ipaddr = self.ipaddr
 print(TestABCRSelect.compile(Problem()))
 
 class TestImaginaryCreate(PlannedAction):
@@ -284,7 +282,7 @@ class TestStaticObject(PlannedAction):
             and Unselect(self.host.has_interface == self.interface)
 
     def effect(self):
-        self.packet.at_interface_input.set(self.problem.testif)
+        self.packet.at_interface_input = self.problem.testif
 
 class StaticObjectProblem(Problem):
     def actions(self):
@@ -320,8 +318,8 @@ class HopToRoute(PlannedAction):
         return Select(self.route_dot_interface == self.problem.interface)
 
     def effect(self):
-        self.packet.at_interface_input.unset()
-        self.packet.at_interface_output.set(self.route_dot_interface)
+        self.packet.at_interface_input = self.problem.null_interface
+        self.packet.at_interface_output = self.route_dot_interface
         
 # print(HopToRoute.compile(Problem()))
 # raise AssertionError("TEST")
