@@ -1566,7 +1566,7 @@ class Problem:
     def compile_actions(self):
         # TODO: collect all predicates while generating
         self.actions_text = ""
-        for act in self.actions():
+        for act in self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(hasattr(self, k), "plan_class")]:
             act.problem = self
             self.actions_text += act.compile(self)
         return self.actions_text
@@ -1920,3 +1920,22 @@ class ActionClassLoader:
             for planLine in fd:
                 if ";" in planLine: continue
                 self.load(planLine.replace("(", "").replace(")", ""))
+
+def planned(fun):
+    if not getattr(fun, "__annotations__", None): 
+        raise ValueError("For planning to work function parameters must be type annotated")
+    class NewPlannedAction(PlannedAction):
+        def effect(self):
+            kwargs = {}
+            global _effect_compilation
+            global _selector_out
+            _effect_compilation = False
+            for k, v in fun.__annotations__.items(): kwargs[k] = v()
+            _effect_compilation = True
+            fun(self.problem, **kwargs)
+            _selector_out = None
+    for k, v in fun.__annotations__.items(): setattr(NewPlannedAction, k, v())
+    NewPlannedAction.__name__ = fun.__name__
+    fun.plan_class = NewPlannedAction
+    return fun
+    

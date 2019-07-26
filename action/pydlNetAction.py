@@ -93,6 +93,30 @@ class ConsumePacketSelect(PlannedActionJinja2):
 
 #print('"'+ConsumePacketSelect.compile().strip()+'"')
 
+class PacketModel:
+    
+    @planned # also @chained
+    def ConsumePacket(self, 
+            interface1: Interface, 
+            current_host: Host, 
+            packet: Packet, 
+            interface_any: Interface, 
+            packet_next: Packet):
+
+        assert interface1 in current_host.has_interface
+        assert packet.at_interface_input == current_host.has_interface
+        assert interface_any in current_host.has_interface
+        assert packet.current_packet == True
+        assert packet.dst_ipaddr == interface_any.has_ipaddr and \
+               packet_next == packet.next
+        
+        packet.current_packet = False
+        packet_next.current_packet = True
+        packet.is_consumed = True
+
+pp = PacketModel()
+print(pp.ConsumePacket.plan_class.compile(pp))
+
 class ForwardPacketToInterface(PlannedAction):
 
     interface1 = Interface()
