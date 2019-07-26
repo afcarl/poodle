@@ -1553,7 +1553,7 @@ class Problem:
             log.info(line.rstrip("\n"))
         if retcode == "0" :
             if self.getFolderName() != None:
-                actionClassLoader = ActionClassLoader(self.actions(), self)
+                actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
                 actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
                 self._plan = actionClassLoader._plan
         return retcode
