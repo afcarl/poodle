@@ -93,7 +93,9 @@ class ConsumePacketSelect(PlannedActionJinja2):
 
 #print('"'+ConsumePacketSelect.compile().strip()+'"')
 
-class PacketModel:
+
+
+class PacketActionModel:
     
     @planned # also @chained
     def ConsumePacket(self, 
@@ -114,7 +116,9 @@ class PacketModel:
         packet_next.current_packet = True
         packet.is_consumed = True
 
-pp = PacketModel()
+
+
+pp = PacketActionModel()
 print(pp.ConsumePacket.plan_class.compile(pp))
 
 class ForwardPacketToInterface(PlannedAction):

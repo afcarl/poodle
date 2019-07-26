@@ -1566,7 +1566,7 @@ class Problem:
     def compile_actions(self):
         # TODO: collect all predicates while generating
         self.actions_text = ""
-        for act in self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(hasattr(self, k), "plan_class")]:
+        for act in self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")]:
             act.problem = self
             self.actions_text += act.compile(self)
         return self.actions_text
