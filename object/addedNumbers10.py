@@ -1,4 +1,4 @@
-from poodle.poodle import * 
+from poodle import *
 from object.commonObject import *
 
 class KubeBase(Problem):
@@ -610,10 +610,12 @@ class KubeBase(Problem):
         self.AddedNumber10_10.result =  self.numberFactory.getNumber(20)
 									
 
+																					
+
         self.greaterThan1_0 = self.addObject(GreaterThan()) 
         self.greaterThan1_0.lower =  self.numberFactory.getNumber(0) 
         self.greaterThan1_0.higher =  self.numberFactory.getNumber(1)
-									
+																					
 
         self.greaterThan2_0 = self.addObject(GreaterThan()) 
         self.greaterThan2_0.lower =  self.numberFactory.getNumber(0) 
@@ -622,7 +624,7 @@ class KubeBase(Problem):
         self.greaterThan2_1 = self.addObject(GreaterThan()) 
         self.greaterThan2_1.lower =  self.numberFactory.getNumber(1) 
         self.greaterThan2_1.higher =  self.numberFactory.getNumber(2)
-								
+																				
 
         self.greaterThan3_0 = self.addObject(GreaterThan()) 
         self.greaterThan3_0.lower =  self.numberFactory.getNumber(0) 
@@ -635,7 +637,7 @@ class KubeBase(Problem):
         self.greaterThan3_2 = self.addObject(GreaterThan()) 
         self.greaterThan3_2.lower =  self.numberFactory.getNumber(2) 
         self.greaterThan3_2.higher =  self.numberFactory.getNumber(3)
-							
+																			
 
         self.greaterThan4_0 = self.addObject(GreaterThan()) 
         self.greaterThan4_0.lower =  self.numberFactory.getNumber(0) 
@@ -652,7 +654,7 @@ class KubeBase(Problem):
         self.greaterThan4_3 = self.addObject(GreaterThan()) 
         self.greaterThan4_3.lower =  self.numberFactory.getNumber(3) 
         self.greaterThan4_3.higher =  self.numberFactory.getNumber(4)
-						
+																		
 
         self.greaterThan5_0 = self.addObject(GreaterThan()) 
         self.greaterThan5_0.lower =  self.numberFactory.getNumber(0) 
@@ -673,7 +675,7 @@ class KubeBase(Problem):
         self.greaterThan5_4 = self.addObject(GreaterThan()) 
         self.greaterThan5_4.lower =  self.numberFactory.getNumber(4) 
         self.greaterThan5_4.higher =  self.numberFactory.getNumber(5)
-					
+																	
 
         self.greaterThan6_0 = self.addObject(GreaterThan()) 
         self.greaterThan6_0.lower =  self.numberFactory.getNumber(0) 
@@ -698,7 +700,7 @@ class KubeBase(Problem):
         self.greaterThan6_5 = self.addObject(GreaterThan()) 
         self.greaterThan6_5.lower =  self.numberFactory.getNumber(5) 
         self.greaterThan6_5.higher =  self.numberFactory.getNumber(6)
-				
+																
 
         self.greaterThan7_0 = self.addObject(GreaterThan()) 
         self.greaterThan7_0.lower =  self.numberFactory.getNumber(0) 
@@ -727,7 +729,7 @@ class KubeBase(Problem):
         self.greaterThan7_6 = self.addObject(GreaterThan()) 
         self.greaterThan7_6.lower =  self.numberFactory.getNumber(6) 
         self.greaterThan7_6.higher =  self.numberFactory.getNumber(7)
-			
+															
 
         self.greaterThan8_0 = self.addObject(GreaterThan()) 
         self.greaterThan8_0.lower =  self.numberFactory.getNumber(0) 
@@ -760,7 +762,7 @@ class KubeBase(Problem):
         self.greaterThan8_7 = self.addObject(GreaterThan()) 
         self.greaterThan8_7.lower =  self.numberFactory.getNumber(7) 
         self.greaterThan8_7.higher =  self.numberFactory.getNumber(8)
-		
+														
 
         self.greaterThan9_0 = self.addObject(GreaterThan()) 
         self.greaterThan9_0.lower =  self.numberFactory.getNumber(0) 
@@ -797,7 +799,7 @@ class KubeBase(Problem):
         self.greaterThan9_8 = self.addObject(GreaterThan()) 
         self.greaterThan9_8.lower =  self.numberFactory.getNumber(8) 
         self.greaterThan9_8.higher =  self.numberFactory.getNumber(9)
-	
+													
 
         self.greaterThan10_0 = self.addObject(GreaterThan()) 
         self.greaterThan10_0.lower =  self.numberFactory.getNumber(0) 
@@ -838,4 +840,899 @@ class KubeBase(Problem):
         self.greaterThan10_9 = self.addObject(GreaterThan()) 
         self.greaterThan10_9.lower =  self.numberFactory.getNumber(9) 
         self.greaterThan10_9.higher =  self.numberFactory.getNumber(10)
+												
+
+        self.greaterThan11_0 = self.addObject(GreaterThan()) 
+        self.greaterThan11_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan11_0.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_1 = self.addObject(GreaterThan()) 
+        self.greaterThan11_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan11_1.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_2 = self.addObject(GreaterThan()) 
+        self.greaterThan11_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan11_2.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_3 = self.addObject(GreaterThan()) 
+        self.greaterThan11_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan11_3.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_4 = self.addObject(GreaterThan()) 
+        self.greaterThan11_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan11_4.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_5 = self.addObject(GreaterThan()) 
+        self.greaterThan11_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan11_5.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_6 = self.addObject(GreaterThan()) 
+        self.greaterThan11_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan11_6.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_7 = self.addObject(GreaterThan()) 
+        self.greaterThan11_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan11_7.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_8 = self.addObject(GreaterThan()) 
+        self.greaterThan11_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan11_8.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_9 = self.addObject(GreaterThan()) 
+        self.greaterThan11_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan11_9.higher =  self.numberFactory.getNumber(11)
+	
+        self.greaterThan11_10 = self.addObject(GreaterThan()) 
+        self.greaterThan11_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan11_10.higher =  self.numberFactory.getNumber(11)
+											
+
+        self.greaterThan12_0 = self.addObject(GreaterThan()) 
+        self.greaterThan12_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan12_0.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_1 = self.addObject(GreaterThan()) 
+        self.greaterThan12_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan12_1.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_2 = self.addObject(GreaterThan()) 
+        self.greaterThan12_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan12_2.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_3 = self.addObject(GreaterThan()) 
+        self.greaterThan12_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan12_3.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_4 = self.addObject(GreaterThan()) 
+        self.greaterThan12_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan12_4.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_5 = self.addObject(GreaterThan()) 
+        self.greaterThan12_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan12_5.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_6 = self.addObject(GreaterThan()) 
+        self.greaterThan12_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan12_6.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_7 = self.addObject(GreaterThan()) 
+        self.greaterThan12_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan12_7.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_8 = self.addObject(GreaterThan()) 
+        self.greaterThan12_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan12_8.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_9 = self.addObject(GreaterThan()) 
+        self.greaterThan12_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan12_9.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_10 = self.addObject(GreaterThan()) 
+        self.greaterThan12_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan12_10.higher =  self.numberFactory.getNumber(12)
+	
+        self.greaterThan12_11 = self.addObject(GreaterThan()) 
+        self.greaterThan12_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan12_11.higher =  self.numberFactory.getNumber(12)
+										
+
+        self.greaterThan13_0 = self.addObject(GreaterThan()) 
+        self.greaterThan13_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan13_0.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_1 = self.addObject(GreaterThan()) 
+        self.greaterThan13_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan13_1.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_2 = self.addObject(GreaterThan()) 
+        self.greaterThan13_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan13_2.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_3 = self.addObject(GreaterThan()) 
+        self.greaterThan13_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan13_3.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_4 = self.addObject(GreaterThan()) 
+        self.greaterThan13_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan13_4.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_5 = self.addObject(GreaterThan()) 
+        self.greaterThan13_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan13_5.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_6 = self.addObject(GreaterThan()) 
+        self.greaterThan13_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan13_6.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_7 = self.addObject(GreaterThan()) 
+        self.greaterThan13_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan13_7.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_8 = self.addObject(GreaterThan()) 
+        self.greaterThan13_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan13_8.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_9 = self.addObject(GreaterThan()) 
+        self.greaterThan13_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan13_9.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_10 = self.addObject(GreaterThan()) 
+        self.greaterThan13_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan13_10.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_11 = self.addObject(GreaterThan()) 
+        self.greaterThan13_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan13_11.higher =  self.numberFactory.getNumber(13)
+	
+        self.greaterThan13_12 = self.addObject(GreaterThan()) 
+        self.greaterThan13_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan13_12.higher =  self.numberFactory.getNumber(13)
+									
+
+        self.greaterThan14_0 = self.addObject(GreaterThan()) 
+        self.greaterThan14_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan14_0.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_1 = self.addObject(GreaterThan()) 
+        self.greaterThan14_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan14_1.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_2 = self.addObject(GreaterThan()) 
+        self.greaterThan14_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan14_2.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_3 = self.addObject(GreaterThan()) 
+        self.greaterThan14_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan14_3.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_4 = self.addObject(GreaterThan()) 
+        self.greaterThan14_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan14_4.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_5 = self.addObject(GreaterThan()) 
+        self.greaterThan14_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan14_5.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_6 = self.addObject(GreaterThan()) 
+        self.greaterThan14_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan14_6.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_7 = self.addObject(GreaterThan()) 
+        self.greaterThan14_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan14_7.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_8 = self.addObject(GreaterThan()) 
+        self.greaterThan14_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan14_8.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_9 = self.addObject(GreaterThan()) 
+        self.greaterThan14_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan14_9.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_10 = self.addObject(GreaterThan()) 
+        self.greaterThan14_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan14_10.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_11 = self.addObject(GreaterThan()) 
+        self.greaterThan14_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan14_11.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_12 = self.addObject(GreaterThan()) 
+        self.greaterThan14_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan14_12.higher =  self.numberFactory.getNumber(14)
+	
+        self.greaterThan14_13 = self.addObject(GreaterThan()) 
+        self.greaterThan14_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan14_13.higher =  self.numberFactory.getNumber(14)
+								
+
+        self.greaterThan15_0 = self.addObject(GreaterThan()) 
+        self.greaterThan15_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan15_0.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_1 = self.addObject(GreaterThan()) 
+        self.greaterThan15_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan15_1.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_2 = self.addObject(GreaterThan()) 
+        self.greaterThan15_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan15_2.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_3 = self.addObject(GreaterThan()) 
+        self.greaterThan15_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan15_3.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_4 = self.addObject(GreaterThan()) 
+        self.greaterThan15_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan15_4.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_5 = self.addObject(GreaterThan()) 
+        self.greaterThan15_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan15_5.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_6 = self.addObject(GreaterThan()) 
+        self.greaterThan15_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan15_6.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_7 = self.addObject(GreaterThan()) 
+        self.greaterThan15_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan15_7.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_8 = self.addObject(GreaterThan()) 
+        self.greaterThan15_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan15_8.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_9 = self.addObject(GreaterThan()) 
+        self.greaterThan15_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan15_9.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_10 = self.addObject(GreaterThan()) 
+        self.greaterThan15_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan15_10.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_11 = self.addObject(GreaterThan()) 
+        self.greaterThan15_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan15_11.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_12 = self.addObject(GreaterThan()) 
+        self.greaterThan15_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan15_12.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_13 = self.addObject(GreaterThan()) 
+        self.greaterThan15_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan15_13.higher =  self.numberFactory.getNumber(15)
+	
+        self.greaterThan15_14 = self.addObject(GreaterThan()) 
+        self.greaterThan15_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan15_14.higher =  self.numberFactory.getNumber(15)
+							
+
+        self.greaterThan16_0 = self.addObject(GreaterThan()) 
+        self.greaterThan16_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan16_0.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_1 = self.addObject(GreaterThan()) 
+        self.greaterThan16_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan16_1.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_2 = self.addObject(GreaterThan()) 
+        self.greaterThan16_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan16_2.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_3 = self.addObject(GreaterThan()) 
+        self.greaterThan16_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan16_3.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_4 = self.addObject(GreaterThan()) 
+        self.greaterThan16_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan16_4.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_5 = self.addObject(GreaterThan()) 
+        self.greaterThan16_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan16_5.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_6 = self.addObject(GreaterThan()) 
+        self.greaterThan16_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan16_6.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_7 = self.addObject(GreaterThan()) 
+        self.greaterThan16_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan16_7.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_8 = self.addObject(GreaterThan()) 
+        self.greaterThan16_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan16_8.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_9 = self.addObject(GreaterThan()) 
+        self.greaterThan16_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan16_9.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_10 = self.addObject(GreaterThan()) 
+        self.greaterThan16_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan16_10.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_11 = self.addObject(GreaterThan()) 
+        self.greaterThan16_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan16_11.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_12 = self.addObject(GreaterThan()) 
+        self.greaterThan16_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan16_12.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_13 = self.addObject(GreaterThan()) 
+        self.greaterThan16_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan16_13.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_14 = self.addObject(GreaterThan()) 
+        self.greaterThan16_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan16_14.higher =  self.numberFactory.getNumber(16)
+	
+        self.greaterThan16_15 = self.addObject(GreaterThan()) 
+        self.greaterThan16_15.lower =  self.numberFactory.getNumber(15) 
+        self.greaterThan16_15.higher =  self.numberFactory.getNumber(16)
+						
+
+        self.greaterThan17_0 = self.addObject(GreaterThan()) 
+        self.greaterThan17_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan17_0.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_1 = self.addObject(GreaterThan()) 
+        self.greaterThan17_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan17_1.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_2 = self.addObject(GreaterThan()) 
+        self.greaterThan17_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan17_2.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_3 = self.addObject(GreaterThan()) 
+        self.greaterThan17_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan17_3.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_4 = self.addObject(GreaterThan()) 
+        self.greaterThan17_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan17_4.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_5 = self.addObject(GreaterThan()) 
+        self.greaterThan17_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan17_5.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_6 = self.addObject(GreaterThan()) 
+        self.greaterThan17_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan17_6.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_7 = self.addObject(GreaterThan()) 
+        self.greaterThan17_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan17_7.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_8 = self.addObject(GreaterThan()) 
+        self.greaterThan17_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan17_8.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_9 = self.addObject(GreaterThan()) 
+        self.greaterThan17_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan17_9.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_10 = self.addObject(GreaterThan()) 
+        self.greaterThan17_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan17_10.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_11 = self.addObject(GreaterThan()) 
+        self.greaterThan17_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan17_11.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_12 = self.addObject(GreaterThan()) 
+        self.greaterThan17_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan17_12.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_13 = self.addObject(GreaterThan()) 
+        self.greaterThan17_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan17_13.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_14 = self.addObject(GreaterThan()) 
+        self.greaterThan17_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan17_14.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_15 = self.addObject(GreaterThan()) 
+        self.greaterThan17_15.lower =  self.numberFactory.getNumber(15) 
+        self.greaterThan17_15.higher =  self.numberFactory.getNumber(17)
+	
+        self.greaterThan17_16 = self.addObject(GreaterThan()) 
+        self.greaterThan17_16.lower =  self.numberFactory.getNumber(16) 
+        self.greaterThan17_16.higher =  self.numberFactory.getNumber(17)
+					
+
+        self.greaterThan18_0 = self.addObject(GreaterThan()) 
+        self.greaterThan18_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan18_0.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_1 = self.addObject(GreaterThan()) 
+        self.greaterThan18_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan18_1.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_2 = self.addObject(GreaterThan()) 
+        self.greaterThan18_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan18_2.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_3 = self.addObject(GreaterThan()) 
+        self.greaterThan18_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan18_3.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_4 = self.addObject(GreaterThan()) 
+        self.greaterThan18_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan18_4.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_5 = self.addObject(GreaterThan()) 
+        self.greaterThan18_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan18_5.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_6 = self.addObject(GreaterThan()) 
+        self.greaterThan18_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan18_6.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_7 = self.addObject(GreaterThan()) 
+        self.greaterThan18_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan18_7.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_8 = self.addObject(GreaterThan()) 
+        self.greaterThan18_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan18_8.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_9 = self.addObject(GreaterThan()) 
+        self.greaterThan18_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan18_9.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_10 = self.addObject(GreaterThan()) 
+        self.greaterThan18_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan18_10.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_11 = self.addObject(GreaterThan()) 
+        self.greaterThan18_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan18_11.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_12 = self.addObject(GreaterThan()) 
+        self.greaterThan18_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan18_12.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_13 = self.addObject(GreaterThan()) 
+        self.greaterThan18_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan18_13.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_14 = self.addObject(GreaterThan()) 
+        self.greaterThan18_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan18_14.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_15 = self.addObject(GreaterThan()) 
+        self.greaterThan18_15.lower =  self.numberFactory.getNumber(15) 
+        self.greaterThan18_15.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_16 = self.addObject(GreaterThan()) 
+        self.greaterThan18_16.lower =  self.numberFactory.getNumber(16) 
+        self.greaterThan18_16.higher =  self.numberFactory.getNumber(18)
+	
+        self.greaterThan18_17 = self.addObject(GreaterThan()) 
+        self.greaterThan18_17.lower =  self.numberFactory.getNumber(17) 
+        self.greaterThan18_17.higher =  self.numberFactory.getNumber(18)
+				
+
+        self.greaterThan19_0 = self.addObject(GreaterThan()) 
+        self.greaterThan19_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan19_0.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_1 = self.addObject(GreaterThan()) 
+        self.greaterThan19_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan19_1.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_2 = self.addObject(GreaterThan()) 
+        self.greaterThan19_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan19_2.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_3 = self.addObject(GreaterThan()) 
+        self.greaterThan19_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan19_3.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_4 = self.addObject(GreaterThan()) 
+        self.greaterThan19_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan19_4.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_5 = self.addObject(GreaterThan()) 
+        self.greaterThan19_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan19_5.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_6 = self.addObject(GreaterThan()) 
+        self.greaterThan19_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan19_6.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_7 = self.addObject(GreaterThan()) 
+        self.greaterThan19_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan19_7.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_8 = self.addObject(GreaterThan()) 
+        self.greaterThan19_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan19_8.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_9 = self.addObject(GreaterThan()) 
+        self.greaterThan19_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan19_9.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_10 = self.addObject(GreaterThan()) 
+        self.greaterThan19_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan19_10.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_11 = self.addObject(GreaterThan()) 
+        self.greaterThan19_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan19_11.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_12 = self.addObject(GreaterThan()) 
+        self.greaterThan19_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan19_12.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_13 = self.addObject(GreaterThan()) 
+        self.greaterThan19_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan19_13.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_14 = self.addObject(GreaterThan()) 
+        self.greaterThan19_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan19_14.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_15 = self.addObject(GreaterThan()) 
+        self.greaterThan19_15.lower =  self.numberFactory.getNumber(15) 
+        self.greaterThan19_15.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_16 = self.addObject(GreaterThan()) 
+        self.greaterThan19_16.lower =  self.numberFactory.getNumber(16) 
+        self.greaterThan19_16.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_17 = self.addObject(GreaterThan()) 
+        self.greaterThan19_17.lower =  self.numberFactory.getNumber(17) 
+        self.greaterThan19_17.higher =  self.numberFactory.getNumber(19)
+	
+        self.greaterThan19_18 = self.addObject(GreaterThan()) 
+        self.greaterThan19_18.lower =  self.numberFactory.getNumber(18) 
+        self.greaterThan19_18.higher =  self.numberFactory.getNumber(19)
+			
+
+        self.greaterThan20_0 = self.addObject(GreaterThan()) 
+        self.greaterThan20_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan20_0.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_1 = self.addObject(GreaterThan()) 
+        self.greaterThan20_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan20_1.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_2 = self.addObject(GreaterThan()) 
+        self.greaterThan20_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan20_2.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_3 = self.addObject(GreaterThan()) 
+        self.greaterThan20_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan20_3.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_4 = self.addObject(GreaterThan()) 
+        self.greaterThan20_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan20_4.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_5 = self.addObject(GreaterThan()) 
+        self.greaterThan20_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan20_5.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_6 = self.addObject(GreaterThan()) 
+        self.greaterThan20_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan20_6.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_7 = self.addObject(GreaterThan()) 
+        self.greaterThan20_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan20_7.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_8 = self.addObject(GreaterThan()) 
+        self.greaterThan20_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan20_8.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_9 = self.addObject(GreaterThan()) 
+        self.greaterThan20_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan20_9.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_10 = self.addObject(GreaterThan()) 
+        self.greaterThan20_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan20_10.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_11 = self.addObject(GreaterThan()) 
+        self.greaterThan20_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan20_11.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_12 = self.addObject(GreaterThan()) 
+        self.greaterThan20_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan20_12.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_13 = self.addObject(GreaterThan()) 
+        self.greaterThan20_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan20_13.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_14 = self.addObject(GreaterThan()) 
+        self.greaterThan20_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan20_14.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_15 = self.addObject(GreaterThan()) 
+        self.greaterThan20_15.lower =  self.numberFactory.getNumber(15) 
+        self.greaterThan20_15.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_16 = self.addObject(GreaterThan()) 
+        self.greaterThan20_16.lower =  self.numberFactory.getNumber(16) 
+        self.greaterThan20_16.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_17 = self.addObject(GreaterThan()) 
+        self.greaterThan20_17.lower =  self.numberFactory.getNumber(17) 
+        self.greaterThan20_17.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_18 = self.addObject(GreaterThan()) 
+        self.greaterThan20_18.lower =  self.numberFactory.getNumber(18) 
+        self.greaterThan20_18.higher =  self.numberFactory.getNumber(20)
+	
+        self.greaterThan20_19 = self.addObject(GreaterThan()) 
+        self.greaterThan20_19.lower =  self.numberFactory.getNumber(19) 
+        self.greaterThan20_19.higher =  self.numberFactory.getNumber(20)
+		
+
+        self.greaterThan21_0 = self.addObject(GreaterThan()) 
+        self.greaterThan21_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan21_0.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_1 = self.addObject(GreaterThan()) 
+        self.greaterThan21_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan21_1.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_2 = self.addObject(GreaterThan()) 
+        self.greaterThan21_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan21_2.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_3 = self.addObject(GreaterThan()) 
+        self.greaterThan21_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan21_3.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_4 = self.addObject(GreaterThan()) 
+        self.greaterThan21_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan21_4.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_5 = self.addObject(GreaterThan()) 
+        self.greaterThan21_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan21_5.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_6 = self.addObject(GreaterThan()) 
+        self.greaterThan21_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan21_6.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_7 = self.addObject(GreaterThan()) 
+        self.greaterThan21_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan21_7.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_8 = self.addObject(GreaterThan()) 
+        self.greaterThan21_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan21_8.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_9 = self.addObject(GreaterThan()) 
+        self.greaterThan21_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan21_9.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_10 = self.addObject(GreaterThan()) 
+        self.greaterThan21_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan21_10.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_11 = self.addObject(GreaterThan()) 
+        self.greaterThan21_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan21_11.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_12 = self.addObject(GreaterThan()) 
+        self.greaterThan21_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan21_12.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_13 = self.addObject(GreaterThan()) 
+        self.greaterThan21_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan21_13.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_14 = self.addObject(GreaterThan()) 
+        self.greaterThan21_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan21_14.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_15 = self.addObject(GreaterThan()) 
+        self.greaterThan21_15.lower =  self.numberFactory.getNumber(15) 
+        self.greaterThan21_15.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_16 = self.addObject(GreaterThan()) 
+        self.greaterThan21_16.lower =  self.numberFactory.getNumber(16) 
+        self.greaterThan21_16.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_17 = self.addObject(GreaterThan()) 
+        self.greaterThan21_17.lower =  self.numberFactory.getNumber(17) 
+        self.greaterThan21_17.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_18 = self.addObject(GreaterThan()) 
+        self.greaterThan21_18.lower =  self.numberFactory.getNumber(18) 
+        self.greaterThan21_18.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_19 = self.addObject(GreaterThan()) 
+        self.greaterThan21_19.lower =  self.numberFactory.getNumber(19) 
+        self.greaterThan21_19.higher =  self.numberFactory.getNumber(21)
+	
+        self.greaterThan21_20 = self.addObject(GreaterThan()) 
+        self.greaterThan21_20.lower =  self.numberFactory.getNumber(20) 
+        self.greaterThan21_20.higher =  self.numberFactory.getNumber(21)
+	
+
+        self.greaterThan22_0 = self.addObject(GreaterThan()) 
+        self.greaterThan22_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan22_0.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_1 = self.addObject(GreaterThan()) 
+        self.greaterThan22_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan22_1.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_2 = self.addObject(GreaterThan()) 
+        self.greaterThan22_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan22_2.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_3 = self.addObject(GreaterThan()) 
+        self.greaterThan22_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan22_3.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_4 = self.addObject(GreaterThan()) 
+        self.greaterThan22_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan22_4.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_5 = self.addObject(GreaterThan()) 
+        self.greaterThan22_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan22_5.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_6 = self.addObject(GreaterThan()) 
+        self.greaterThan22_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan22_6.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_7 = self.addObject(GreaterThan()) 
+        self.greaterThan22_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan22_7.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_8 = self.addObject(GreaterThan()) 
+        self.greaterThan22_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan22_8.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_9 = self.addObject(GreaterThan()) 
+        self.greaterThan22_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan22_9.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_10 = self.addObject(GreaterThan()) 
+        self.greaterThan22_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan22_10.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_11 = self.addObject(GreaterThan()) 
+        self.greaterThan22_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan22_11.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_12 = self.addObject(GreaterThan()) 
+        self.greaterThan22_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan22_12.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_13 = self.addObject(GreaterThan()) 
+        self.greaterThan22_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan22_13.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_14 = self.addObject(GreaterThan()) 
+        self.greaterThan22_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan22_14.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_15 = self.addObject(GreaterThan()) 
+        self.greaterThan22_15.lower =  self.numberFactory.getNumber(15) 
+        self.greaterThan22_15.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_16 = self.addObject(GreaterThan()) 
+        self.greaterThan22_16.lower =  self.numberFactory.getNumber(16) 
+        self.greaterThan22_16.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_17 = self.addObject(GreaterThan()) 
+        self.greaterThan22_17.lower =  self.numberFactory.getNumber(17) 
+        self.greaterThan22_17.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_18 = self.addObject(GreaterThan()) 
+        self.greaterThan22_18.lower =  self.numberFactory.getNumber(18) 
+        self.greaterThan22_18.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_19 = self.addObject(GreaterThan()) 
+        self.greaterThan22_19.lower =  self.numberFactory.getNumber(19) 
+        self.greaterThan22_19.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_20 = self.addObject(GreaterThan()) 
+        self.greaterThan22_20.lower =  self.numberFactory.getNumber(20) 
+        self.greaterThan22_20.higher =  self.numberFactory.getNumber(22)
+	
+        self.greaterThan22_21 = self.addObject(GreaterThan()) 
+        self.greaterThan22_21.lower =  self.numberFactory.getNumber(21) 
+        self.greaterThan22_21.higher =  self.numberFactory.getNumber(22)
+
+
+        self.greaterThan23_0 = self.addObject(GreaterThan()) 
+        self.greaterThan23_0.lower =  self.numberFactory.getNumber(0) 
+        self.greaterThan23_0.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_1 = self.addObject(GreaterThan()) 
+        self.greaterThan23_1.lower =  self.numberFactory.getNumber(1) 
+        self.greaterThan23_1.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_2 = self.addObject(GreaterThan()) 
+        self.greaterThan23_2.lower =  self.numberFactory.getNumber(2) 
+        self.greaterThan23_2.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_3 = self.addObject(GreaterThan()) 
+        self.greaterThan23_3.lower =  self.numberFactory.getNumber(3) 
+        self.greaterThan23_3.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_4 = self.addObject(GreaterThan()) 
+        self.greaterThan23_4.lower =  self.numberFactory.getNumber(4) 
+        self.greaterThan23_4.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_5 = self.addObject(GreaterThan()) 
+        self.greaterThan23_5.lower =  self.numberFactory.getNumber(5) 
+        self.greaterThan23_5.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_6 = self.addObject(GreaterThan()) 
+        self.greaterThan23_6.lower =  self.numberFactory.getNumber(6) 
+        self.greaterThan23_6.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_7 = self.addObject(GreaterThan()) 
+        self.greaterThan23_7.lower =  self.numberFactory.getNumber(7) 
+        self.greaterThan23_7.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_8 = self.addObject(GreaterThan()) 
+        self.greaterThan23_8.lower =  self.numberFactory.getNumber(8) 
+        self.greaterThan23_8.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_9 = self.addObject(GreaterThan()) 
+        self.greaterThan23_9.lower =  self.numberFactory.getNumber(9) 
+        self.greaterThan23_9.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_10 = self.addObject(GreaterThan()) 
+        self.greaterThan23_10.lower =  self.numberFactory.getNumber(10) 
+        self.greaterThan23_10.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_11 = self.addObject(GreaterThan()) 
+        self.greaterThan23_11.lower =  self.numberFactory.getNumber(11) 
+        self.greaterThan23_11.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_12 = self.addObject(GreaterThan()) 
+        self.greaterThan23_12.lower =  self.numberFactory.getNumber(12) 
+        self.greaterThan23_12.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_13 = self.addObject(GreaterThan()) 
+        self.greaterThan23_13.lower =  self.numberFactory.getNumber(13) 
+        self.greaterThan23_13.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_14 = self.addObject(GreaterThan()) 
+        self.greaterThan23_14.lower =  self.numberFactory.getNumber(14) 
+        self.greaterThan23_14.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_15 = self.addObject(GreaterThan()) 
+        self.greaterThan23_15.lower =  self.numberFactory.getNumber(15) 
+        self.greaterThan23_15.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_16 = self.addObject(GreaterThan()) 
+        self.greaterThan23_16.lower =  self.numberFactory.getNumber(16) 
+        self.greaterThan23_16.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_17 = self.addObject(GreaterThan()) 
+        self.greaterThan23_17.lower =  self.numberFactory.getNumber(17) 
+        self.greaterThan23_17.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_18 = self.addObject(GreaterThan()) 
+        self.greaterThan23_18.lower =  self.numberFactory.getNumber(18) 
+        self.greaterThan23_18.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_19 = self.addObject(GreaterThan()) 
+        self.greaterThan23_19.lower =  self.numberFactory.getNumber(19) 
+        self.greaterThan23_19.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_20 = self.addObject(GreaterThan()) 
+        self.greaterThan23_20.lower =  self.numberFactory.getNumber(20) 
+        self.greaterThan23_20.higher =  self.numberFactory.getNumber(23)
+	
+        self.greaterThan23_21 = self.addObject(GreaterThan()) 
+        self.greaterThan23_21.lower =  self.numberFactory.getNumber(21) 
+        self.greaterThan23_21.higher =  self.numberFactory.getNumber(23)
+
+
 
