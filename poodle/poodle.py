@@ -997,6 +997,8 @@ class StateFact(Property): # TODO HERE Rename to Bool()
         return self._property_of_inst
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
+class Bool(StateFact):
+    pass
 
 class ActionMeta(type):
     # def __new__(mcls, name, bases, attrs):
