@@ -126,7 +126,6 @@ class SQLModelDemo(Problem):
         self.condition1.lhs_column = self.column4
         self.condition2 = self.addObject(SimpleLikeCondition("column11 LIKE 'world'"))
         self.condition2.lhs_column = self.column11
-        
         self.conditions = [self.condition1, self.condition2]
     
     def goal(self):
