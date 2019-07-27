@@ -997,8 +997,18 @@ class StateFact(Property): # TODO HERE Rename to Bool()
         return self._property_of_inst
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
-class Bool(StateFact):
-    pass
+class Bool(Property):
+    
+    def set(self, value):
+        if type(value) != type(True): raise ValueError("Bool can only be set to True or False")
+    
+    def __eq__(self, value):
+        if type(value) != type(True): raise ValueError("Bool can only be compared to True or False")
+        # TODO
+        pass
+    
+    def __bool__(self):
+        return self == True
 
 class ActionMeta(type):
     # def __new__(mcls, name, bases, attrs):
