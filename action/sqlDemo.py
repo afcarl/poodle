@@ -59,6 +59,18 @@ class SQLModelDemo(Problem):
         table2.is_selected = True
         
         return f"JOIN {table2}.{column_right} ON ({table1}.{column_left} = {table2}.{column_right})"
+    
+    @planned
+    def addAvailableColumnsWhenNeeded(self,
+            col: Column,
+            tbl: Table
+            # select: Select # TODO
+        ):
+        
+        assert tbl.is_selected and col in tbl.columns
+        
+        # select.columns_available.add(col) # TODO
+        self.select.columns_available.add(col)
 
     @planned
     def applyLikeConditions(self,
