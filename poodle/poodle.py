@@ -134,7 +134,7 @@ def get_source_frame_dict():
     frame = inspect.getouterframes(inspect.currentframe())[4]
     for f in inspect.getouterframes(inspect.currentframe()):
         frameinfo = inspect.getframeinfo(f[0])
-        if frameinfo.code_context and  "Select(" in frameinfo.code_context[0].strip().replace(" ",""):
+        if frameinfo.code_context and  ("Select(" in frameinfo.code_context[0].strip().replace(" ","") or frameinfo.code_context[0].strip().startswith("assert")):
             frame = f
             break
     frameinfo = inspect.getframeinfo(frame[0])
@@ -1745,7 +1745,11 @@ class Problem:
         for tryCount in range(attempts):
             i=0
             work_facts = self.facts()
-            for act in self.solution():
+            for fun_act in self.solution():
+                if hasattr(fun_act, "plan_class"):
+                    act = fun_act.plan_class
+                else:
+                    act = fun_act
                 step_completed = False
                 lhs, rhs = act.get_clips_lhs_rhs(self)
                 c = CLIPSExecutor()
@@ -1806,7 +1810,7 @@ class CLIPSExecutor:
     def render_assert_facts(self):
         return '\n'.join("(assert %s)" % f for f in self.facts)
         
-    def gen_run_problem(self):
+    def gen_run_problem(self, factFileName):
         defrules = str(self.rules[0])
         facts = self.render_assert_facts()
         return """
@@ -1814,11 +1818,13 @@ class CLIPSExecutor:
         (seed {seed})
         (set-strategy random)
         (watch facts)
-        {facts}
+        (watch rules)
+        (load-facts "{ffn}")
+        ;{facts}
         (printout t "--- RUN ---" crlf)
         (run 1)
         (exit)
-        """.format(defrules=defrules, facts=facts, seed=str(int(time.time())))
+        """.format(defrules=defrules, facts=facts, seed=str(int(time.time())), ffn=factFileName)
         
     def gen_match_problem(self, factFileName):
         defrules = str(self.rules[0])
@@ -1866,8 +1872,13 @@ class CLIPSExecutor:
         # open("./CPLTEST_RES.clp","w+").write(self.run_result)
             
     def run(self):
-        self.run_get_result(self.gen_run_problem())
+        # self.run_get_result(self.gen_run_problem())
+        with tempfile.NamedTemporaryFile() as fp:
+            fp.write('\n'.join(self.facts).encode("ascii"))
+            fp.flush()
+            self.run_get_result(self.gen_run_problem(fp.name))
         if len(self.run_result.split("--- RUN ---")[-1]) < 10:
+            # print("MY CHECK RRES", self.run_result)
             raise MatchError("Rule %s does not match its selector")
     
     def check_match(self, actClass):

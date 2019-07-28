@@ -157,4 +157,5 @@ class SQLDemoTest(SQLActionModel):
         
    
 p = SQLDemoTest()
+p.check_solution(50)
 p.run()
