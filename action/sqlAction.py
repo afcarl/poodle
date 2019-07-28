@@ -5,8 +5,8 @@ class SQLActionModelA:
     
     @planned
     def joinColumns(self,
-        table1 : DbTable,
-        table2 : DbTable):
+        table1 : Table,
+        table2 : Table):
             
         assert table1.hasFKlink == table2
         
@@ -49,17 +49,17 @@ class SQLActionModelA:
         column1 : Column,
         table1 : Table,
         column2 : Column,
-        table2 : Table)
+        table2 : Table):
         
         assert request1.atColumn == column1 and \
-        column1 in table1.columns and \ 
-        table1.hasJoin == table2 and \ 
+        column1 in table1.columns and \
+        table1.hasJoin == table2 and \
         column2 in table2.columns
         
         request1.atColumn = column2
         
 
-class SQLActionModelB:
+'''class SQLActionModelB:
     # def __init__(self, *args, **kwargs):
         # super().__init__(*args, **kwargs)
         
@@ -79,7 +79,7 @@ class SQLActionModelB:
         return f"SELECT {table}.{target_column} FROM {table}"
     
     @planned 
-    joinColumns(self,
+    def joinColumns (self,
             table1: Table,
             table2: Table,
             column_right: Column,
@@ -112,4 +112,4 @@ class SQLActionModelB:
         where.started = True
         
         return "WHERE "+' '.join(self.conditions)
-   
+   '''

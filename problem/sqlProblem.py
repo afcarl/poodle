@@ -1,6 +1,6 @@
 from poodle.poodle import *
 from object.sqlObject import *
-import action.sqlAction
+from  action.sqlAction import * 
 
 """
 SELECT DISTINCT ADMISSIONS.subject_id FROM mimiciii.ADMISSIONS JOIN mimiciii.microbiologyevents  ON (microbiologyevents.subject_id = mimiciii.ADMISSIONS.subject_id) JOIN mimiciii.D_ITEMS ON (mimiciii.D_ITEMS.ITEMID = microbiologyevents.AB_ITEMID AND mimiciii.D_ITEMS.LINKSTO = 'microbiologyevents' AND D_ITEMS.dbsource != 'carevue' AND D_ITEMS.category != 'Alarms')  WHERE  D_ITEMS.LABEL ILIKE '%CEFAZOLIN%' AND  microbiologyevents.interpretation ILIKE '%S%' AND '1' ;
@@ -12,7 +12,7 @@ SELECT count(DISTINCT ADMISSIONS.hadm_id) FROM ADMISSIONS JOIN DIAGNOSES_ICD c O
 SELECT count(DISTINCT ADMISSIONS.hadm_id) FROM ADMISSIONS JOIN DIAGNOSES_ICD c ON (c.HADM_ID = ADMISSIONS.HADM_ID) JOIN D_ICD_DIAGNOSES ON (D_ICD_DIAGNOSES.ICD9_CODE = c.ICD9_CODE) JOIN chartevents b ON (b.HADM_ID = ADMISSIONS.HADM_ID) JOIN D_ITEMS ON (D_ITEMS.ITEMID = b.ITEMID AND D_ITEMS.LINKSTO = 'chartevents')  WHERE CAST((julianday('now')-julianday(ADMISSIONS.ADMITTIME)) as Integer) BETWEEN 1 AND 10 AND b.VALUENUM > 9 AND  D_ITEMS.LABEL like '%hemoglobin%' AND 1 ;
 """
 
-class TestSQLProblem(Problem, action.sqlAction.SQLActionModel):
+class TestSQLProblem(Problem, SQLActionModelA):
 
     def problem(self):
         
@@ -65,6 +65,6 @@ class TestSQLProblem(Problem, action.sqlAction.SQLActionModel):
         self.request1 = self.addObject(Request())
         
     def goal(self):
-        return  self.column10.seenAt = True and \
-                self.column2.seenAt = True and \
-                self.column5.seenAt = True
+        return  self.column10.seenAt == True and \
+                self.column2.seenAt == True and \
+                self.column5.seenAt == True

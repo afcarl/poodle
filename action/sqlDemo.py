@@ -40,7 +40,7 @@ class SQLModelDemo(Problem):
         return f"SELECT {table}.{target_column} FROM {table}"
     
     @planned 
-    joinColumns(self,
+    joinTables(self,
             table1: Table,
             table2: Table,
             column_right: Column,
@@ -55,7 +55,7 @@ class SQLModelDemo(Problem):
             column_right in table2.columns and \
             table1.is_selected == True
         
-        select.columns_available.add(column_right)
+        select.columns_available.add(column_right) # TODO: re-implement with .add(Table) !!!
         select.columns_available.add(column_left)
         table2.is_selected = True
         
