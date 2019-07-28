@@ -997,15 +997,31 @@ class StateFact(Property): # TODO HERE Rename to Bool()
         return self._property_of_inst
         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
+
 class Bool(Property):
     
+    def __init__(self, initialValue):
+        if type(initialValue) != type(True): raise ValueError("Bool must be initialized with True of False")
+        super().__init__(BooleanObject)
+        # self.__init_value = _none_objects["object-%s" % str(initialValue)]
+        self._init_value = initialValue
+    
     def set(self, value):
-        if type(value) != type(True): raise ValueError("Bool can only be set to True or False")
+        if value == True:
+            super().set(_none_objects["object-True"])
+        elif value == False:
+            super().set(_none_objects["object-False"])
+        else:
+            raise ValueError("Bool can only be set to True or False but got %s (%s)" % (value, type(value)) )
+            
     
     def __eq__(self, value):
-        if type(value) != type(True): raise ValueError("Bool can only be compared to True or False")
-        # TODO
-        pass
+        if value == True:
+            return super().__eq__(_none_objects["object-True"])
+        elif value == False:
+            return super().__eq__(_none_objects["object-False"])
+        else:
+            raise ValueError("Bool can only be compared to True or False")
     
     def __bool__(self):
         return self == True
@@ -1152,9 +1168,13 @@ class Object(metaclass=BaseObjectMeta):
                         not getattr(self,key)._value is None and \
                         not isinstance(getattr(self, key), Relation) and \
                         not value == "POODLE-NULL":
-                    # print("MY CHECK", self, key, getattr(self,key), repr(getattr(self,key)._value))
-                    # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
-                    null_object = getattr(self,key)._value("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
+                    print("MY CHECK VAL", dir(getattr(self,key)))
+                    if hasattr(getattr(self,key), "_init_value"):
+                        null_object = getattr(self,key)._init_value
+                        print("MY CHECK NULL VALUE INIT")
+                    else: 
+                        # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
+                        null_object = getattr(self,key)._value("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
                     getattr(self,key).init_unsafe_internal(null_object)
         self.__unlock_setter = False
     def gen_name(self, name):
@@ -1226,12 +1246,15 @@ class Object(metaclass=BaseObjectMeta):
             # print("EXEC SET ---------------------------------------", name, value)
             getattr(self, name).set(value)
         elif (_effect_compilation or _problem_compilation) and isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
-            if value == True:
-                getattr(self, name).set()
-            elif value == False:
-                getattr(self, name).unset()
+            if isinstance(getattr(self, name), Bool):
+                getattr(self, name).set(value)
             else:
-                raise AssertionError("Something is wrong")
+                if value == True:
+                    getattr(self, name).set()
+                elif value == False:
+                    getattr(self, name).unset()
+                else:
+                    raise AssertionError("Something is wrong")
         else:
             # WARNING! please check the proper usage of __unlock_setter
             # setter must probably unlock only for non-existent class attributes or only for existing properties
@@ -1317,6 +1340,14 @@ class Digit(Object):
 class PoodleHashnum(Object):
     "hashnum is used in imaginary object identification"
     pass # unsorted, unopimized
+
+class BooleanObject(Object):
+    pass
+
+_problem_compilation = True
+_none_objects["object-True"] = BooleanObject("TRUE")
+_none_objects["object-False"] = BooleanObject("FALSE")
+_problem_compilation = False
 
 #########################################################################
 ##
@@ -1520,7 +1551,8 @@ class Problem:
         return self.objectList
 
     def actions(self):
-        raise NotImplementedError("Please implement .actions() method to return list of planned action classes")
+        return []
+        # raise NotImplementedError("Please implement .actions() method to return list of planned action classes")
 
     def getActionByName(self):
         strList = []
@@ -1648,13 +1680,15 @@ class Problem:
         self.collected_object_classes = _collected_object_classes
         self.collected_objects = _collected_objects
         for k in _none_objects:
+            print("MY CHECK ",k,_none_objects[k],_none_objects[k].name)
             on = _none_objects[k].name.split()[0]
             if not k in self.collected_object_classes: continue
             if on == "p-null-Imaginary": continue
+            noClassName = _none_objects[k].__class__.__name__ # we're not using k as class
             if k in self.collected_objects:
-                self.collected_objects[k].append(on)
+                self.collected_objects[noClassName].append(on)
             else:
-                self.collected_objects[k] = [ on ]
+                self.collected_objects[noClassName] = [ on ]
         self.collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal

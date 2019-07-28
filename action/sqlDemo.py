@@ -1,5 +1,4 @@
 from poodle.poodle import *
-from object.sqlObject import *
 
 class StrObject(Object):
     def __str__(self):
@@ -40,7 +39,7 @@ class SQLModelDemo(Problem):
         return f"SELECT {table}.{target_column} FROM {table}"
     
     @planned 
-    joinTables(self,
+    def joinTables(self,
             table1: Table,
             table2: Table,
             column_right: Column,
@@ -62,7 +61,7 @@ class SQLModelDemo(Problem):
         return f"JOIN {table2}.{column_right} ON ({table1}.{column_left} = {table2}.{column_right})"
 
     @planned
-    def applyLikeConditions(self
+    def applyLikeConditions(self,
             select: Select
         ):
         "Finally, apply the conditions when all columns are selected"
@@ -72,7 +71,7 @@ class SQLModelDemo(Problem):
         
         select.completed = True
         
-        return "WHERE "+' '.join(self.conditions)
+        return "WHERE "+' '.join(str(x) for x in self.conditions)
     
     def problem(self):
         self.table1 = self.addObject(Table("tbl1")) 
@@ -131,3 +130,5 @@ class SQLModelDemo(Problem):
     def goal(self):
         assert self.select.completed == True
    
+p = SQLModelDemo()
+p.run()
