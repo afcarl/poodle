@@ -52,6 +52,7 @@ _poodle_object_classes = {}
 _replaced_predicates = {}
 
 _none_objects = {}
+_system_objects = {}
 
 HASHNUM_VAR_NAME = "hashnum"
 HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
@@ -1003,23 +1004,23 @@ class Bool(Property):
     def __init__(self, initialValue):
         if type(initialValue) != type(True): raise ValueError("Bool must be initialized with True of False")
         super().__init__(BooleanObject)
-        # self.__init_value = _none_objects["object-%s" % str(initialValue)]
+        # self.__init_value = _system_objects["object-%s" % str(initialValue)]
         self._init_value = initialValue
     
     def set(self, value):
         if value == True:
-            super().set(_none_objects["object-True"])
+            super().set(_system_objects["object-True"])
         elif value == False:
-            super().set(_none_objects["object-False"])
+            super().set(_system_objects["object-False"])
         else:
             raise ValueError("Bool can only be set to True or False but got %s (%s)" % (value, type(value)) )
             
     
     def __eq__(self, value):
         if value == True:
-            return super().__eq__(_none_objects["object-True"])
+            return super().__eq__(_system_objects["object-True"])
         elif value == False:
-            return super().__eq__(_none_objects["object-False"])
+            return super().__eq__(_system_objects["object-False"])
         else:
             raise ValueError("Bool can only be compared to True or False")
     
@@ -1345,8 +1346,8 @@ class BooleanObject(Object):
     pass
 
 _problem_compilation = True
-_none_objects["object-True"] = BooleanObject("TRUE")
-_none_objects["object-False"] = BooleanObject("FALSE")
+_system_objects["object-True"] = BooleanObject("TRUE")
+_system_objects["object-False"] = BooleanObject("FALSE")
 _problem_compilation = False
 
 #########################################################################
@@ -1680,7 +1681,7 @@ class Problem:
         self.collected_object_classes = _collected_object_classes
         self.collected_objects = _collected_objects
         for k in _none_objects:
-            print("MY CHECK ",k,_none_objects[k],_none_objects[k].name)
+            print("MY CHECK nonegen->",k,_none_objects[k],_none_objects[k].name)
             on = _none_objects[k].name.split()[0]
             if not k in self.collected_object_classes: continue
             if on == "p-null-Imaginary": continue
@@ -1689,7 +1690,15 @@ class Problem:
                 self.collected_objects[noClassName].append(on)
             else:
                 self.collected_objects[noClassName] = [ on ]
+        for k in _system_objects:
+            on = _system_objects[k].name.split()[0]
+            noClassName = _system_objects[k].__class__.__name__ # we're not using k as class
+            if k in self.collected_objects:
+                self.collected_objects[noClassName].append(on)
+            else:
+                self.collected_objects[noClassName] = [ on ]
         self.collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
+        print("MY CHECK resultingobj", self.collected_objects)
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal
         _collected_effects = []

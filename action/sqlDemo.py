@@ -13,6 +13,7 @@ class Column(StrObject):
 
 class Select(StrObject):
     columns_available = Relation("Column")
+    started = Bool(False)
     completed = Bool(False)
     
 class Condition(StrObject):
@@ -23,7 +24,7 @@ class SimpleLikeCondition(Condition):
 
 class SQLActionModel(Problem):
         
-    @planned
+    @planned # plannedOnce? #chained?
     def selectFromTable(self,
             target_column: Column,
             table: Table,
@@ -32,9 +33,11 @@ class SQLActionModel(Problem):
         "Only select from table that has target column"
         
         assert \
-            target_column in table.columns
+            target_column in table.columns and \
+            select.started == False
         
-        table.is_selected = True    
+        table.is_selected = True
+        select.started = True
         
         return f"SELECT {table}.{target_column} FROM {table}"
     
