@@ -54,8 +54,6 @@ class SQLActionModel(Problem):
             column_right in table2.columns and \
             table1.is_selected == True
         
-        select.columns_available.add(column_right) # TODO: re-implement with .add(Table) !!!
-        select.columns_available.add(column_left)
         table2.is_selected = True
         
         return f"JOIN {table2}.{column_right} ON ({table1}.{column_left} = {table2}.{column_right})"
