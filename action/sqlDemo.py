@@ -21,7 +21,7 @@ class Condition(StrObject):
 class SimpleLikeCondition(Condition):
     lhs_column = Property("Column")
 
-class SQLModelDemo(Problem):
+class SQLActionModel(Problem):
         
     @planned
     def selectFromTable(self,
@@ -84,6 +84,8 @@ class SQLModelDemo(Problem):
         select.completed = True
         
         return "WHERE "+' '.join(str(x) for x in self.conditions)
+
+class SQLDemoTest(SQLActionModel):
     
     def problem(self):
         self.table1 = self.addObject(Table("tbl1")) 
@@ -141,6 +143,17 @@ class SQLModelDemo(Problem):
     
     def goal(self):
         assert self.select.completed == True
+    
+    def solution(self):
+        return [
+            self.selectFromTable,
+            self.joinTables,
+            self.joinTables,
+            self.addAvailableColumnsWhenNeeded,
+            self.addAvailableColumnsWhenNeeded,
+            self.applyLikeConditions
+        ]
+        
    
-p = SQLModelDemo()
+p = SQLDemoTest()
 p.run()
