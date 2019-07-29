@@ -80,7 +80,7 @@ class PacketActionModel:
         assert addedMemConsumptionAtCurrentNode1_res_num == addedMemConsumptionAtCurrentNode1_res.result
 
         # podWithTargetService.currentRealCpuConsumption = addedCpuConsumptionAtPod1_res_num
-        # currentNode.currentRealCpuConsumption = addedCpuConsumptionAtCurrentNode1_res_num
+        currentNode.currentRealCpuConsumption = addedCpuConsumptionAtCurrentNode1_res_num
         # podWithTargetService.currentRealMemConsumption = addedMemConsumptionAtPod1_res_num
         # currentNode.currentRealMemConsumption = addedMemConsumptionAtCurrentNode1_res_num
 
