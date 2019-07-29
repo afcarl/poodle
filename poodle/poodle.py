@@ -1990,17 +1990,17 @@ class ActionClassLoader:
 def planned(fun):
     if not getattr(fun, "__annotations__", None): 
         raise ValueError("For planning to work function parameters must be type annotated")
+    kwargs = {}
+    for k, v in fun.__annotations__.items(): kwargs[k] = v()
     class NewPlannedAction(PlannedAction):
         def effect(self):
-            kwargs = {}
             global _effect_compilation
             global _selector_out
             _effect_compilation = False
-            for k, v in fun.__annotations__.items(): kwargs[k] = v()
             _effect_compilation = True
             fun(self.problem, **kwargs)
             _selector_out = None
-    for k, v in fun.__annotations__.items(): setattr(NewPlannedAction, k, v())
+    for k, v in kwargs.items(): setattr(NewPlannedAction, k, v)
     NewPlannedAction.__name__ = fun.__name__
     fun.plan_class = NewPlannedAction
     return fun
