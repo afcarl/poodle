@@ -1,4 +1,5 @@
 from poodle.poodle import *
+log.setLevel(logging.ERROR)
 
 class StrObject(Object):
     def __str__(self):
@@ -72,6 +73,8 @@ class SQLActionModel(Problem):
         
         # select.columns_available.add(col) # TODO
         self.select.columns_available.add(col)
+        
+        return ""
 
     @planned
     def applyLikeConditions(self,
@@ -150,7 +153,6 @@ class SQLDemoTest(SQLActionModel):
         self.condition2 = self.addObject(SimpleLikeCondition("column11 LIKE 'world'"))
         self.condition2.lhs_column = self.column11
         self.conditions = [self.condition1, self.condition2]
-        # self.conditions = [self.condition1]
     
     def goal(self):
         assert self.select.completed == True
@@ -170,5 +172,8 @@ class SQLDemoTest(SQLActionModel):
 p = SQLDemoTest()
 # p.check_solution(50)
 p.run()
-for a in p.plan: print(a)
+# for a in p.plan: print(a)
+
+print("\n\n\n============================ \n\n\n\n")
 print(' '.join(getattr(p, x.methodName)(**x.kwargs) for x in p.plan))
+print("\n\n\n============================ \n\n\n\n")

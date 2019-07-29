@@ -865,7 +865,7 @@ class Relation(Property):
     # https://stackoverflow.com/a/932580
     def __init__(self, *p, **kw):
         super().__init__(*p, **kw)
-        self._property_value = []
+        self._property_value = set()
     def contains(self, other):
         return self.operator(other, "contains")
         
@@ -880,7 +880,7 @@ class Relation(Property):
     #     raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
     
     def add(self, what):
-        if isinstance(what, Object): self._property_value.append(what)
+        if isinstance(what, Object): self._property_value.add(what)
         self._unset = True
         super().set(what)
         
@@ -1271,7 +1271,7 @@ class Object(metaclass=BaseObjectMeta):
     #     return super().__getattribute__(attr)
 
     def __getattribute__(self, attr):
-        if "_" == attr[0]: return super().__getattribute__(attr)
+        if attr.startswith("_"): return super().__getattribute__(attr)
         # this does not work and is not needed:::: -->
         if hasattr(self, "_dot_from") and isinstance(self._dot_from, Property):
             raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
@@ -1290,6 +1290,8 @@ class Object(metaclass=BaseObjectMeta):
         except:
             return repr(self)+"(Additionally, there was an error during standard __str__)"
             
+    def __hash__(self):
+        return hash(self.name)
 
     
     # def __getattr__(self, attr):
@@ -1565,6 +1567,7 @@ class Problem:
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
 
     def run(self):
+        for ob in self.objectList: ob._sealed = False # seal all objects
         global _collected_parameters
         # print(_collected_parameters)
         counter = 0
@@ -1601,6 +1604,7 @@ class Problem:
                 actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
                 actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
                 self._plan = actionClassLoader._plan
+        for ob in self.objectList: ob._sealed = True # seal all objects
         return retcode
         
     @property
