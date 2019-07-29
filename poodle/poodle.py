@@ -1971,12 +1971,16 @@ class ActionClassLoader:
                             if argStr.lower() == obj.name.lower():
                                 obj_found = obj
                     argumentList.append(obj_found)
+                print("MY CHECK --------------------------------")
+                print("MY CHECK AL",actionString, argumentList)
                 parameter_names = []
                 for k in action.collected_parameters.keys(): parameter_names+=k.split()
+                parameter_names = [ x for x in parameter_names if x.startswith("?") ] # see https://trello.com/c/STwRxQ9e/213-bug-objvariable-contains-both-variables-and-symbol
+                print("MY CHECK PN",actionString, parameter_names)
                 pos_args_dict = dict(zip(parameter_names,argumentList))
-                print("MY CHECK PA", pos_args_dict)
+                print("MY CHECK PA",actionString, pos_args_dict)
                 action_py_vars_dict = {n:getattr(action,n)._class_variable for n in dir(action) if isinstance(getattr(action,n), Object)}
-                print("MY CHECK APVM", action_py_vars_dict)
+                print("MY CHECK APVM",actionString, action_py_vars_dict)
                 action_py_vars_matched_values = {pyvar:pos_args_dict.get(ppar) for pyvar,ppar in action_py_vars_dict.items()}
                 plannedAction = action(**action_py_vars_matched_values)
                 self._plan.append(plannedAction)
