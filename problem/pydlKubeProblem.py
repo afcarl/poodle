@@ -18,6 +18,9 @@ class Problem1(ProblemTemplate, PacketActionModel):
         
         self.nullLink = self.addObject( Loadbalancer('Null'))
         
+        self.nodenull = self.addObject(Node('Null'))
+        self.nodenull.state = self.constSymbol["stateNodeInactive"]
+        
         self.node1 = self.addObject(Node('node1'))
         self.node1.state = self.constSymbol["stateNodeActive"]
         self.node1.status = self.constSymbol["statusNodeActive"] ##TODO - make Node activation mechanism
@@ -57,7 +60,7 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.node2.prevNode = self.node1
         self.node1.prevNode = self.node3        
         
-        
+        self.nullPod = self.addObject(Pod('nullPod'))
         self.pod1 = self.addObject(Pod('pod1'))
         self.pod1.podConfig = self.сontainerConfig1
         self.pod1.currentRealCpuConsumption = self.numberFactory.getNumber(0)
@@ -72,6 +75,7 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.pod1.type = self.constSymbol["typeTemporary"]
         self.pod1.memLimit =  self.numberFactory.getNumber(1)
         self.pod1.cpuLimit =  self.numberFactory.getNumber(1)
+        self.pod1.atNode = self.nodenull
 
 
         
@@ -90,6 +94,7 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.pod2.memLimit =  self.numberFactory.getNumber(3)
         self.pod2.cpuLimit =  self.numberFactory.getNumber(3)
         self.pod2.prevPod = self.pod1         
+        self.pod2.atNode = self.nodenull        
         ## to-do:  for relations  it should give helpful error message when = instead of add.
         
         self.pod3 = self.addObject(Pod('pod3'))
@@ -106,8 +111,13 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.pod3.type = self.constSymbol["typePersistent"]
         self.pod3.memLimit =  self.numberFactory.getNumber(2)
         self.pod3.cpuLimit =  self.numberFactory.getNumber(2)
+        self.pod3.atNode = self.nodenull        
+        
+        
         self.pod3.prevPod = self.pod2
         self.pod1.prevPod = self.pod3
+        
+
         
         self.service1 = self.addObject(Service('service1'))
         self.service2 = self.addObject(Service('service2'))
@@ -115,6 +125,10 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.service2.selectionedPod.add(self.pod3)
         self.service1.selectionedPod.add(self.pod2)
         self.service1.selectionedPod.add(self.pod1)
+
+        self.pod1.targetService = self.service1
+        self.pod2.targetService = self.service1
+        self.pod3.targetService = self.service2
 
         self.lb1 = self.addObject(Loadbalancer())
         self.lb1.atNode = self.node1
@@ -135,6 +149,8 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.request1.memRequest = self.numberFactory.getNumber(2)
         self.request1.type = self.constSymbol["typeTemporary"]
         self.request1.atLb = self.lb1
+        self.request1.isAtLoadbalancer = True
+        self.request1.atPod = self.nullPod
 
         self.request2 = self.addObject(Request())
         self.request2.launchPeriod = self.period1
@@ -145,7 +161,8 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.request2.memRequest = self.numberFactory.getNumber(2)
         self.request2.type = self.constSymbol["typePersistent"]
         self.request2.atLb = self.lb1
-
+        self.request2.isAtLoadbalancer = True
+        self.request2.atPod = self.nullPod
 
         self.request3 = self.addObject(Request())
         self.request3.launchPeriod = self.period1
@@ -156,6 +173,8 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.request3.memRequest = self.numberFactory.getNumber(1)
         self.request3.type = self.constSymbol["typePersistent"]
         self.request3.atLb = self.lb1
+        self.request3.isAtLoadbalancer = True
+        self.request3.atPod = self.nullPod
 
 
         # self.request4 = self.addObject(Request())
@@ -167,6 +186,7 @@ class Problem1(ProblemTemplate, PacketActionModel):
         # self.request4.memRequest = self.numberFactory.getNumber(1)
         # self.request4.type = self.constSymbol["typePersistent"]
         # self.request4.atLb = self.lb1
+        # self.request4.isAtLoadbalancer = True
         
         # self.request5 = self.addObject(Request())
         # self.request5.launchPeriod = self.period1
@@ -177,6 +197,7 @@ class Problem1(ProblemTemplate, PacketActionModel):
         # self.request5.memRequest = self.numberFactory.getNumber(1)
         # self.request5.type = self.constSymbol["typePersistent"]
         # self.request5.atLb = self.lb1
+        # self.request5.isAtLoadbalancer = True
         
         # self.request6 = self.addObject(Request())
         # self.request6.launchPeriod = self.period1
@@ -267,11 +288,16 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.globalVar1 = self.addObject(GlobalVar())
         self.globalVar1.numberOfRejectedReq = self.numberFactory.getNumber(0)
         self.globalVar1.lastPod = self.pod1
+        
+        
+        
 
 
     def goal(self):
         return self.request1.atNode == self.node2 and \
-        self.request2.atNode == self.node2
+        self.request2.atNode == self.node2 and \
+        self.request1.atPod == self.pod1
+        # return self.pod1.atNode == self.node1
 
         # self.request1.status == self.constSymbol["statusReqRequestFinished"] and \
         # self.request2.status == self.constSymbol["statusReqRequestFinished"]  and \

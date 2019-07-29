@@ -108,6 +108,8 @@ class Pod(Object):
     toNode = Property(Node)
     status = Property(Status)
     state = Property(State)
+    isPending = StateFact()
+    isRunning = StateFact()
     bindedToNode = Property(Node)
     podOverwhelmingLimits = StateFact()
     podNotOverwhelmingLimits = StateFact()
@@ -118,6 +120,7 @@ class Pod(Object):
     _label = ""
     requestedMem = Property(Number)
     requestedCpu = Property(Number)
+    targetService = Property("Service")
 
     def __str__ (self): return str(self.value)
     
@@ -163,6 +166,7 @@ class Request(Object):
     status = Property(Status)
     state = Property(State)
     atLb = Property('Loadbalancer')
+    isAtLoadbalancer = StateFact()
     atPod = Property(Pod)
     atNode = Property(Node)
     toPod = Property(Pod)
