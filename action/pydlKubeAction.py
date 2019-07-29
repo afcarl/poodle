@@ -14,7 +14,7 @@ class PacketActionModel:
         assert loadbalancerAtWhichRequestIs == request1.atLb and \
         nextNodeToBeUsedByLb.prevNode == loadbalancerAtWhichRequestIs.lastNode and \
         request1.isAtLoadbalancer == True
-        # assert request1.status == self.constSymbol["statusReqAtStart"]
+        assert request1.status == self.constSymbol["statusReqAtStart"]
         
         request1.atNode = nextNodeToBeUsedByLb
         loadbalancerAtWhichRequestIs.lastNode = nextNodeToBeUsedByLb
@@ -89,8 +89,6 @@ class PacketActionModel:
 
             
 
-pp = PacketActionModel()
-print(pp.ReqToNodeFromLb.plan_class.compile(pp))
  
 # p = Problem1()
 # # print(ForwardPacketToInterface.compile_clips(p))
