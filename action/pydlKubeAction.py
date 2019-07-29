@@ -69,6 +69,7 @@ class PacketActionModel:
 
         assert addedCpuConsumptionAtPod1_res.operator1 == podWithTargetService.currentRealCpuConsumption
         assert addedCpuConsumptionAtPod1_res.operator2 == request1.cpuRequest
+        assert addedCpuConsumptionAtPod1_res_num == addedCpuConsumptionAtPod1_res.result
         assert addedCpuConsumptionAtCurrentNode1_res.operator1 == currentNode.currentRealCpuConsumption
         assert addedCpuConsumptionAtCurrentNode1_res.operator2 == request1.cpuRequest
         assert addedCpuConsumptionAtCurrentNode1_res_num == addedCpuConsumptionAtCurrentNode1_res.result
@@ -79,10 +80,10 @@ class PacketActionModel:
         assert addedMemConsumptionAtCurrentNode1_res.operator2 == request1.memRequest
         assert addedMemConsumptionAtCurrentNode1_res_num == addedMemConsumptionAtCurrentNode1_res.result
 
-        # podWithTargetService.currentRealCpuConsumption = addedCpuConsumptionAtPod1_res_num
+        podWithTargetService.currentRealCpuConsumption = addedCpuConsumptionAtPod1_res_num
         currentNode.currentRealCpuConsumption = addedCpuConsumptionAtCurrentNode1_res_num
-        # podWithTargetService.currentRealMemConsumption = addedMemConsumptionAtPod1_res_num
-        # currentNode.currentRealMemConsumption = addedMemConsumptionAtCurrentNode1_res_num
+        podWithTargetService.currentRealMemConsumption = addedMemConsumptionAtPod1_res_num
+        currentNode.currentRealMemConsumption = addedMemConsumptionAtCurrentNode1_res_num
 
         request1.atPod = podWithTargetService
 
