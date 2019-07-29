@@ -1231,6 +1231,8 @@ class Object(metaclass=BaseObjectMeta):
             # raise NotImplementedError("Object-Object selector is not supported")
             push_selector_object(self)
             return self
+        elif type(other) == type(True):
+            return True # WARNING! stub for asserts! TODO FIX
         else:
             return super().__eq__(other)
     
@@ -1972,6 +1974,8 @@ class ActionClassLoader:
                 action_py_vars_dict = {n:getattr(action,n)._class_variable for n in dir(action) if isinstance(getattr(action,n), Object)}
                 action_py_vars_matched_values = {pyvar:pos_args_dict.get(ppar) for pyvar,ppar in action_py_vars_dict.items()}
                 plannedAction = action(**action_py_vars_matched_values)
+                plannedAction.kwargs = action_py_vars_matched_values
+                plannedAction.methodName = action.__name__
                 self._plan.append(plannedAction)
                 # log.info(plannedAction)
 
