@@ -58,7 +58,10 @@ class PacketActionModel:
         addedMemConsumptionAtPod1_res: AddedNumber,
         addedMemConsumptionAtPod1_res_num: Number,
         addedMemConsumptionAtCurrentNode1_res: AddedNumber,
-        addedMemConsumptionAtCurrentNode1_res_num: Number
+        addedMemConsumptionAtCurrentNode1_res_num: Number,
+        increasedByOneMemCapacity_res: AddedNumber,
+        increasedByOneCpuCapacity_res: AddedNumber,
+        greaterThan: GreaterThan
         ):
             
         assert currentNode == request1.atNode  and \
@@ -79,6 +82,16 @@ class PacketActionModel:
         assert addedMemConsumptionAtCurrentNode1_res.operator1 == currentNode.currentRealMemConsumption
         assert addedMemConsumptionAtCurrentNode1_res.operator2 == request1.memRequest
         assert addedMemConsumptionAtCurrentNode1_res_num == addedMemConsumptionAtCurrentNode1_res.result
+
+        assert increasedByOneMemCapacity_res.operator1 == currentNode.memCapacity#          -----
+        assert increasedByOneMemCapacity_res.operator2 == self.numberFactory.getNumber(1)#      |
+        assert greaterThan.lower == currentNode.currentRealMemConsumption#                      |   from class ConsumeResource(PlannedAction)
+        assert greaterThan.higher == increasedByOneMemCapacity_res.result#                      |
+        assert increasedByOneCpuCapacity_res.operator1 == currentNode.cpuCapacity#              |
+        assert increasedByOneCpuCapacity_res.operator2 == self.numberFactory.getNumber(1)#  -----
+
+        assert greaterThan.lower == currentNode.currentRealCpuConsumption
+        assert greaterThan.higher == increasedByOneCpuCapacity_res.result
 
         podWithTargetService.currentRealCpuConsumption = addedCpuConsumptionAtPod1_res_num
         currentNode.currentRealCpuConsumption = addedCpuConsumptionAtCurrentNode1_res_num
