@@ -13,6 +13,7 @@ class Column(StrObject):
 
 class Select(StrObject):
     columns_available = Relation("Column")
+    started = Bool(False)
     completed = Bool(False)
     
 class Condition(StrObject):
@@ -23,7 +24,7 @@ class SimpleLikeCondition(Condition):
 
 class SQLActionModel(Problem):
         
-    @planned
+    @planned # plannedOnce? #chained?
     def selectFromTable(self,
             target_column: Column,
             table: Table,
@@ -32,9 +33,11 @@ class SQLActionModel(Problem):
         "Only select from table that has target column"
         
         assert \
-            target_column in table.columns
+            target_column in table.columns and \
+            select.started == False
         
-        table.is_selected = True    
+        table.is_selected = True
+        select.started = True
         
         return f"SELECT {table}.{target_column} FROM {table}"
     
@@ -76,12 +79,15 @@ class SQLActionModel(Problem):
         ):
         "Finally, apply the conditions when all columns are selected"
         
+        s_cond = ""
+        
         for condition in self.conditions:
             assert condition.lhs_column in select.columns_available
+            s_cond += str(condition) + " "
         
         select.completed = True
         
-        return "WHERE "+' '.join(str(x) for x in self.conditions)
+        return f"WHERE {s_cond}"
 
 class SQLDemoTest(SQLActionModel):
     
@@ -112,14 +118,17 @@ class SQLDemoTest(SQLActionModel):
         self.table1.columns.add(self.column2)
         self.table1.columns.add(self.column3)
         self.table1.columns.add(self.column4)
+        
         self.table2.columns.add(self.column5)
         self.table2.columns.add(self.column6)
         self.table2.columns.add(self.column7)
         self.table2.columns.add(self.column8)
+        
         self.table3.columns.add(self.column9)
         self.table3.columns.add(self.column10)
         self.table3.columns.add(self.column11)
         self.table3.columns.add(self.column12)
+        
         self.table4.columns.add(self.column13)
         self.table4.columns.add(self.column14)
         self.table4.columns.add(self.column15)
@@ -127,6 +136,9 @@ class SQLDemoTest(SQLActionModel):
         
         self.column3.contains_elements_from.add(self.column7)
         self.column7.contains_elements_from.add(self.column3)
+        
+        self.column8.contains_elements_from.add(self.column10)
+        self.column10.contains_elements_from.add(self.column8)
         
         self.column9.contains_elements_from.add(self.column16)
         self.column16.contains_elements_from.add(self.column9)
@@ -138,6 +150,7 @@ class SQLDemoTest(SQLActionModel):
         self.condition2 = self.addObject(SimpleLikeCondition("column11 LIKE 'world'"))
         self.condition2.lhs_column = self.column11
         self.conditions = [self.condition1, self.condition2]
+        # self.conditions = [self.condition1]
     
     def goal(self):
         assert self.select.completed == True
@@ -149,9 +162,12 @@ class SQLDemoTest(SQLActionModel):
             self.joinTables,
             self.addAvailableColumnsWhenNeeded,
             self.addAvailableColumnsWhenNeeded,
+            self.addAvailableColumnsWhenNeeded,
             self.applyLikeConditions
         ]
         
    
 p = SQLDemoTest()
+# p.check_solution(50)
 p.run()
+for a in p.plan: print(a)
