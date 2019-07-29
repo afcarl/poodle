@@ -1169,10 +1169,8 @@ class Object(metaclass=BaseObjectMeta):
                         not getattr(self,key)._value is None and \
                         not isinstance(getattr(self, key), Relation) and \
                         not value == "POODLE-NULL":
-                    print("MY CHECK VAL", dir(getattr(self,key)))
                     if hasattr(getattr(self,key), "_init_value"):
                         null_object = getattr(self,key)._init_value
-                        print("MY CHECK NULL VALUE INIT")
                     else: 
                         # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
                         null_object = getattr(self,key)._value("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
@@ -1681,7 +1679,6 @@ class Problem:
         self.collected_object_classes = _collected_object_classes
         self.collected_objects = _collected_objects
         for k in _none_objects:
-            print("MY CHECK nonegen->",k,_none_objects[k],_none_objects[k].name)
             on = _none_objects[k].name.split()[0]
             if not k in self.collected_object_classes: continue
             if on == "p-null-Imaginary": continue
@@ -1698,7 +1695,6 @@ class Problem:
             else:
                 self.collected_objects[noClassName] = [ on ]
         self.collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
-        print("MY CHECK resultingobj", self.collected_objects)
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal
         _collected_effects = []
@@ -1878,7 +1874,6 @@ class CLIPSExecutor:
             fp.flush()
             self.run_get_result(self.gen_run_problem(fp.name))
         if len(self.run_result.split("--- RUN ---")[-1]) < 10:
-            # print("MY CHECK RRES", self.run_result)
             raise MatchError("Rule %s does not match its selector")
     
     def check_match(self, actClass):
@@ -1887,7 +1882,6 @@ class CLIPSExecutor:
             fp.flush()
             self.run_get_result(self.gen_match_problem(fp.name))
         assert not "[" in self.run_result, "Error in creating debugger problem: %s" % self.run_result
-        # print("MY CHECK", self.run_result)
         m = self.run_result.split("--- RUN ---")[-1]
         all_selected_objects_histories = []
         for n in dir(actClass):
@@ -1971,16 +1965,11 @@ class ActionClassLoader:
                             if argStr.lower() == obj.name.lower():
                                 obj_found = obj
                     argumentList.append(obj_found)
-                print("MY CHECK --------------------------------")
-                print("MY CHECK AL",actionString, argumentList)
                 parameter_names = []
                 for k in action.collected_parameters.keys(): parameter_names+=k.split()
                 parameter_names = [ x for x in parameter_names if x.startswith("?") ] # see https://trello.com/c/STwRxQ9e/213-bug-objvariable-contains-both-variables-and-symbol
-                print("MY CHECK PN",actionString, parameter_names)
                 pos_args_dict = dict(zip(parameter_names,argumentList))
-                print("MY CHECK PA",actionString, pos_args_dict)
                 action_py_vars_dict = {n:getattr(action,n)._class_variable for n in dir(action) if isinstance(getattr(action,n), Object)}
-                print("MY CHECK APVM",actionString, action_py_vars_dict)
                 action_py_vars_matched_values = {pyvar:pos_args_dict.get(ppar) for pyvar,ppar in action_py_vars_dict.items()}
                 plannedAction = action(**action_py_vars_matched_values)
                 self._plan.append(plannedAction)
