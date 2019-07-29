@@ -88,20 +88,30 @@ class PacketActionModel:
         assert greaterThan.lower == currentNode.currentRealMemConsumption#                      |   from class ConsumeResource(PlannedAction)
         assert greaterThan.higher == increasedByOneMemCapacity_res.result#                      |
         assert increasedByOneCpuCapacity_res.operator1 == currentNode.cpuCapacity#              |
-        assert increasedByOneCpuCapacity_res.operator2 == self.numberFactory.getNumber(1)#  -----
+        assert increasedByOneCpuCapacity_res.operator2 == self.numberFactory.getNumber(1)#      |
+        assert greaterThan.lower == currentNode.currentRealCpuConsumption#                      |
+        assert greaterThan.higher == increasedByOneCpuCapacity_res.result#                      |
 
-        assert greaterThan.lower == currentNode.currentRealCpuConsumption
-        assert greaterThan.higher == increasedByOneCpuCapacity_res.result
+        # assert request1.status == self.constSymbol['statusReqMemResourceConsumed']# TODO may be useless        -----
+     
+        request1.status = self.constSymbol['statusReqResourcesConsumed']# TODO may be useless
 
         podWithTargetService.currentRealCpuConsumption = addedCpuConsumptionAtPod1_res_num
         currentNode.currentRealCpuConsumption = addedCpuConsumptionAtCurrentNode1_res_num
-        podWithTargetService.currentRealMemConsumption = addedMemConsumptionAtPod1_res_num
-        currentNode.currentRealMemConsumption = addedMemConsumptionAtCurrentNode1_res_num
+        # podWithTargetService.currentRealMemConsumption = addedMemConsumptionAtPod1_res_num# ---TODO too slowwwww
+        # currentNode.currentRealMemConsumption = addedMemConsumptionAtCurrentNode1_res_num#   --/
 
         request1.atPod = podWithTargetService
 
-            
-
+#class ProcessPersistentRequest(PlannedAction):
+    @planned
+    def ProcessPersistentRequest(self,
+        request1: Request
+        ):
+    
+        assert request1.status == self.constSymbol['statusReqResourcesConsumed']
+        assert request1.type == self.constSymbol['typePersistent']
+        request1.status = self.constSymbol['statusReqRequestFinished']
  
 # p = Problem1()
 # # print(ForwardPacketToInterface.compile_clips(p))
