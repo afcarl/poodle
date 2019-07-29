@@ -36,8 +36,8 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.node2 = self.addObject(Node('node2'))
         self.node2.state = self.constSymbol["stateNodeActive"]
         self.node2.status = self.constSymbol["statusNodeActive"]
-        self.node2.cpuCapacity = self.numberFactory.getNumber(1)
-        self.node2.memCapacity = self.numberFactory.getNumber(1)
+        self.node2.cpuCapacity = self.numberFactory.getNumber(4)
+        self.node2.memCapacity = self.numberFactory.getNumber(4)
         self.node2.currentFormalCpuConsumption = self.numberFactory.getNumber(0)
         self.node2.currentFormalMemConsumption = self.numberFactory.getNumber(0)
         self.node2.currentRealMemConsumption = self.numberFactory.getNumber(0)
@@ -156,7 +156,7 @@ class Problem1(ProblemTemplate, PacketActionModel):
         self.request2.launchPeriod = self.period1
         self.request2.status = self.constSymbol["statusReqAtStart"]
         self.request2.state = self.constSymbol["stateRequestInactive"]
-        self.request2.targetService = self.service2
+        self.request2.targetService = self.service1
         self.request2.cpuRequest = self.numberFactory.getNumber(2)
         self.request2.memRequest = self.numberFactory.getNumber(2)
         self.request2.type = self.constSymbol["typePersistent"]
@@ -296,7 +296,12 @@ class Problem1(ProblemTemplate, PacketActionModel):
     def goal(self):
         return self.request1.atNode == self.node2 and \
         self.request2.atNode == self.node2 and \
-        self.request1.atPod == self.pod1
+        self.request1.atPod == self.pod1 and \
+        self.request2.atPod == self.pod1 and \
+        self.node2.currentRealCpuConsumption == self.numberFactory.getNumber(4) and\
+        self.node2.currentRealMemConsumption == self.numberFactory.getNumber(4) and\
+        self.request2.isFinished == True
+        
         # return self.pod1.atNode == self.node1
 
         # self.request1.status == self.constSymbol["statusReqRequestFinished"] and \

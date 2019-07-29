@@ -95,6 +95,10 @@ class EntityType(Object):
 class GlobalVar(Object):
     numberOfRejectedReq = Property(Number)
          
+class Calculation(Object):
+    id = Property(Number)
+    value = Property(Number)
+
 class Pod(Object):
     #Identity
     # Property
@@ -175,8 +179,11 @@ class Request(Object):
     firstToPod = Property(Pod)
     targetService = Property(Service)
     cpuRequest = Property(Number)
+    cpuRequestConsumed = StateFact()
     memRequest = Property(Number)
+    memRequestConsumed = StateFact()
     type = Property(Type)
+    isFinished = StateFact
          # Relations
 
 class Loadbalancer(Object):
