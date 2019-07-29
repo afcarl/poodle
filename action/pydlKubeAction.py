@@ -22,7 +22,7 @@ class PacketActionModel:
         request1.atNode = nextNodeToBeUsedByLb
         loadbalancerAtWhichRequestIs.lastNode = nextNodeToBeUsedByLb
         request1.isAtLoadbalancer = False
-        # request1.status = self.constSymbol["statusReqAtKubeproxy"]
+        request1.status = self.constSymbol["statusReqAtKubeproxy"]
 
     @planned
     def ReqToNextNodeRR(self,
@@ -50,15 +50,15 @@ class PacketActionModel:
     def ReqToPod(self,
         request1: Request,
         podWithTargetService: Pod,
-        currentNode: Node#,
-        # addedCpuConsumptionAtPod1_res: AddedNumber,
-        # addedCpuConsumptionAtPod1_res_num: Number,
-        # addedCpuConsumptionAtCurrentNode1_res: AddedNumber,
-        # addedCpuConsumptionAtCurrentNode1_res_num: Number,
-        # addedMemConsumptionAtPod1_res: AddedNumber,
-        # addedMemConsumptionAtPod1_res_num: Number,
-        # addedMemConsumptionAtCurrentNode1_res: AddedNumber,
-        # addedMemConsumptionAtCurrentNode1_res_num: Number
+        currentNode: Node,
+        addedCpuConsumptionAtPod1_res: AddedNumber,
+        addedCpuConsumptionAtPod1_res_num: Number,
+        addedCpuConsumptionAtCurrentNode1_res: AddedNumber,
+        addedCpuConsumptionAtCurrentNode1_res_num: Number,
+        addedMemConsumptionAtPod1_res: AddedNumber,
+        addedMemConsumptionAtPod1_res_num: Number,
+        addedMemConsumptionAtCurrentNode1_res: AddedNumber,
+        addedMemConsumptionAtCurrentNode1_res_num: Number
         ):
             
         assert currentNode == request1.atNode  and \
@@ -66,25 +66,24 @@ class PacketActionModel:
         currentNode == podWithTargetService.atNode and \
         podWithTargetService.status == self.constSymbol["statusPodActive"] and \
         currentNode.status == self.constSymbol["statusNodeActive"]
-        # addedCpuConsumptionAtPod1_res.operator1 == podWithTargetService.currentRealCpuConsumption and \
-        # addedCpuConsumptionAtPod1_res.operator2 == request1.cpuRequest and \
-        # \
-        # addedCpuConsumptionAtCurrentNode1_res.operator1 == currentNode.currentRealCpuConsumption and \
-        # addedCpuConsumptionAtCurrentNode1_res.operator2 == request1.cpuRequest and \
-        # addedCpuConsumptionAtCurrentNode1_res_num == addedCpuConsumptionAtCurrentNode1_res.result and \
-        # \
-        # addedMemConsumptionAtPod1_res.operator1 == podWithTargetService.currentRealMemConsumption and \
-        # addedMemConsumptionAtPod1_res.operator2 == request1.memRequest and \
-        # addedMemConsumptionAtPod1_res_num == addedMemConsumptionAtPod1_res.result and \
-        # \
-        # addedMemConsumptionAtCurrentNode1_res.operator1 == currentNode.currentRealMemConsumption and \
-        # addedMemConsumptionAtCurrentNode1_res.operator2 == request1.memRequest and \
-        # addedMemConsumptionAtCurrentNode1_res_num == addedMemConsumptionAtCurrentNode1_res.result
+
+        assert addedCpuConsumptionAtPod1_res.operator1 == podWithTargetService.currentRealCpuConsumption
+        assert addedCpuConsumptionAtPod1_res.operator2 == request1.cpuRequest
+        assert addedCpuConsumptionAtCurrentNode1_res.operator1 == currentNode.currentRealCpuConsumption
+        assert addedCpuConsumptionAtCurrentNode1_res.operator2 == request1.cpuRequest
+        assert addedCpuConsumptionAtCurrentNode1_res_num == addedCpuConsumptionAtCurrentNode1_res.result
+        assert addedMemConsumptionAtPod1_res.operator1 == podWithTargetService.currentRealMemConsumption
+        assert addedMemConsumptionAtPod1_res.operator2 == request1.memRequest
+        assert addedMemConsumptionAtPod1_res_num == addedMemConsumptionAtPod1_res.result
+        assert addedMemConsumptionAtCurrentNode1_res.operator1 == currentNode.currentRealMemConsumption
+        assert addedMemConsumptionAtCurrentNode1_res.operator2 == request1.memRequest
+        assert addedMemConsumptionAtCurrentNode1_res_num == addedMemConsumptionAtCurrentNode1_res.result
 
         # podWithTargetService.currentRealCpuConsumption = addedCpuConsumptionAtPod1_res_num
         # currentNode.currentRealCpuConsumption = addedCpuConsumptionAtCurrentNode1_res_num
         # podWithTargetService.currentRealMemConsumption = addedMemConsumptionAtPod1_res_num
         # currentNode.currentRealMemConsumption = addedMemConsumptionAtCurrentNode1_res_num
+
         request1.atPod = podWithTargetService
 
             
