@@ -3,10 +3,10 @@ import itertools
 from poodle.poodle import *
 log.setLevel(logging.ERROR)
 
-from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-from sqlalchemy.orm import class_mapper
+# from sqlalchemy.ext.automap import automap_base
+# from sqlalchemy.orm import Session
+# from sqlalchemy import create_engine
+# from sqlalchemy.orm import class_mapper
 
 class StrObject(Object):
     def __str__(self):
@@ -183,26 +183,39 @@ class SQLDemoLoading(SQLActionModel):
         Base = automap_base()
         engine = create_engine("sqlite:///mimicdata.sqlite")
         Base.prepare(engine, reflect=True)
+        session = Session(engine)
         # for tbl in Base.metadata.tables.items()
         # print(dict(myTable.__table__.columns))
         # [column.key for column in myTable.__table__.columns]
         all_db_cols = {}
+        
+        self.tables=[]
+        
         for tbln, tbl in Base.classes.items():
-            for n,col in vars(tbl):
-                if n.startswith("_"): continue
-                all_db_cols[col] = session.query(col).limit(10).all()
+            self.tables.append(Table(tbln))
+            try:
+                for n,col in vars(tbl).items():
+                    if n.startswith("_"): continue
+                    all_db_cols[col] = session.query(col).limit(10).all()
+                print("Processed", tbln)
+            except ValueError:
+                print("Can't parse", tbln)
         join_candidates = []
         for a, b in itertools.combinations(all_db_cols.items(), 2):
             # compare all pairs of columns and mark them as candidate pairs
-            # also calculate distance
-            pass
+            matches = len([i for i in b[1] if i in a[1] ])
+            if matches > 8:
+                join_candidates.append({"pair":[a[0],b[0]],"matches":matches})
+            # also calculate name distance?
         # sort all candidate pairs by amount of similar elements and colname dist
-                
+        for jc in join_candidates:
+            print("JC:",jc["pair"][0].name,"<>","JC:",jc["pair"][1].name, ":",jc["matches"])
+            
                 
         
         
-    
-   
+# SQLDemoLoading().problem()    
+
 p = SQLDemoTest()
 # p.check_solution(50)
 p.run()
