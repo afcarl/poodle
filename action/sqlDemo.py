@@ -1,5 +1,12 @@
+import itertools
+
 from poodle.poodle import *
 log.setLevel(logging.ERROR)
+
+from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import class_mapper
 
 class StrObject(Object):
     def __str__(self):
@@ -92,6 +99,10 @@ class SQLActionModel(Problem):
         
         return f"WHERE {s_cond}"
 
+    def goal(self):
+        assert self.select.completed == True
+        
+
 class SQLDemoTest(SQLActionModel):
     
     def problem(self):
@@ -154,8 +165,6 @@ class SQLDemoTest(SQLActionModel):
         self.condition2.lhs_column = self.column11
         self.conditions = [self.condition1, self.condition2]
     
-    def goal(self):
-        assert self.select.completed == True
     
     def solution(self):
         return [
@@ -168,6 +177,31 @@ class SQLDemoTest(SQLActionModel):
             self.applyLikeConditions
         ]
         
+class SQLDemoLoading(SQLActionModel):
+        
+    def problem(self):
+        Base = automap_base()
+        engine = create_engine("sqlite:///mimicdata.sqlite")
+        Base.prepare(engine, reflect=True)
+        # for tbl in Base.metadata.tables.items()
+        # print(dict(myTable.__table__.columns))
+        # [column.key for column in myTable.__table__.columns]
+        all_db_cols = {}
+        for tbln, tbl in Base.classes.items():
+            for n,col in vars(tbl):
+                if n.startswith("_"): continue
+                all_db_cols[col] = session.query(col).limit(10).all()
+        join_candidates = []
+        for a, b in itertools.combinations(all_db_cols.items(), 2):
+            # compare all pairs of columns and mark them as candidate pairs
+            # also calculate distance
+            pass
+        # sort all candidate pairs by amount of similar elements and colname dist
+                
+                
+        
+        
+    
    
 p = SQLDemoTest()
 # p.check_solution(50)
