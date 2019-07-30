@@ -222,5 +222,5 @@ p.run()
 # for a in p.plan: print(a)
 
 print("\n\n\n============================ \n\n\n\n")
-print(' '.join(getattr(p, x.methodName)(**x.kwargs) for x in p.plan))
+print(' '.join(x() for x in p.plan))
 print("\n\n\n============================ \n\n\n\n")

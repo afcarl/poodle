@@ -1515,6 +1515,9 @@ class PlannedAction(metaclass=ActionMeta):
     def effect(self):
         raise NotImplementedError("effect() in %s not implemented" % repr(self))
     
+    def __call__(self):
+        return getattr(self.problem, self.methodName)(**self.kwargs)
+    
 
 class PlannedActionJinja2(PlannedAction):
     template = "./template/default.j2"
