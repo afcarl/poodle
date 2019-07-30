@@ -95,6 +95,8 @@ class ProblemTemplate(KubeBase):
         "statusPodPending",
         "statusPodAtManualCreation",
         "statusPodDirectedToNode",
+        "statusPodCpuConsumed",
+        "statusPodMemConsumed",
         "statusPodBindedToNode",
         "statusPodRunning",
         "statusPodSucceeded", # may be lost be careful
@@ -108,7 +110,9 @@ class ProblemTemplate(KubeBase):
         "statusNodeActive",
         "statusNodeInactive",
         "statusReqDirectedToNode",
-        "statusReqNodeCapacityOverwhelmed"]
+        "statusReqNodeCapacityOverwhelmed",
+        "statusLimMet",
+        "statusLimOverwhelmed"]
         self.constFactory(statusList, Status)
 
         stateList = [

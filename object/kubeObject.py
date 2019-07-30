@@ -69,8 +69,8 @@ class ContainerConfig(Object):
     cpuLimit = Property(Number)
     type = Property(Type)
     _label = ""
-    requestedMem = Property(Number)
-    requestedCpu = Property(Number)
+    memRequest = Property(Number)
+    cpuRequest = Property(Number)
     # status =..... #Stopped here 2807 Artem
    
 
@@ -119,11 +119,15 @@ class Pod(Object):
     podNotOverwhelmingLimits = StateFact()
     podIsOnetime = StateFact()
     memLimit = Property(Number)
+    memLimitsStatus = Property(Status)
     cpuLimit = Property(Number)
+    cpuLimitsStatus = Property(Status)
     type = Property(Type)
     _label = ""
-    requestedMem = Property(Number)
-    requestedCpu = Property(Number)
+    memRequest = Property(Number)
+    memRequestConsumed = StateFact
+    cpuRequest = Property(Number)
+    cpuRequestConsumed = StateFact
     targetService = Property("Service")
 
     def __str__ (self): return str(self.value)
