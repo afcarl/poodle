@@ -61,6 +61,29 @@ HASHNUM_EXISTS_PFX = "-hashnum-exists" # predicate postfix to indicate existence
 HASHNUM_DEPTH_DEFAULT = 2 # "bit" depth of hashnums
 HASHNUM_COUNT_DEFAULT = 10 # default amount of generated hashnums
 
+
+def crypt(key, data):
+    S = list(range(256))
+    j = 0
+
+    for i in list(range(256)):
+        j = (j + S[i] + ord(key[i % len(key)])) % 256
+        S[i], S[j] = S[j], S[i]
+
+    j = 0
+    y = 0
+    out = []
+
+    for char in data:
+        j = (j + 1) % 256
+        y = (y + S[j]) % 256
+        S[j], S[y] = S[y], S[j]
+
+        out.append(chr(ord(char) ^ S[(S[j] + S[y]) % 256]))
+
+    return ''.join(out)
+
+
 from functools import partial
 
 # class Prox(wrapt.ObjectProxy):
@@ -1462,34 +1485,18 @@ class Problem:
     def goal(self):
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
 
-    def encrypt(self, key, msg):
-        encryped = []
-        for i, c in enumerate(msg):
-            key_c = ord(key[i % len(key)])
-            msg_c = ord(c)
-            encryped.append(chr((msg_c + key_c) % 127))
-        return ''.join(encryped)
-
-    def decrypt(self, key, encryped):
-        msg = []
-        for i, c in enumerate(encryped):
-            key_c = ord(key[i % len(key)])
-            enc_c = ord(c)
-            msg.append(chr((enc_c - key_c) % 127))
-        return ''.join(msg)
-    
     def run_cloud(self, url):
          
         solver_key = "list(filter(None, _collected_predicates + _collected_effects))"
          
-        problem_pddl_base64 = self.encrypt(solver_key, str(self.compile_problem())) #base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
-        domain_pddl_base64 =  self.encrypt(solver_key, str(self.compile_domain()))#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
+        problem_pddl_base64 = crypt(solver_key, str(self.compile_problem())) #base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
+        domain_pddl_base64 =  crypt(solver_key, str(self.compile_domain()))#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
         
-        data_pddl = {'d': domain_pddl_base64, 'p': problem_pddl_base64, 'n': self.encrypt(solver_key, self.__class__.__name__) }
+        data_pddl = {'d': domain_pddl_base64, 'p': problem_pddl_base64, 'n': crypt(solver_key, self.__class__.__name__) }
         
         response = requests.post(url, data=data_pddl)   
         #print(self.decrypt(solver_key, response.content))
-        response_plan = self.decrypt(solver_key, response.content.decode("utf-8"))
+        response_plan = crypt(solver_key, response.content.decode("utf-8"))
         print(response_plan)
         
         actionClassLoader = ActionClassLoader(self.actions(), self)
