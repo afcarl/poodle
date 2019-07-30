@@ -1350,6 +1350,7 @@ class BooleanObject(Object):
 _problem_compilation = True
 _system_objects["object-True"] = BooleanObject("TRUE")
 _system_objects["object-False"] = BooleanObject("FALSE")
+_collected_object_classes.add("BooleanObject") # TODO THIS DOES NOT WORK FIXME
 _problem_compilation = False
 
 #########################################################################
@@ -1678,6 +1679,7 @@ class Problem:
         global _collected_predicates
         _problem_compilation = True
         _collected_object_classes = set()
+        _collected_object_classes.add("BooleanObject")
         _collected_objects = {}
         _collected_facts = []
         self.problem()
