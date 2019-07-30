@@ -132,8 +132,8 @@ class Packet(Object):
     
     at_table = Property(Table)
     at_host = StateRelation(Host) # TODO: this should be derived predicate!
-    at_interface_input = StateProperty(Interface)
-    at_interface_output = StateProperty(Interface)
+    at_interface_input = Property(Interface)
+    at_interface_output = Property(Interface)
     # can also be manually derived (as it is now manually written in PDDL)
     related_to = Relation(Interface) # TODO: REMOVE!!
     

@@ -349,6 +349,24 @@ class HopToRoute(PlannedAction):
         self.packet.at_interface_input = self.problem.null_interface
         self.packet.at_interface_output = self.route_dot_interface
         
+class HopToRouteAction:
+    def HopToRoute(self,
+            host: Host,
+            packet: Packet,
+            route_dot_interface: Interface,
+            table: Table,
+            route: Route
+        ):
+        "Relay the packet to route in the host"
+        
+        assert table in host.has_table and route in table.has_route
+        assert packet.at_interface_input in host.has_interface
+        assert route_dot_interface == self.interface
+
+        packet.at_interface_input = self.null_interface
+        packet.at_interface_output = route_dot_interface
+        
+
 # print(HopToRoute.compile(Problem()))
 # raise AssertionError("TEST")
 

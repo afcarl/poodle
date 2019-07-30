@@ -49,10 +49,11 @@ class NetworkGoal(Problem):
         return self.packet.is_consumed == True
         
 
-class SimpleTestProblem1(NetworkGoal, PacketActionModel):
+class SimpleTestProblem1(NetworkGoal, PacketActionModel, HopToRouteAction):
 
     def actions(self):
-        return [ ForwardPacketToInterface, CreateRoute, 
+        return [ ForwardPacketToInterface, 
+                CreateRoute, 
                 HopToRoute, 
                 # PacketAtOutputReturn,
                 # RouteExistsReturn
