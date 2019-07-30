@@ -859,13 +859,16 @@ class ProtectedProperty(Property):
         self._check()
         super().unset_internal(what)
 
+class ListLike(list): # Important not to cause any comparisons during compilation
+    def add(self, value):
+        self.append(value)
     
 class Relation(Property):
     "a property that can have multiple values"
     # https://stackoverflow.com/a/932580
     def __init__(self, *p, **kw):
         super().__init__(*p, **kw)
-        self._property_value = set()
+        self._property_value = ListLike()
     def contains(self, other):
         return self.operator(other, "contains")
         
@@ -880,7 +883,7 @@ class Relation(Property):
     #     raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
     
     def add(self, what):
-        if isinstance(what, Object): self._property_value.add(what)
+        if isinstance(what, Object): self._property_value.append(what)
         self._unset = True
         super().set(what)
         
@@ -1222,7 +1225,7 @@ class Object(metaclass=BaseObjectMeta):
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
-        elif isinstance(other, Object):
+        elif isinstance(other, Object) and (_compilation or _problem_compilation or _effect_compilation):
             assert self._class_variable and other._class_variable, "Expected fully initialized objects"
             global _collected_predicates
             global _collected_parameters
