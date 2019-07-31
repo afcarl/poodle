@@ -268,8 +268,10 @@ class Property(object):
             self._singleton = True
             classtype = initial_data[0]
             if type(initial_data[0])==type(str()):
+                if classtype == "Object": raise ValueError("Object can not be used directly")
                 self._value = classtype
             else:
+                if classtype == Object: raise ValueError("Object can not be used directly")
                 self._value = initial_data[0]
             return
         else:

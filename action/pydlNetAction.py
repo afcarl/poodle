@@ -311,18 +311,41 @@ class TestStaticObject(PlannedAction):
 
     def effect(self):
         self.packet.at_interface_input = self.problem.testif
+        
+class TestObj(Object):
+    pass
+
+class ObjHolder(Object):
+    obj = Property(TestObj)
+    done = Bool(False)
 
 class StaticObjectProblem(Problem):
+    @planned
+    def testObjEq(self, ob1: TestObj, ob2: TestObj, oh: ObjHolder, oh2: ObjHolder):
+        assert ob1 == oh.obj
+        assert ob2 == oh2.obj
+        assert ob1 == ob2
+        oh.done = True
+        return "DONE"
+    
     def actions(self):
         return [ TestStaticObject ]
     def problem(self):
         self.testif = self.addObject(Interface("test0"))
         self.ipaddr = IPAddr("192.168.1.1")
+        self.o1 = self.addObject(TestObj())
+        self.o2 = self.addObject(TestObj())
+        self.oh = self.addObject(ObjHolder())
+        self.oh2 = self.addObject(ObjHolder())
+        self.oh.obj = self.o1
+        self.oh2.obj = self.o1
     def goal(self):
-        return self.testif.has_ipaddr == self.ipaddr
+        # return self.testif.has_ipaddr == self.ipaddr
+        return self.oh.done == True
 
 p = StaticObjectProblem()
 p.run()
+for a in p.plan: print(a())
 print(p.compile_domain())
 #p.compile_problem()
 #p.compile_domain()
