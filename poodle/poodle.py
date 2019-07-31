@@ -168,7 +168,10 @@ def get_source_frame_dict():
             frame = f
             break
     frameinfo = getframeinfo(frame[0])
-    c_string = frameinfo.code_context[0].strip()
+    try:
+        c_string = frameinfo.code_context[0].strip()
+    except TypeError:
+        c_string = "(UNKNOWN)"
     return {
                     "code": c_string,
                     "line": frameinfo.lineno,
@@ -1168,7 +1171,7 @@ class Object(metaclass=BaseObjectMeta):
         self.name = ""
         if _problem_compilation:
             if name is None: # WARNING name must always be none
-                frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
+                frameinfo = getframeinfo(inspect.currentframe().f_back)
                 name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
             self.name = self.gen_name(name) # object name when instantiating..
         if not _force_name is None:
