@@ -328,6 +328,11 @@ class StaticObjectProblem(Problem):
         oh.done = True
         return "DONE"
     
+    # @planned
+    # def noConditions(self, a:TestObj):
+    #     self.oh2.obj = a
+    #     return True
+    
     def actions(self):
         return [ TestStaticObject ]
     def problem(self):
