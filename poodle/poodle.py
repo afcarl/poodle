@@ -769,6 +769,10 @@ class Property(object):
         text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, value.class_variable(), value.__class__.__name__)
         # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
         _collected_effects.append(text_predicate)
+        _collected_parameters.update({
+            self.find_class_variable(): self._property_of_inst.__class__.__name__,
+            value.class_variable(): value.__class__.__name__
+        })
         if init_mode:
             # if issubclass(type(value), Imaginary):
             #     raise NotImplementedError("For Imaginary objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
