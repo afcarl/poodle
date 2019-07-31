@@ -78,10 +78,6 @@ class Infix(object):
         
 @Infix
 def IN(what, where):
-    # frame = inspect.currentframe()
-    # frame = inspect.getouterframes(frame)[2]
-    # c_string = inspect.getframeinfo(frame[0]).code_context[0].strip()
-    # print("FRAME", c_string)
     ret = where.contains(what)
     global _selector_out
     _selector_out = None
@@ -130,14 +126,48 @@ def Unselect(what):
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
+from inspect import FrameInfo, istraceback, isframe, getsourcefile, getfile, findsource, Traceback
+def getouterframes(frame, context=1):
+    framelist = []
+    while frame:
+        frameinfo = (frame,) + getframeinfo(frame, context)
+        framelist.append(FrameInfo(*frameinfo))
+        frame = frame.f_back
+    return framelist
+
+def getframeinfo(frame, context=1):
+    if istraceback(frame):
+        lineno = frame.tb_lineno
+        frame = frame.tb_frame
+    else:
+        lineno = frame.f_lineno
+    if not isframe(frame):
+        raise TypeError('{!r} is not a frame or traceback object'.format(frame))
+
+    filename = getsourcefile(frame) or getfile(frame)
+    if context > 0:
+        start = lineno - 1 - context//2
+        try:
+            lines, lnum = findsource(frame)
+        except (OSError, IndexError): # fix: added IndexError
+            lines = index = None
+        else:
+            start = max(0, min(start, len(lines) - context))
+            lines = lines[start:start+context]
+            index = lineno - 1 - start
+    else:
+        lines = index = None
+
+    return Traceback(filename, lineno, frame.f_code.co_name, lines, index)
+
 def get_source_frame_dict():
-    frame = inspect.getouterframes(inspect.currentframe())[4]
-    for f in inspect.getouterframes(inspect.currentframe()):
-        frameinfo = inspect.getframeinfo(f[0])
+    frame = getouterframes(inspect.currentframe())[4]
+    for f in getouterframes(inspect.currentframe()):
+        frameinfo = getframeinfo(f[0])
         if frameinfo.code_context and  ("Select(" in frameinfo.code_context[0].strip().replace(" ","") or frameinfo.code_context[0].strip().startswith("assert")):
             frame = f
             break
-    frameinfo = inspect.getframeinfo(frame[0])
+    frameinfo = getframeinfo(frame[0])
     c_string = frameinfo.code_context[0].strip()
     return {
                     "code": c_string,
@@ -614,14 +644,6 @@ class Property(object):
                 else:
                     log.warning("WARNING! Not setting other variable to {0} as it already has {1}".format(other_genvar, other._class_variable))
 
-        frame = inspect.getouterframes(inspect.currentframe())[3]
-        for f in inspect.getouterframes(inspect.currentframe()):
-            frameinfo = inspect.getframeinfo(f[0])
-            if frameinfo.code_context and  "Select(" in frameinfo.code_context[0].strip().replace(" ",""):
-                frame = f
-                break
-        frameinfo = inspect.getframeinfo(frame[0])
-        c_string = frameinfo.code_context[0].strip()
         if isinstance(other, Property):
             otherPropName = other._property_name
         else:
@@ -640,11 +662,12 @@ class Property(object):
                 "class_variables": { my_class_name: myclass_genvar },
                 "text_predicates": [text_predicate, text_predicate_2],
                 "parameters": collected_parameters,
-                "frame": {
-                    "code": c_string,
-                    "line": frameinfo.lineno,
-                    "file": frameinfo.filename
-                }
+                "frame": get_source_frame_dict()
+                # "frame": {
+                #     "code": c_string,
+                #     "line": frameinfo.lineno,
+                #     "file": frameinfo.filename
+                # }
             }
         if not other_property_class_name is None and not other_property_genvar is None:
             ph_entry["variables"][other_property_class_name] = other_property_genvar
