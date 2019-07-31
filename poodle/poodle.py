@@ -18,7 +18,7 @@
 from jinja2 import Template
 import string
 import random
-import inspect
+import inspect, functools
 import copy, subprocess, tempfile
 from collections import OrderedDict
 import os
@@ -1998,7 +1998,10 @@ class ActionClassLoader:
                 if ";" in planLine: continue
                 self.load(planLine.replace("(", "").replace(")", ""))
 
-def planned(fun):
+def planned(fun=None, *, cost=None):
+    if fun is None:
+        return functools.partial(planned, cost=cost)
+    cost = cost if cost else 1
     if not getattr(fun, "__annotations__", None): 
         raise ValueError("For planning to work function parameters must be type annotated")
     kwargs = {}
@@ -2013,6 +2016,7 @@ def planned(fun):
             _selector_out = None
     for k, v in kwargs.items(): setattr(NewPlannedAction, k, v)
     NewPlannedAction.__name__ = fun.__name__
+    NewPlannedAction.cost = cost
     fun.plan_class = NewPlannedAction
     return fun
     

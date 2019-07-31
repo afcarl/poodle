@@ -49,7 +49,7 @@ class SQLActionModel(Problem):
         
         return f"SELECT {table}.{target_column} FROM {table}"
     
-    @planned 
+    @planned(cost=2)
     def joinTables(self,
             table1: Table,
             table2: Table,
