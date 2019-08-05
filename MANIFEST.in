@@ -1,3 +1,0 @@
-recursive-include poodle *
-recursive-include object *
-recursive-exclude setup.py
