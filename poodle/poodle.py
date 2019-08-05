@@ -25,6 +25,9 @@ import os
 import datetime
 import logging
 import sys, time
+import requests
+import base64 
+import json
 
 # import wrapt
 # import infix
@@ -60,6 +63,28 @@ HASHNUM_CLASS_NAME = "PoodleHashnum"
 HASHNUM_EXISTS_PFX = "-hashnum-exists" # predicate postfix to indicate existence of imaginary object
 HASHNUM_DEPTH_DEFAULT = 2 # "bit" depth of hashnums
 HASHNUM_COUNT_DEFAULT = 10 # default amount of generated hashnums
+
+def crypt(key, data):
+    S = list(range(256))
+    j = 0
+
+    for i in list(range(256)):
+        j = (j + S[i] + ord(key[i % len(key)])) % 256
+        S[i], S[j] = S[j], S[i]
+
+    j = 0
+    y = 0
+    out = []
+
+    for char in data:
+        j = (j + 1) % 256
+        y = (y + S[j]) % 256
+        S[j], S[y] = S[y], S[j]
+
+        out.append(chr(ord(char) ^ S[(S[j] + S[y]) % 256]))
+
+    return ''.join(out)
+
 
 from functools import partial
 
@@ -1605,46 +1630,29 @@ class Problem:
     def goal(self):
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
 
-    def run(self):
-        for ob in self.objectList: ob._sealed = False # seal all objects
-        global _collected_parameters
-        # print(_collected_parameters)
-        counter = 0
-        try:
-            with open("./.counter", "r") as fd:
-                counter = int(fd.read())
-        except:
-            counter = 0
- 
-        counter += 1
-        with open("./.counter", "w") as fd:
-            fd.write(str(counter))
+    def run_cloud(self, url):
+         
+        solver_key = "list(filter(None, _collected_predicates + _collected_effects))"
+         
+        problem_pddl_base64 = crypt(solver_key, str(self.compile_problem())) #base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
+        domain_pddl_base64 =  crypt(solver_key, str(self.compile_domain()))#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
         
-
-        rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, self.__class__.__name__, str(datetime.date.today()),rnd)
-        os.makedirs(self.folder_name, exist_ok=True)
-        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_problem())
-        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
-            fd.write(self.compile_domain())
-        max_time = 10000
-        # TODO: create "debug" mode to run in os command and show output in real time
-        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
-        log.debug("run line is {0}".format(runscript))
-        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
-        retcode = "-1"
-        for line in std:
-            if line.find('search exit code:') != -1:
-                retcode = line.rstrip("\n").split()[3]
-            log.info(line.rstrip("\n"))
-        if retcode == "0" :
-            if self.getFolderName() != None:
-                actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
-                actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
-                self._plan = actionClassLoader._plan
-        for ob in self.objectList: ob._sealed = True # seal all objects
-        return retcode
+        data_pddl = {'d': domain_pddl_base64, 'p': problem_pddl_base64, 'n': crypt(solver_key, self.__class__.__name__) }
+        
+        response = requests.post(url, data=data_pddl)   
+        #print(self.decrypt(solver_key, response.content))
+        response_plan = crypt(solver_key, response.content.decode("utf-8"))
+        print(response_plan)
+        
+        actionClassLoader = ActionClassLoader(self.actions(), self)
+        actionClassLoader.loadFromStr(response_plan)
+        self._plan = actionClassLoader._plan
+        print(self._plan)
+        
+        return 0
+    
+    def run(self, url = 'http://127.0.0.1:8082/solve'):
+        return self.run_cloud(url) 
         
     @property
     def plan(self):
