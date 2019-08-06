@@ -2039,32 +2039,32 @@ class ActionClassLoader:
                 if ";" in planLine: continue
                 self.load(planLine.replace("(", "").replace(")", ""))
 
-
-    def planned(fun=None, *, cost=None):
-        if fun is None:
-            return functools.partial(planned, cost=cost)
-        cost = cost if cost else 1
-        if not getattr(fun, "__annotations__", None): 
-            raise ValueError("For planning to work function parameters must be type annotated")
-        kwargs = {}
-        for k, v in fun.__annotations__.items(): kwargs[k] = v()
-        class NewPlannedAction(PlannedAction):
-            def effect(self):
-                global _effect_compilation
-                global _selector_out
-                _effect_compilation = False
-                _effect_compilation = True
-                fun(self.problem, **kwargs)
-                _selector_out = None
-        for k, v in kwargs.items(): setattr(NewPlannedAction, k, v)
-        NewPlannedAction.__name__ = fun.__name__
-        NewPlannedAction.cost = cost
-        fun.plan_class = NewPlannedAction
-        return fun
-
     def loadFromStr(self, outPlanStr):
         log.debug("load action from str")
         for planLine in outPlanStr.splitlines():
             if ";" in planLine: continue
             self.load(planLine.replace("(", "").replace(")", ""))
+
+def planned(fun=None, *, cost=None):
+    if fun is None:
+        return functools.partial(planned, cost=cost)
+    cost = cost if cost else 1
+    if not getattr(fun, "__annotations__", None): 
+        raise ValueError("For planning to work function parameters must be type annotated")
+    kwargs = {}
+    for k, v in fun.__annotations__.items(): kwargs[k] = v()
+    class NewPlannedAction(PlannedAction):
+        def effect(self):
+            global _effect_compilation
+            global _selector_out
+            _effect_compilation = False
+            _effect_compilation = True
+            fun(self.problem, **kwargs)
+            _selector_out = None
+    for k, v in kwargs.items(): setattr(NewPlannedAction, k, v)
+    NewPlannedAction.__name__ = fun.__name__
+    NewPlannedAction.cost = cost
+    fun.plan_class = NewPlannedAction
+    return fun
+
 
