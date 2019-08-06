@@ -6,6 +6,9 @@ kube:
 	python3.7 -m problem.pydlKubeProblem
 sqldemo: 
 	python3.7 -m action.sqlDemo
+obfuscate: 
+	pyarmor obfuscate ./poodle/poodle.py
+	cp ./dist/poodle.py ../poodle-release/poodle/poodle.py
 
 all: net test
 
