@@ -33,10 +33,10 @@ import json
 # import infix
 
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.ERROR)
 
 handler = logging.StreamHandler(sys.stdout) # loggging driver
-handler.setLevel(logging.DEBUG) #loglevel ->> CRITICAL ERROR WARNING INFO DEBUG NOTSET
+handler.setLevel(logging.ERROR) #loglevel ->> CRITICAL ERROR WARNING INFO DEBUG NOTSET
 log.addHandler(handler)
 
 _compilation = False
