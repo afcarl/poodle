@@ -1643,7 +1643,7 @@ class Problem:
         #print(self.decrypt(solver_key, response.content))
         response_plan = crypt(solver_key, response.content.decode("utf-8"))
         print(response_plan)
-        print("---")
+        #print("---")
         if response_plan != 'ERROR' :
             #actionClassLoader = ActionClassLoader(self.actions(), self)
             actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)

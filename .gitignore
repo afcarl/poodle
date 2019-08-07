@@ -1,2 +1,5 @@
 out/
 __pycache__
+poodle-release/
+dist/
+.counter
