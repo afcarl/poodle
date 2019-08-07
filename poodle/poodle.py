@@ -1643,14 +1643,19 @@ class Problem:
         #print(self.decrypt(solver_key, response.content))
         response_plan = crypt(solver_key, response.content.decode("utf-8"))
         print(response_plan)
+        print("---")
+        if response_plan != 'ERROR' :
+            #actionClassLoader = ActionClassLoader(self.actions(), self)
+            actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
+            actionClassLoader.loadFromStr(response_plan)
+            self._plan = actionClassLoader._plan
+            print(self._plan)
+            for ob in self.objectList: ob._sealed = True
+            
+            return 0
+        else:
+            return 1
         
-        actionClassLoader = ActionClassLoader(self.actions(), self)
-        actionClassLoader.loadFromStr(response_plan)
-        self._plan = actionClassLoader._plan
-        print(self._plan)
-        
-        return 0
-    
     def run(self, url = 'http://127.0.0.1:8082/solve'):
         return self.run_cloud(url) 
 
