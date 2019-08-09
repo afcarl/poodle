@@ -1,4 +1,4 @@
-from poodle.poodle import *
+from poodle import *
 from object.commonObject import *
 
 class RequestState(StaticObject):

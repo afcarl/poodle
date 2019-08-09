@@ -1,4 +1,4 @@
-from poodle.poodle import *
+from poodle import *
 
 class Number(Digit): # alias for Digit!!! TODO rename number to digit
     higher_than = Relation("Number")

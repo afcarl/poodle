@@ -10,10 +10,14 @@ setup(
         "Depends sudo apt install python3.7 python3-jinja2 python3-jinja2-time cookiecutter"),
     long_description=open('README.md').read(),
     keywords="Poodle, Pddl, CriticalHop",
-    license=open('LICENSE').read(),
+    # license=open('LICENSE').read(), # breaks tox
     platforms=['linux'],
-    packages=find_packages(),
+    packages=['poodle'],
+    package_dir = {'poodle': 'poodle_lib'},
     include_package_data=True,
+    install_requires=[
+        'requests',
+    ],
     # See http://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Development Status :: 4 - Beta',

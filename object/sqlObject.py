@@ -1,4 +1,4 @@
-from poodle.poodle import *
+from poodle import *
 
 class Database(Object):
     tables = Relation("Table")

@@ -1,4 +1,4 @@
-from poodle.poodle import * 
+from poodle import * 
 from action.pydlNetAction import *
 from object.networkObject import *
 

@@ -1,5 +1,4 @@
 import sys
-sys.path.insert(0, '../poodle/poodle')
 
 from poodle import *
 from object.commonObject import *

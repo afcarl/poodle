@@ -1,6 +1,7 @@
 import unittest
 
-from poodle.poodle import *
+from poodle import *
+
 from object.networkObject import *
 from object.commonObject import *
 
