@@ -1,4 +1,5 @@
 import unittest
+import pytest
 
 from poodle import *
 
@@ -48,3 +49,45 @@ class TestEffectGenPredicate(unittest.TestCase):
         lines = p.get_predicates()
         #Packet-is_consumed ?var1 - Packet
         self.assertTrue(lines.find('(Packet-is_consumed ?var1 - Packet)') != -1)
+
+def test_booleffect():
+    class Stub(Object):
+        pass
+
+    stobj = Stub()
+
+    class Scheduler(Object):
+        queueLength = Property(Stub)
+        active = Bool(False)
+    
+    class T(Problem):
+        @planned
+        def ScheduleQueueProcessed(self,
+                scheduler1: Scheduler):
+            assert  scheduler1.queueLength == stobj
+            scheduler1.active = True
+    t=T()
+    # print(t.compile_domain())
+    assert "(Scheduler-active " in \
+         t.compile_domain().split("ScheduleQueueProcessed")[1]
+
+    
+@pytest.mark.skip(reason="no way of currently testing this")
+def test_full_schedule():
+    class Stub(Object):
+        pass
+
+    stobj = Stub()
+
+    class Scheduler(Object):
+        queueLength = Property(Stub)
+        active = Bool(False)
+    
+    tsched = Scheduler()
+    tsched.queueLength = stobj
+
+    @planned
+    def ScheduleQueueProcessed(
+            scheduler1: Scheduler):
+        assert  scheduler1.queueLength == stobj
+        scheduler1.active = True
