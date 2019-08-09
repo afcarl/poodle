@@ -1651,10 +1651,52 @@ class Problem:
             return 0
         else:
             return 1
+
+    def run_local(self):
+        for ob in self.objectList: ob._sealed = False # seal all objects
+        global _collected_parameters
+        # print(_collected_parameters)
+        counter = 0
+        try:
+            with open("./.counter", "r") as fd:
+                counter = int(fd.read())
+        except:
+            counter = 0
+ 
+        counter += 1
+        with open("./.counter", "w") as fd:
+            fd.write(str(counter))
+        
+
+        rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
+        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, self.__class__.__name__, str(datetime.date.today()),rnd)
+        os.makedirs(self.folder_name, exist_ok=True)
+        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
+            fd.write(self.compile_problem())
+        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
+            fd.write(self.compile_domain())
+        max_time = 10000
+        # TODO: create "debug" mode to run in os command and show output in real time
+        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
+        log.debug("run line is {0}".format(runscript))
+        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
+        retcode = "-1"
+        for line in std:
+            if line.find('search exit code:') != -1:
+                retcode = line.rstrip("\n").split()[3]
+            log.info(line.rstrip("\n"))
+        if retcode == "0" :
+            if self.getFolderName() != None:
+                actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
+                actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
+                self._plan = actionClassLoader._plan
+        for ob in self.objectList: ob._sealed = True # seal all objects
+        return retcode
         
     def run(self, url = 'http://devapi.xhop.ai:8082/solve'):
+        if os.environ.get("POODLE_LOCAL_PLANNER"):
+            return self.run_local()
         return self.run_cloud(url) 
-
         
     @property
     def plan(self):
