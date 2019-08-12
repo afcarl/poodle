@@ -20,9 +20,16 @@ class Number(Object):
         return resultVar
 
     def __add__(self, other):
-        return self.add(other)
+        if type(other) == type(0):
+            return self.add(numberFactory.getNumber(other))
+        elif type(other) == Number:
+            return self.add(other)
+        raise ValueError("Unsupported type for arithmetic operator")
+
+    def __radd__(self, other):
+        return self.__add__(self, other)
+
     def sub(self, other: Number, sumRes: SumResult):
-        # c = a - b
         resultVar = Number()
         assert sumRes.operator1 == resultVar
         assert sumRes.operator2 == other
@@ -31,18 +38,24 @@ class Number(Object):
         return resultVar
 
     def __sub__(self, other):
-        return self.sub(other)
+        if type(other) == type(0):
+            return self.sub(numberFactory.getNumber(other))
+        elif type(other) == Number:
+            return self.sub(other)
+        raise ValueError("Unsupported type for arithmetic operator")
 
-    def mul(self, other: Number, mulres: MulResult):
-        resultVar = Number()
-        assert mulres.operator1 == self 
-        assert mulres.operator2 == other
-        assert mulres.result == resultVar 
+    # def mul(self, other: Number, mulres: MulResult):
+    #     resultVar = Number()
+    #     assert mulres.operator1 == self 
+    #     assert mulres.operator2 == other
+    #     assert mulres.result == resultVar 
 
-        return resultVar
+    #     return resultVar
 
-    def __mul__(self, other):
-        return self.mul(other)
+    # def __mul__(self, other):
+    #     return self.mul(other)
+
+    # # TODO: add division
 
 
 
