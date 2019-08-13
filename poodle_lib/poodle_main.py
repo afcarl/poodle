@@ -1140,6 +1140,7 @@ class BaseObjectMeta(type):
             # foo.__annotations__["l"].__args__[0].__forward_arg__
             # get_type_hints(foo)["l"].__args__[0]
             # get_type_hints(foo)["l"]._name == 'List'
+            # TODO: better to have Set instead of List
 
 
 
