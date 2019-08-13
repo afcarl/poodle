@@ -1,6 +1,8 @@
 import itertools
 
 from poodle import *
+from poodle import log
+import logging
 log.setLevel(logging.ERROR)
 
 # from sqlalchemy.ext.automap import automap_base

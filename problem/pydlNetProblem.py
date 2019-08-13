@@ -1,6 +1,7 @@
 from poodle import * 
 from action.pydlNetAction import *
 from object.networkObject import *
+from poodle import log
 
 class IPFactory():
     def __init__(self):

@@ -1132,15 +1132,21 @@ class BaseObjectMeta(type):
             else:
                 _none_objects[name].name = ' '.join(["p-null-Imaginary"] * HASHNUM_DEPTH_DEFAULT) # HASHNUM_DEPTH_DEFAULT fix!
                 _none_objects[name]._class_variable = gen_var_imaginary(name, prefix="null-")
-
-        for ann, tname in cls.__annotations__.items():
-            setattr(cls, ann, Property(tname))
-            # TODO: support for "Relation"
-            # for :List["NewObject"]
-            # foo.__annotations__["l"].__args__[0].__forward_arg__
-            # get_type_hints(foo)["l"].__args__[0]
-            # get_type_hints(foo)["l"]._name == 'List'
-            # TODO: better to have Set instead of List
+        if hasattr(cls, "__annotations__"):
+            for ann, tname in cls.__annotations__.items():
+                if hasattr(tname, "_name") and tname._name == "Set":
+                    trname = tname.__args__[0].__forward_arg__
+                    setattr(cls, ann, Relation(trname))
+                elif isinstance(tname, str):
+                    setattr(cls, ann, Property(tname))
+                elif inspect.isclass(tname) and issubclass(tname, Object):
+                    setattr(cls, ann, Property(tname))
+                else:
+                    raise ValueError("Unsupported attribute type: %s : %s" % (ann, tname))
+                # for :List["NewObject"]
+                # foo.__annotations__["l"].__args__[0].__forward_arg__
+                # get_type_hints(foo)["l"].__args__[0]
+                # get_type_hints(foo)["l"]._name == 'List'
 
 
 
@@ -1402,9 +1408,6 @@ class Imaginary(Object):
 # A static object initializes itself with instances static_values
 class StaticObject(Object):
     # TODO
-    pass
-
-class Digit(Object):
     pass
 
 class PoodleHashnum(Object):
@@ -2102,7 +2105,11 @@ def planned(fun=None, *, cost=None):
     if not getattr(fun, "__annotations__", None):
         raise ValueError("For planning to work function parameters must be type annotated")
     kwargs = {}
-    for k, v in fun.__annotations__.items(): kwargs[k] = v()
+    for k, v in fun.__annotations__.items(): 
+        if isinstance(v, str):
+            raise ValueError("Forward references are not suported in methods yet")
+        else:
+            kwargs[k] = v()
     class NewPlannedAction(PlannedAction):
         def effect(self):
             global _effect_compilation

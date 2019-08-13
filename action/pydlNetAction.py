@@ -1,42 +1,42 @@
 from poodle import *
 from object.networkObject import *
 
-class ConsumePacket(PlannedActionJinja2):
-    cost = 1
+# class ConsumePacket(PlannedAction):
+#     cost = 1
 
-    interface1 = Interface()
-    # current_host = Host.has_interface.contains(interface1)
-    # current_host = Host.has_interface // interface1
-    current_host = interface1 |IN| Host.has_interface
+#     interface1 = Interface()
+#     # current_host = Host.has_interface.contains(interface1)
+#     # current_host = Host.has_interface // interface1
+#     current_host = interface1 |IN| Host.has_interface
     
-    # packet = current_host.has_interface |EQ| Packet.at_interface_input \
-    packet = Packet.at_interface_input |EQ| current_host.has_interface \
-            #   or current_host.has_interface |IN| Packet.at_interface_output
-    # (Packet-at_interface_input ?Packet-6 ?Interface-3)
-    # (Host-has_interface ?Host-4 ?Interface-3)
-    interface_any = Interface |IN| current_host.has_interface
-    packet_next = packet.next |EQ| Packet 
+#     # packet = current_host.has_interface |EQ| Packet.at_interface_input \
+#     packet = Packet.at_interface_input |EQ| current_host.has_interface \
+#             #   or current_host.has_interface |IN| Packet.at_interface_output
+#     # (Packet-at_interface_input ?Packet-6 ?Interface-3)
+#     # (Host-has_interface ?Host-4 ?Interface-3)
+#     interface_any = Interface |IN| current_host.has_interface
+#     packet_next = packet.next |EQ| Packet 
     
-    # packet_next = Packet |EQ| packet.next # TODO: implement other-way-around???
-    # packet_next = packet.next |EQ| Packet 
-    # TODO: implement reverse order EQ!!
-    # host_more = Host.has_interface |EQ| packet_next.at_interface_input
-    # host_more =  packet_next.at_interface_input |EQ| Host.has_interface
-    # (Host-has_interface ?host-1 ?interface-1)
-    # (Packet-at_interface_input ?packet-1 ?interface-1)
-    # packet2 = packet.related_to |IN| Host.has_interface
+#     # packet_next = Packet |EQ| packet.next # TODO: implement other-way-around???
+#     # packet_next = packet.next |EQ| Packet 
+#     # TODO: implement reverse order EQ!!
+#     # host_more = Host.has_interface |EQ| packet_next.at_interface_input
+#     # host_more =  packet_next.at_interface_input |EQ| Host.has_interface
+#     # (Host-has_interface ?host-1 ?interface-1)
+#     # (Packet-at_interface_input ?packet-1 ?interface-1)
+#     # packet2 = packet.related_to |IN| Host.has_interface
     
-    def selector(self):
-        return self.packet.dst_ipaddr |EQ| self.interface_any.has_ipaddr \
-                and self.interface1.has_ipaddr |EQ| self.packet.dst_ipaddr
+#     def selector(self):
+#         return self.packet.dst_ipaddr |EQ| self.interface_any.has_ipaddr \
+#                 and self.interface1.has_ipaddr |EQ| self.packet.dst_ipaddr
     
-    def effect(self):
-        self.packet_next.current_packet = True # = True
-        # (Packet-current_packet )
-        self.packet.is_consumed = True # = False
-        self.packet.current_packet = False
+#     def effect(self):
+#         self.packet_next.current_packet = True # = True
+#         # (Packet-current_packet )
+#         self.packet.is_consumed = True # = False
+#         self.packet.current_packet = False
 
-#print('"'+ConsumePacket.compile(None).strip()+'"')
+# #print('"'+ConsumePacket.compile(None).strip()+'"')
 
 class ConsumePacketSelectInv(PlannedAction):
     cost = 1
@@ -65,7 +65,7 @@ class ConsumePacketSelectInv(PlannedAction):
 
 #print('"'+ConsumePacketSelectInv.compile(None).strip()+'"')
 
-class ConsumePacketSelect(PlannedActionJinja2):
+class ConsumePacketSelect(PlannedAction):
     cost = 2
     
     interface1 = Interface()
@@ -160,24 +160,24 @@ p = ForwardingProblem()
 p.run()
 for i in p.plan: print(i)
   
-class ForwardPacketInSwitch(PlannedAction):
+# class ForwardPacketInSwitch(PlannedAction):
 
-    switch = Host()
+#     switch = Host()
     
-    #switch = Host |IN| Host.isSwitch
-    interface_from = Interface |IN| switch.has_interface
-    interface_to = Interface |IN| switch.has_interface
+#     #switch = Host |IN| Host.isSwitch
+#     interface_from = Interface |IN| switch.has_interface
+#     interface_to = Interface |IN| switch.has_interface
 
-    packet = Packet()
+#     packet = Packet()
 
-    state = RequestState |IN| packet.protocol_state
+#     state = RequestState |IN| packet.protocol_state
 
-    def selector(self):
-        Select(self.interface_from == self.packet.at_interface_input \
-        and self.interface_from != self.interface_to)
+#     def selector(self):
+#         Select(self.interface_from == self.packet.at_interface_input \
+#         and self.interface_from != self.interface_to)
 
-    def effect(self):
-        self.packet.at_interface_input.unset(self.interface_from)
+#     def effect(self):
+#         self.packet.at_interface_input.unset(self.interface_from)
 
 # print(ForwardPacketInSwitch.compile())
 

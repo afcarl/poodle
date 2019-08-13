@@ -1,7 +1,7 @@
 from poodle import *
 from object.commonObject import *
 
-class RequestState(StaticObject):
+class RequestState(Object):
     static_values = ["request", "reply"]
 
 class IPAddr(Object): # -> ipaddr - object; ip-192.179.4.34 - ipaddr
@@ -120,18 +120,18 @@ class Packet(Object):
     has_src_port = Property(Port)
     has_dst_port = Property(Port)
     
-    socket_from = ProtectedProperty(Socket)
-    socket_to = ProtectedProperty(Socket)
+    socket_from = Property(Socket)
+    socket_to = Property(Socket)
     
     # validation_packet_recv = RelationRecv(Packet) # checking relation receipt
     
     # seen_at = Relation(host=Host, state=RequestState)
     # seen_at_eth = Relation(iface=Interface, state=RequestState)
     
-    origin = ProtectedProperty(Host)
+    origin = Property(Host)
     
     at_table = Property(Table)
-    at_host = StateRelation(Host) # TODO: this should be derived predicate!
+    at_host = Relation(Host) # TODO: this should be derived predicate!
     at_interface_input = Property(Interface)
     at_interface_output = Property(Interface)
     # can also be manually derived (as it is now manually written in PDDL)
