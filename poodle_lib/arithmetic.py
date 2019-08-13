@@ -1,26 +1,20 @@
-from poodle import *
+from poodle import Object, SystemAny
 
-class SumResult(Object):
-    operator1: Number
-    operator2: Number
-    result: Number
+psystem = [] # Stub.
 
-class MulResult(Object):
-    operator1: Number
-    operator2: Number
-    result: Number
 
 class Number(Object):
-    def add(self, num: Number, sumResult: SumResult):
-        resultVar = Number()
-        assert sumResult.operator1 == self
-        assert sumResult.operator2 == num
-        assert sumResult.result == resultVar
+    def add(self, num: Number):
+        resultVar = Any(Number, space=psystem)  # TODO: implicit search in current context?
+        sumRes = Any(SumResult, space=psystem)
+        assert sumRes.operator1 == self
+        assert sumRes.operator2 == num
+        assert sumRes.result == resultVar
 
         return resultVar
 
     def __add__(self, other):
-        if type(other) == type(0):
+        if isinstance(other, int):
             return self.add(numberFactory.getNumber(other))
         elif type(other) == Number:
             return self.add(other)
@@ -29,8 +23,9 @@ class Number(Object):
     def __radd__(self, other):
         return self.__add__(self, other)
 
-    def sub(self, other: Number, sumRes: SumResult):
-        resultVar = Number()
+    def sub(self, other: Number):
+        resultVar = Any(Number, space=psystem)
+        sumRes = Any(SumResult, space=psystem)
         assert sumRes.operator1 == resultVar
         assert sumRes.operator2 == other
         assert sumRes.result == self
@@ -46,9 +41,9 @@ class Number(Object):
 
     # def mul(self, other: Number, mulres: MulResult):
     #     resultVar = Number()
-    #     assert mulres.operator1 == self 
+    #     assert mulres.operator1 == self
     #     assert mulres.operator2 == other
-    #     assert mulres.result == resultVar 
+    #     assert mulres.result == resultVar
 
     #     return resultVar
 
@@ -58,8 +53,19 @@ class Number(Object):
     # # TODO: add division
 
 
-
 class NumberFactory():
-    pass # TODO
+    pass  # TODO
     # generate all numbers and generate all results/mults etc. (when space accessed)
     # implement logarithmic generation based on settings
+
+
+class SumResult(Object):
+    operator1: Number
+    operator2: Number
+    result: Number
+
+
+class MulResult(Object):
+    operator1: Number
+    operator2: Number
+    result: Number
