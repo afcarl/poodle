@@ -28,6 +28,7 @@ import sys, time
 import requests
 import base64 
 import json
+import itertools
 
 # import wrapt
 # import infix
@@ -319,6 +320,17 @@ def gen_one_predicate(predicate_name, var, var_class_name):
         #_collected_object_classes.update([class_name, var1_class, var2_class])
     return text_predicate
     
+def deduplicate_equals_one(l_preconditions):
+    for a,b in itertools.combinations(l_preconditions, 2):
+        if a.startswith("(=") and b.startswith("(="):
+            if sorted(a.replace("(","").replace(")","").split()) == \
+                            sorted(b.replace("(","").replace(")","").split()):
+                l_preconditions.remove(a)
+                return True
+    return False
+
+def deduplicate_equals(l_preconditions):
+    while deduplicate_equals_one(l_preconditions): pass
 
 class Property(object):
     def __init__(self, *initial_data, **kwargs):
@@ -1523,6 +1535,7 @@ class PlannedAction(metaclass=ActionMeta):
                 collected_parameters += "%s - %s " % (ob, cls.collected_parameters[ob])
         
         assert len(collected_parameters) > 0
+        deduplicate_equals(_collected_predicates)
         return """
     (:action {action_name}
         :parameters ({parameters})
