@@ -1663,7 +1663,6 @@ class Problem:
             return 1
 
     def run_local(self):
-        for ob in self.objectList: ob._sealed = False # seal all objects
         global _collected_parameters
         # print(_collected_parameters)
         counter = 0
@@ -1700,13 +1699,16 @@ class Problem:
                 actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
                 actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
                 self._plan = actionClassLoader._plan
-        for ob in self.objectList: ob._sealed = True # seal all objects
         return retcode
 
     def run(self, url = 'http://devapi.xhop.ai:8082/solve'):
+        for ob in self.objectList: ob._sealed = False # seal all objects
         if os.environ.get("POODLE_LOCAL_PLANNER"):
-            return self.run_local()
-        return self.run_cloud(url)
+            r = self.run_local()
+        else:
+            r = self.run_cloud(url)
+        for ob in self.objectList: ob._sealed = True # seal all objects
+        return r
 
     @property
     def plan(self):
