@@ -332,6 +332,10 @@ def deduplicate_equals_one(l_preconditions):
 def deduplicate_equals(l_preconditions):
     while deduplicate_equals_one(l_preconditions): pass
 
+def is_internall_call():
+    return getouterframes(inspect.currentframe())[2].filename ==\
+                                                os.path.abspath(__file__)
+
 class Property(object):
     def __init__(self, *initial_data, **kwargs):
         # WARNGING
@@ -1304,13 +1308,13 @@ class Object(metaclass=BaseObjectMeta):
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
-        elif isinstance(other, Object) and (_compilation or _problem_compilation or _effect_compilation):
+        elif not is_internall_call() and isinstance(other, Object) and \
+                    (_compilation or _problem_compilation or _effect_compilation):
             assert self._class_variable and other._class_variable, "Expected fully initialized objects"
             global _collected_predicates
             global _collected_parameters
             _collected_predicates.append("(= %s %s)" % (self._class_variable, other._class_variable))
             _collected_parameters.update({self._class_variable: self.__class__.__name__, other._class_variable: other.__class__.__name__}) # TODO: could be done easier if we added them on init...
-            # raise NotImplementedError("Object-Object selector is not supported")
             push_selector_object(self)
             return self
         elif type(other) == type(True):
