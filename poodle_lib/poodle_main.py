@@ -25,7 +25,6 @@ import datetime
 import logging
 import sys, time
 import requests
-import poodle.arithmetic
 
 # import wrapt
 # import infix
@@ -924,6 +923,7 @@ class Property(object):
         raise NotImplementedError()
 
     def __iadd__(self, other):
+        from poodle.arithmetic import IntegerType
         if isinstance(other, Property) and issubclass(other._value, IntegerType):
             if self._property_value is None and other._property_value is None:
                 # TODO HERE:
