@@ -1,6 +1,7 @@
 import poodle
+import itertools
 
-psystem = [] # Stub.
+psystem = [] # Stub. TODO HERE
 
 class IntegerType(poodle.Object):
     pass
@@ -17,7 +18,7 @@ class LogSparseInteger(IntegerType):
 
     def __add__(self, other):
         if isinstance(other, int):
-            return self.add(logSparseIntegerFactory.getLogSparseInteger(other))
+            return self.add(logSparseIntegerFactory.get(other))
         elif type(other) == LogSparseInteger:
             return self.add(other)
         raise ValueError("Unsupported type for arithmetic operator")
@@ -25,21 +26,23 @@ class LogSparseInteger(IntegerType):
     def __radd__(self, other):
         return self.__add__(self, other)
 
-    def sub(self, other: "LogSparseInteger"):
-        resultVar = Any(LogSparseInteger, space=psystem)
-        sumRes = Any(SumResult, space=psystem)
-        assert sumRes.operator1 == resultVar
-        assert sumRes.operator2 == other
-        assert sumRes.result == self
+    # def sub(self, other: "LogSparseInteger"):
+    #     resultVar = Any(LogSparseInteger, space=psystem)
+    #     sumRes = Any(SumResult, space=psystem)
+    #     assert sumRes.operator1 == resultVar
+    #     assert sumRes.operator2 == other
+    #     assert sumRes.result == self
 
-        return resultVar
+    #     return resultVar
 
-    def __sub__(self, other):
-        if isinstance(other, int):
-            return self.sub(logSparseIntegerFactory.getLogSparseInteger(other))
-        elif type(other) == LogSparseInteger:
-            return self.sub(other)
-        raise ValueError("Unsupported type for arithmetic operator")
+    # def __sub__(self, other):
+    #     if isinstance(other, int):
+    #         return self.sub(logSparseIntegerFactory.get(other))
+    #     elif type(other) == LogSparseInteger:
+    #         return self.sub(other)
+    #     raise ValueError("Unsupported type for arithmetic operator")
+        
+    # TODO: __rsub__
 
     # def mul(self, other: LogSparseInteger, mulres: MulResult):
     #     resultVar = LogSparseInteger()
@@ -54,11 +57,36 @@ class LogSparseInteger(IntegerType):
 
     # # TODO: add division
 
+def logexp(x,a,b,c):
+    return a*pow(b,x*c)
 
-class LogSparseIntegerFactory():
-    pass  # TODO
-    # generate all LogSparseIntegers and generate all results/mults etc. (when space accessed)
-    # implement logarithmic generation based on settings
+class LogSparseIntegerFactory:
+    def __init__(self, start=0, count=21, func=logexp, args={"a":0.0717876, "b":1.25545, "c":2.6032}):
+        self.numbers={func(i, **args):LogSparseInteger(func(i, **args)) for i in range(start, count)}
+        self.NONE = LogSparseInteger("NONE")
+        self.NaN = LogSparseInteger("NaN")
+        self.generate_sparse_sums()
+    def get(self, x):
+        if x < self.numbers[0]: raise ValueError(f"Value of {x} is not supported (lower than {self.numbers[0]})")
+        for n, obj in reversed(list(self.numbers.items())):
+            if x >= n: return obj
+        raise ValueError(f"Value of {x} is not supported (bigger than {self.numbers[-1]})")
+    def get_objects(self):
+        return list(self.numbers.values()) + \
+                list(self.sums)
+    def generate_sparse_sums(self):
+        self.sums=[]
+        for a, b in itertools.combinations(self.numbers.items(), 2):
+            s = SumResult()
+            s.operator1 = a[1]
+            s.operator2 = b[1]
+            sumn = a[0]+b[0]
+            try:
+                s.result = self.get(sumn)
+                self.sums.append(s)
+            except:
+                pass
+    # TODO: spase_mults
 
 
 class SumResult(poodle.Object):
@@ -71,3 +99,10 @@ class MulResult(poodle.Object):
     operator1: LogSparseInteger
     operator2: LogSparseInteger
     result: LogSparseInteger
+
+# TODO HERE: generate all SumResult
+# TODO HERE: generate all MulResult 
+
+# TODO HERE: add generated lists to planning problem to _collected_facts
+#                   or use other poodle3 methods
+

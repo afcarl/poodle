@@ -25,6 +25,7 @@ import datetime
 import logging
 import sys, time
 import requests
+import poodle.arithmetic
 
 # import wrapt
 # import infix
@@ -400,16 +401,16 @@ class Property(object):
 
     def gen_predicate_name(self):
         return self.get_property_class_name()+"-"+self._property_name
-        
+
     def get_value_class_name(self):
         return self._value.__name__
-        
+
     def _pddl_gen_predicates_entry(self):
         return "({pred_name} ?var1 - {cls_name} ?var2 - {prop_cls_name})".format(\
             pred_name=self.gen_predicate_name(),
             cls_name=self.get_property_class_name(),
             prop_cls_name=self.get_value_class_name())
-    
+
     def _pddl_gen_fact(self):
         assert self._property_value, "No property value"
         assert self._property_value.name, "No property name"
@@ -915,21 +916,26 @@ class Property(object):
             raise NotImplementedError("`%s` is not implemented in %s and no _value is assigned to %s" % (attr, self.__class__.__name__, self)) # you can add a stopword if you need this property upstream
         else:
             raise AttributeError('%s object has no attribute %s' % (self.__value, attr))
-    
+
     def __add__(self, other):
         raise NotImplementedError()
-    
+
     def __sub__(self, other):
         raise NotImplementedError()
-    
+
     def __iadd__(self, other):
         if isinstance(other, Property) and issubclass(other._value, IntegerType):
             if self._property_value is None and other._property_value is None:
                 # TODO HERE:
-                # 1. instantiate both objects, 
-                # 2. add them to :parameters
+                # 1. instantiate both objects,
+                self_ob = self._value()
+                other_ob = other._value()
+                # 2. add them to :parameters - already works
+                #     query all history at set(), add parameters and preconditinos
                 # 3. select them from self
-                pass
+                assert self == self_ob and other == other_ob
+                # 4. set self value to sum
+                self.set(self_ob + other_ob)
             elif not self._property_value is None and not other._property_value is None:
                 self.set(self._property_value + other._property_value)
             else:
@@ -938,7 +944,7 @@ class Property(object):
             pass
         else:
             raise TypeError("Operator += for %s and %s is not supported" % (type(self), type(other)))
-        
+
     def __isub__(self, other):
         raise NotImplementedError()
 
@@ -991,16 +997,16 @@ class Relation(Property):
     def __contains__(self, what):
         push_selector_object(self.contains(what))
         return True
-        
+
     def __add__(self, other):
         raise NotImplementedError("Relations do not support math")
-    
+
     def __sub__(self, other):
         raise NotImplementedError("Relations do not support math")
-    
+
     def __iadd__(self, other):
         raise NotImplementedError("Relations do not support math")
-        
+
     def __isub__(self, other):
         raise NotImplementedError("Relations do not support math")
 
@@ -1348,21 +1354,21 @@ class Object(metaclass=BaseObjectMeta):
             ret = v.operator(getattr(ret,k),dir_hint="reverse")
         _compilation = False
         return ret
-        
+
     def _get_all_predicates(self):
         all_preds = []
         for k,v in self.__dict__.items():
             if isinstance(v, Property):
                all_preds.append(v._pddl_gen_predicates_entry())
         return all_preds
-    
+
     def _get_all_facts(self):
         all_facts = []
         for k,v in self.__dict__.items():
             if isinstance(v, Property):
                 all_facts.append(v._pddl_gen_fact())
         return all_facts
-        
+
 
     def __eq__(self, other):
         if isinstance(other, Property):
@@ -1894,8 +1900,8 @@ class Problem:
         _compilation = False
         _problem_compilation = False
         return self.format_problem()
-    
-    def format_problem(self): 
+
+    def format_problem(self):
         txt_objects = ""
         for cls in self.collected_objects:
             txt_objects += "\n        ".join(list(set(self.collected_objects[cls]))) + " - " + cls + "\n        "
@@ -2182,7 +2188,7 @@ def planned(fun=None, *, cost=None):
     if not getattr(fun, "__annotations__", None):
         raise ValueError("For planning to work function parameters must be type annotated")
     kwargs = {}
-    for k, v in fun.__annotations__.items(): 
+    for k, v in fun.__annotations__.items():
         if isinstance(v, str):
             raise ValueError("Forward references are not suported in methods yet")
         else:
