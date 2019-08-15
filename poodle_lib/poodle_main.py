@@ -923,7 +923,21 @@ class Property(object):
         raise NotImplementedError()
     
     def __iadd__(self, other):
-        raise NotImplementedError()
+        if isinstance(other, Property) and issubclass(other._value, IntegerType):
+            if self._property_value is None and other._property_value is None:
+                # TODO HERE:
+                # 1. instantiate both objects, 
+                # 2. add them to :parameters
+                # 3. select them from self
+                pass
+            elif not self._property_value is None and not other._property_value is None:
+                self.set(self._property_value + other._property_value)
+            else:
+                raise TypeError("Unsupported combination of values")
+        elif isinstance(other, Object):
+            pass
+        else:
+            raise TypeError("Operator += for %s and %s is not supported" % (type(self), type(other)))
         
     def __isub__(self, other):
         raise NotImplementedError()

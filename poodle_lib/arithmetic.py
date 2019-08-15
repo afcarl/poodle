@@ -2,8 +2,10 @@ import poodle
 
 psystem = [] # Stub.
 
+class IntegerType(poodle.Object):
+    pass
 
-class LogSparseInteger(poodle.Object):
+class LogSparseInteger(IntegerType):
     def add(self, num: "LogSparseInteger"):
         resultVar = Any(LogSparseInteger, space=psystem)  # TODO: implicit search in current context?
         sumRes = Any(SumResult, space=psystem)
@@ -15,7 +17,7 @@ class LogSparseInteger(poodle.Object):
 
     def __add__(self, other):
         if isinstance(other, int):
-            return self.add(LogSparseIntegerFactory.getLogSparseInteger(other))
+            return self.add(logSparseIntegerFactory.getLogSparseInteger(other))
         elif type(other) == LogSparseInteger:
             return self.add(other)
         raise ValueError("Unsupported type for arithmetic operator")
@@ -33,8 +35,8 @@ class LogSparseInteger(poodle.Object):
         return resultVar
 
     def __sub__(self, other):
-        if type(other) == type(0):
-            return self.sub(LogSparseIntegerFactory.getLogSparseInteger(other))
+        if isinstance(other, int):
+            return self.sub(logSparseIntegerFactory.getLogSparseInteger(other))
         elif type(other) == LogSparseInteger:
             return self.sub(other)
         raise ValueError("Unsupported type for arithmetic operator")
