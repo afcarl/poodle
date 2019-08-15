@@ -8,8 +8,8 @@ class IntegerType(poodle.Object):
 
 class LogSparseInteger(IntegerType):
     def add(self, num: "LogSparseInteger"):
-        resultVar = Any(LogSparseInteger, space=psystem)  # TODO: implicit search in current context?
-        sumRes = Any(SumResult, space=psystem)
+        resultVar = poodle.Any(LogSparseInteger, space=psystem)  # TODO: implicit search in current context?
+        sumRes = poodle.Any(SumResult, space=psystem)
         assert sumRes.operator1 == self
         assert sumRes.operator2 == num
         assert sumRes.result == resultVar

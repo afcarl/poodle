@@ -944,13 +944,13 @@ class Property(object):
         else:
             raise AttributeError('%s object has no attribute %s' % (self.__value, attr))
 
-    def __add__(self, other):
-        raise NotImplementedError()
+    # def __add__(self, other):
+    #     raise NotImplementedError()
 
     def __sub__(self, other):
         raise NotImplementedError()
 
-    def __iadd__(self, other):
+    def __add__(self, other):
         from poodle.arithmetic import IntegerType
         if isinstance(other, Property) and issubclass(other._value, IntegerType):
             if self._property_value is None and other._property_value is None:
@@ -963,7 +963,8 @@ class Property(object):
                 # 3. select them from self
                 assert self == self_ob and other == other_ob
                 # 4. set self value to sum
-                self.set(self_ob + other_ob)
+                # self.set(self_ob + other_ob)
+                return self_ob + other_ob
             elif not self._property_value is None and not other._property_value is None:
                 self.set(self._property_value + other._property_value)
             else:
@@ -1291,7 +1292,7 @@ class Object(metaclass=BaseObjectMeta):
         global _effect_compilation
         global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
-        if _effect_compilation and not self.__imaginary__:
+        if _effect_compilation and not self.__imaginary__ and not is_internall_call():
             raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
         self.__unlock_setter = True
         name = None

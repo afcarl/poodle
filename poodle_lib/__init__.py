@@ -1,7 +1,7 @@
-from .poodle_main import Object, Imaginary, Property, Relation, Bool, PlannedAction, Select, Unselect, StateFact, planned, Problem, log
+from .poodle_main import Object, Imaginary, Property, Relation, Bool, PlannedAction, Select, Unselect, StateFact, planned, Problem, log, Any
 from .schedule import xschedule, schedule
 __all__ = ["arithmetic", 
-            "Object", "Imaginary", 
+            "Object", "Imaginary", "Any", 
             "Property", "Relation", "Bool", "PlannedAction", "Select", "Unselect", # TODO REMOVE-second order
             "StateFact", # TODO: REMOVE-first order
             "planned", "Problem",
