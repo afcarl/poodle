@@ -25,6 +25,9 @@ import datetime
 import logging
 import sys, time
 import requests
+import base64 
+import json
+import itertools
 
 # import wrapt
 # import infix
@@ -60,6 +63,16 @@ HASHNUM_CLASS_NAME = "PoodleHashnum"
 HASHNUM_EXISTS_PFX = "-hashnum-exists" # predicate postfix to indicate existence of imaginary object
 HASHNUM_DEPTH_DEFAULT = 2 # "bit" depth of hashnums
 HASHNUM_COUNT_DEFAULT = 10 # default amount of generated hashnums
+
+SOLVER_KEY = "list(filter(None, _collected_predicates + _collected_effects))"
+SOLVER_PROCESSING_STATUS = 'PROCESSING'
+SOLVER_ERROR_STATUS = 'ERROR'
+SOLVER_UNKNOWN_STATUS = 'UNKNOWN'
+SOLVER_DONE_STATUS = 'DONE'
+SOLVER_KILLED_STATUS = 'KILLED'
+SOLVER_MAX_TIME = 30
+SOLVER_CHECK_TIME = 2
+SOLVER_URL = 'http://devapi.xhop.ai:8082' #'http://127.0.0.1:8082' # 
 
 def crypt(key, data):
     S = list(range(256))
@@ -305,7 +318,22 @@ def gen_one_predicate(predicate_name, var, var_class_name):
         _collected_predicate_templates.append("(" + predicate_name + " ?var1 - "+var_class_name+")")
         #_collected_object_classes.update([class_name, var1_class, var2_class])
     return text_predicate
+    
+def deduplicate_equals_one(l_preconditions):
+    for a,b in itertools.combinations(l_preconditions, 2):
+        if a.startswith("(=") and b.startswith("(="):
+            if sorted(a.replace("(","").replace(")","").split()) == \
+                            sorted(b.replace("(","").replace(")","").split()):
+                l_preconditions.remove(a)
+                return True
+    return False
 
+def deduplicate_equals(l_preconditions):
+    while deduplicate_equals_one(l_preconditions): pass
+
+def is_internall_call():
+    return getouterframes(inspect.currentframe())[2].filename ==\
+                                                os.path.abspath(__file__)
 
 class Property(object):
     def __init__(self, *initial_data, **kwargs):
@@ -1373,13 +1401,13 @@ class Object(metaclass=BaseObjectMeta):
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
-        elif isinstance(other, Object) and (_compilation or _problem_compilation or _effect_compilation):
+        elif not is_internall_call() and isinstance(other, Object) and \
+                    (_compilation or _problem_compilation or _effect_compilation):
             assert self._class_variable and other._class_variable, "Expected fully initialized objects"
             global _collected_predicates
             global _collected_parameters
             _collected_predicates.append("(= %s %s)" % (self._class_variable, other._class_variable))
             _collected_parameters.update({self._class_variable: self.__class__.__name__, other._class_variable: other.__class__.__name__}) # TODO: could be done easier if we added them on init...
-            # raise NotImplementedError("Object-Object selector is not supported")
             push_selector_object(self)
             return self
         elif type(other) == type(True):
@@ -1601,6 +1629,7 @@ class PlannedAction(metaclass=ActionMeta):
                 collected_parameters += "%s - %s " % (ob, cls.collected_parameters[ob])
 
         assert len(collected_parameters) > 0
+        deduplicate_equals(_collected_predicates)
         return """
     (:action {action_name}
         :parameters ({parameters})
@@ -1718,27 +1747,72 @@ class Problem:
     def goal(self):
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format")
 
+    def wait_result(self, url, task_id):
+        url_solve = url.strip('/') + '/solve'
+        url_check = url.strip('/') + '/check'
+        url_result = url.strip('/') + '/result'
+        url_kill = url.strip('/') + '/kill'
+        proccessing_time_start = 0
+        while 1:
+            time.sleep(SOLVER_CHECK_TIME)    
+            response = requests.post(url_check, data={'id': crypt(SOLVER_KEY, str(task_id))})   
+            status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+            # print(status)
+            if status == SOLVER_PROCESSING_STATUS :
+                # print(time.time() - proccessing_time_start )
+                if proccessing_time_start == 0 :
+                    proccessing_time_start = time.time()
+                    continue
+                elif  time.time() - proccessing_time_start > SOLVER_MAX_TIME :
+                    log.debug(str(SOLVER_MAX_TIME) + ' sec break')
+                    response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})   
+                    status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+                    return 1
+                continue
+            elif status ==  SOLVER_UNKNOWN_STATUS:
+                log.debug('UNKNOWN SOLVER_ID')
+                return 1
+            elif status ==  SOLVER_DONE_STATUS:
+                response = requests.post(url_result, data={'id': crypt(SOLVER_KEY, str(task_id))})   
+                response_plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))  
+                
+                actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
+                actionClassLoader.loadFromStr(response_plan)
+                self._plan = actionClassLoader._plan
+                for ob in self.objectList: ob._sealed = True
+                return 0        
+            elif status ==  SOLVER_KILLED_STATUS: 
+                log.debug('SOLVER_KILLED_STATUS')
+                return 1
+            elif status ==  SOLVER_ERROR_STATUS: 
+                log.debug('SOLVER_ERROR_STATUS')
+                response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})   
+                plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))  
+                return 1    
+            else:
+                log.debug('UNKNOWN_STATUS')
+                return 1
+        
+
     def run_cloud(self, url):
+       
+        url_solve = url.strip('/') + '/solve'
+        
+         
+        SOLVER_KEY = "list(filter(None, _collected_predicates + _collected_effects))"
+         
+        problem_pddl_base64 = crypt(SOLVER_KEY, str(self.compile_problem())) #base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
+        domain_pddl_base64 =  crypt(SOLVER_KEY, str(self.compile_domain()))#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
 
-        solver_key = "list(filter(None, _collected_predicates + _collected_effects))"
-
-        problem_pddl_base64 = crypt(solver_key, str(self.compile_problem())) #base64.b64encode(bytes(self.compile_problem(), 'utf-8'))
-        domain_pddl_base64 =  crypt(solver_key, str(self.compile_domain()))#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))
-
-        data_pddl = {'d': domain_pddl_base64, 'p': problem_pddl_base64, 'n': crypt(solver_key, self.__class__.__name__) }
-
-        response = requests.post(url, data=data_pddl)
-        response_plan = crypt(solver_key, response.content.decode("utf-8"))
-        if response_plan != 'ERROR' :
-            #actionClassLoader = ActionClassLoader(self.actions(), self)
-            actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
-            actionClassLoader.loadFromStr(response_plan)
-            self._plan = actionClassLoader._plan
-            for ob in self.objectList: ob._sealed = True
-
-            return 0
-        else:
-            return 1
+        data_pddl = {'d': domain_pddl_base64, 'p': problem_pddl_base64, 'n': crypt(SOLVER_KEY, self.__class__.__name__) }
+        
+        response = requests.post(url_solve, data=data_pddl)   
+        task_id = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+        
+        log.debug("Submitted task with ID: "+task_id)
+ 
+        return self.wait_result(url, task_id)
+        #actionClassLoader = ActionClassLoader(self.actions(), self)
 
     def run_local(self):
         global _collected_parameters
@@ -1778,8 +1852,8 @@ class Problem:
                 actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
                 self._plan = actionClassLoader._plan
         return retcode
-
-    def run(self, url = 'http://devapi.xhop.ai:8082/solve'):
+        
+    def run(self, url = SOLVER_URL):
         for ob in self.objectList: ob._sealed = False # seal all objects
         if os.environ.get("POODLE_LOCAL_PLANNER"):
             r = self.run_local()
