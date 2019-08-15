@@ -3,9 +3,9 @@ from poodle import *
 from poodle.arithmetic import *
 
 class Obj(Object):
-    type: "Type"
+    type: "ObjType"
     count: LogSparseInteger
-    value: LogSparseInteger
+    value2: LogSparseInteger
     
 class ObjType(Object):
     pass
@@ -16,16 +16,16 @@ TYPE_2 = ObjType()
 @planned
 def addValues(o1: Obj, o2: Obj):
     assert o1.type == TYPE_1
-    o1.count += o2.value
+    o1.count += o2.value2
     
 cobj1 = Obj()
 cobj1.type = TYPE_1
-cobj1.value = 1
+cobj1.value2 = 1
 cobj1.count = 1
 
 cobj2 = Obj()
 cobj2.type = TYPE_2
-cobj2.value = 2
+cobj2.value2 = 2
 cobj2.count = 1
 
 def test_math_add():

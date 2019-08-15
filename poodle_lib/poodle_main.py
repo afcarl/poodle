@@ -915,6 +915,18 @@ class Property(object):
             raise NotImplementedError("`%s` is not implemented in %s and no _value is assigned to %s" % (attr, self.__class__.__name__, self)) # you can add a stopword if you need this property upstream
         else:
             raise AttributeError('%s object has no attribute %s' % (self.__value, attr))
+    
+    def __add__(self, other):
+        raise NotImplementedError()
+    
+    def __sub__(self, other):
+        raise NotImplementedError()
+    
+    def __iadd__(self, other):
+        raise NotImplementedError()
+        
+    def __isub__(self, other):
+        raise NotImplementedError()
 
 
 class ProtectedProperty(Property):
@@ -965,6 +977,20 @@ class Relation(Property):
     def __contains__(self, what):
         push_selector_object(self.contains(what))
         return True
+        
+    def __add__(self, other):
+        raise NotImplementedError("Relations do not support math")
+    
+    def __sub__(self, other):
+        raise NotImplementedError("Relations do not support math")
+    
+    def __iadd__(self, other):
+        raise NotImplementedError("Relations do not support math")
+        
+    def __isub__(self, other):
+        raise NotImplementedError("Relations do not support math")
+
+
 
 # class BidirectionalRelation(Relation):
 #     pass
