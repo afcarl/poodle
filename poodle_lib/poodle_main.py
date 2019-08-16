@@ -135,6 +135,7 @@ def Select(what):
     ret = _selector_out
     _selector_out = None
     return ret
+goal = Select
 
 def Unselect(what):
     global _collected_predicates
@@ -1292,13 +1293,14 @@ class BaseObjectMeta(type):
 
 
 class Object(metaclass=BaseObjectMeta):
-    def __init__(self, value=None, _force_name=None): # WARNING! name is too dangerous to put here!
+    def __init__(self, value=None, _force_name=None, _variable_mode=False): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
         self._parse_history_self = [] # Self, non-merged parse history
         self._parameter = False
         self._sealed = False
         self._new_fresh = False # will only become fresh and new if it is imaginary in effect compilation
         global _effect_compilation
+        global _compilation
         global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
         if _effect_compilation and not self.__imaginary__ and not is_internall_call():
@@ -1306,6 +1308,7 @@ class Object(metaclass=BaseObjectMeta):
         self.__unlock_setter = True
         name = None
         self._class_variable = gen_var(self.__class__.__name__, prefix="default-")
+        self._variable_mode = _variable_mode
         self.value = value
         self.name = ""
         # if _problem_compilation:
@@ -1318,7 +1321,7 @@ class Object(metaclass=BaseObjectMeta):
             self.name = _force_name
         global _collected_objects
         global _collected_object_classes
-        if _problem_compilation: # poodle3-ignore
+        if not _compilation and not _effect_compilation and not _variable_mode: 
             self._parse_history = []
             self._class_variable = self.name
             if not self.__imaginary__:
@@ -1921,7 +1924,9 @@ class Problem:
     def get_types(self):
         # collect all types used in both actions and problem objects
         global _collected_object_classes
-        return ' '.join(list(filter(None, list(_collected_object_classes))))
+        all_types = set(self.collected_objects.keys())
+        # return ' '.join(list(filter(None, list(_collected_object_classes))))
+        return ' '.join(list(filter(None, list(OrderedDict.fromkeys(_collected_object_classes | all_types)))))
 
     def compile_domain(self):
         actions = self.get_actions()
@@ -1990,6 +1995,7 @@ class Problem:
                 self.collected_objects[noClassName].append(on)
             else:
                 self.collected_objects[noClassName] = [ on ]
+            print("MY CHECK adding obj", noClassName, on)
         self.collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal
@@ -2300,7 +2306,7 @@ def planned(fun=None, *, cost=None):
         if isinstance(v, str):
             raise ValueError("Forward references are not suported in methods yet")
         else:
-            kwargs[k] = v()
+            kwargs[k] = v(_variable_mode=True)
     class NewPlannedAction(PlannedAction):
         def effect(self):
             global _effect_compilation
@@ -2317,5 +2323,5 @@ def planned(fun=None, *, cost=None):
 
 def Any(what, space=[]):
     # TODO: implement "Any" selection
-    return what()
+    return what(_variable_mode=True)
 

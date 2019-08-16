@@ -1,5 +1,6 @@
 import poodle
 import itertools
+from .poodle_main import _system_objects
 
 psystem = [] # Stub. TODO HERE
 
@@ -107,7 +108,10 @@ class MulResult(poodle.Object):
 
 logSparseIntegerFactory = LogSparseIntegerFactory()
 
+_system_objects.update({ob.name:ob for ob in logSparseIntegerFactory.get_objects()})
 # TODO HERE: generate all SumResult
+# ... add SumResult to _system_facts
+
 # TODO HERE: generate all MulResult 
 
 # TODO HERE: add generated lists to planning problem to _collected_facts

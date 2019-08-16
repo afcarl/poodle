@@ -36,15 +36,18 @@ class StumbProblem(Problem):
     def actions(self):
         return [ ConsumePacketSelect]
     def problem(self):
+        self.o1 = Object()
+        self.o2 = Object()
         pass
     def goal(self):
-        return self.packet.is_consumed == True
+        return self.o1 == self.o2
 
 
 class TestEffectGenPredicate(unittest.TestCase):
     #bug #35 https://trello.com/c/cTbR2PEe/35-effect-dont-declare-predicates-for-declaration-collection
     def test_effectGenPredicate(self):
         p = StumbProblem()
+        p.compile_problem()
         p.compile_domain()
         lines = p.get_predicates()
         #Packet-is_consumed ?var1 - Packet
@@ -66,8 +69,15 @@ def test_booleffect():
                 scheduler1: Scheduler):
             assert  scheduler1.queueLength == stobj
             scheduler1.active = True
+        def problem(self):
+            self.o1 = Object()
+            self.o2 = Object()
+            pass
+        def goal(self):
+            return self.o1 == self.o2
     t=T()
     # print(t.compile_domain())
+    t.compile_problem()
     assert "(Scheduler-active " in \
          t.compile_domain().split("ScheduleQueueProcessed")[1]
 
