@@ -99,7 +99,6 @@ class SumResult(poodle.Object):
     operator2: LogSparseInteger
     result: LogSparseInteger
 
-
 class MulResult(poodle.Object):
     operator1: LogSparseInteger
     operator2: LogSparseInteger

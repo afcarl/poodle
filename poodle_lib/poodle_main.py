@@ -1409,7 +1409,6 @@ class Object(metaclass=BaseObjectMeta):
         all_facts = []
         for k,v in [[n,getattr(self,n)] for n in dir(self)]:
             if isinstance(v, Property):
-                print("MY CHECK VALLLLLL----", k, v)
                 all_facts.append(v._pddl_gen_fact())
         return all_facts
 
@@ -1995,7 +1994,6 @@ class Problem:
                 self.collected_objects[noClassName].append(on)
             else:
                 self.collected_objects[noClassName] = [ on ]
-            print("MY CHECK adding obj", noClassName, on)
         self.collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal

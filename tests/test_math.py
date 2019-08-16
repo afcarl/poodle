@@ -31,6 +31,7 @@ cobj2.value2 = 2
 cobj2.count = 1
 
 def test_math_add():
+    # debug_plan([addValues], space=globals(), goal=Select(cobj2.count==3), plan=[addValues])
     xschedule([addValues], space=globals(), goal=goal(cobj2.count==3))
 
 @planned
@@ -40,7 +41,7 @@ def plus1(o1: Obj):
     
 @pytest.mark.skip(reason="no way of currently testing this")
 def test_math_plus1():
-    xschedule([plus1], space=globals(), goal=goal(cobj2.count==3))
+    xschedule([plus1], space=globals(), goal=(cobj2.count==3))
     
 @planned
 def check3(obj: Obj):
