@@ -25,6 +25,9 @@ class LogSparseInteger(IntegerType):
 
     def __radd__(self, other):
         return self.__add__(self, other)
+        
+    def gen_name(self, name):
+        return super().gen_name(name+"-num-"+str(self.value))
 
     # def sub(self, other: "LogSparseInteger"):
     #     resultVar = Any(LogSparseInteger, space=psystem)
@@ -58,7 +61,7 @@ class LogSparseInteger(IntegerType):
     # # TODO: add division
 
 def logexp(x,a,b,c):
-    return a*pow(b,x*c)
+    return int(a*pow(b,x*c))
 
 class LogSparseIntegerFactory:
     def __init__(self, start=0, count=21, func=logexp, args={"a":0.0717876, "b":1.25545, "c":2.6032}):
@@ -67,10 +70,10 @@ class LogSparseIntegerFactory:
         self.NaN = LogSparseInteger("NaN")
         self.generate_sparse_sums()
     def get(self, x):
-        if x < self.numbers[0]: raise ValueError(f"Value of {x} is not supported (lower than {self.numbers[0]})")
+        if x < list(self.numbers.keys())[0]: raise ValueError(f"Value of {x} is not supported (lower than %s)" % list(self.numbers.keys())[0])
         for n, obj in reversed(list(self.numbers.items())):
             if x >= n: return obj
-        raise ValueError(f"Value of {x} is not supported (bigger than {self.numbers[-1]})")
+        raise ValueError(f"Value of {x} is not supported (bigger than %s)" % list(self.numbers.keys()[-1]))
     def get_objects(self):
         return list(self.numbers.values()) + \
                 list(self.sums)
@@ -86,6 +89,7 @@ class LogSparseIntegerFactory:
                 self.sums.append(s)
             except:
                 pass
+        
     # TODO: spase_mults
 
 
@@ -99,6 +103,9 @@ class MulResult(poodle.Object):
     operator1: LogSparseInteger
     operator2: LogSparseInteger
     result: LogSparseInteger
+
+
+logSparseIntegerFactory = LogSparseIntegerFactory()
 
 # TODO HERE: generate all SumResult
 # TODO HERE: generate all MulResult 

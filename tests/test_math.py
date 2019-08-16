@@ -6,6 +6,8 @@ class Obj(Object):
     type: "ObjType"
     count: LogSparseInteger
     value2: LogSparseInteger
+    not_initialized: LogSparseInteger
+    not_initialized2: "ObjType"
     
 class ObjType(Object):
     pass
@@ -29,7 +31,16 @@ cobj2.value2 = 2
 cobj2.count = 1
 
 def test_math_add():
-    xschedule([addValues], space=globals(), goal=(cobj2.count==3))
+    xschedule([addValues], space=globals(), goal=Select(cobj2.count==3))
+
+@planned
+def plus1(o1: Obj):
+    assert o1.type == TYPE_1
+    o1.count += 1
+    
+@pytest.mark.skip(reason="no way of currently testing this")
+def test_math_plus1():
+    xschedule([plus1], space=globals(), goal=(cobj2.count==3))
     
 @planned
 def check3(obj: Obj):

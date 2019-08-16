@@ -439,12 +439,15 @@ class Property(object):
             prop_cls_name=self.get_value_class_name())
 
     def _pddl_gen_fact(self):
-        assert self._property_value, "No property value"
-        assert self._property_value.name, "No property name"
+        if self._property_value is None:
+            val = self._value._none_object
+        else:
+            val = self._property_value
+            
         return "({pred_name} {parent_name} {prop_name})".format(\
             pred_name=self.gen_predicate_name(),
             parent_name=self._property_of_inst.name,
-            prop_name=self._property_value.name)
+            prop_name=val.name)
 
     def find_parameter_variable(self):
         "finds the variable that holds the class or our value"
@@ -555,7 +558,7 @@ class Property(object):
                 obj = subjObjectClass()
                 who_instantiating_fix = False # Fix for bug with instantiating Class.prop in inst.prop2
         else:
-            if _compilation: # actually means "running selector" and would be better renamed as `_selector_mode`
+            if True or _compilation: # actually means "running selector" and would be better renamed as `_selector_mode`
                 # PART 3.1.
                 # in compilation mode, we can return anything we want as result is not being used in later computations
                 log.debug("OPERATOR IN COMPILATION/SELECTOR MODE")
@@ -801,6 +804,9 @@ class Property(object):
         return self.operator(other, "equals")
 
     def __eq__(self, other):
+        from poodle.arithmetic import IntegerType, logSparseIntegerFactory
+        if isinstance(other, int) and issubclass(self._value, IntegerType):
+            other = logSparseIntegerFactory.get(other)
         if hasattr(self, "_property_of_inst") and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
             log.warning("!!!!!! ALT BEH 1 - me is {0} {1} other is {2} ".format(self, self._property_of_inst, other))
             push_selector_object(other.equals(self))
@@ -812,8 +818,8 @@ class Property(object):
 
     def _prepare(self, valueObjectObject=None):
         global _compilation
-        if not _compilation:
-            raise BaseException("Parameter mutation outside of compilation")
+        # if not _compilation:
+            # raise BaseException("Parameter mutation outside of compilation")
         # TODO: also detect that we are outside of effect block!
         global _collected_predicates
         global _collected_parameters
@@ -841,7 +847,7 @@ class Property(object):
                 init_mode = True
         assert type(value) == self._value, "Type mismatch: setting %s to %s.%s expecting %s" % (value, self._property_of_inst.__class__.__name__, self._property_name, self._value)
         if not isinstance(self, Relation): self._property_value = value # protect from re-setting value as Relation did same above...
-        if _problem_compilation:
+        if _problem_compilation: # poodle3 ignore, as we collect sets from props
             global _collected_facts
             text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
             if not isinstance(value, Imaginary) and not isinstance(self, Relation):
@@ -1077,7 +1083,7 @@ class StateFact(Property): # TODO HERE Rename to Bool()
         # print("EFFECT-PDDL: TODO", self._property_of_inst._parse_history)
         # now find in our instance's _parse_history our instance's class name variable
 
-        if _problem_compilation:
+        if _problem_compilation: # poodle3: ignore stateFact...
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
             _collected_facts.append(text_predicate)
         else:
@@ -1108,7 +1114,7 @@ class StateFact(Property): # TODO HERE Rename to Bool()
             # TODO: could call self.unset() if run in effect compilation, not problem compilation!!
             # (add below...)
             raise NotImplementedError("Comparing StateFact to False is not supported")
-        global _problem_compilation
+        global _problem_compilation # poodle3: ignore stateface
         if _problem_compilation:
             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
             # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
@@ -1215,6 +1221,7 @@ class BaseObjectMeta(type):
             _none_objects[name] = cls()
             _none_objects[name].name = "p-null-%s" % name
             _none_objects[name]._class_variable = gen_var(name, prefix="null-")
+            cls._none_object = _none_objects[name]
 
         if not name in ["Object", "Imaginary"]:
             _none_objects[name] = cls()
@@ -1224,6 +1231,7 @@ class BaseObjectMeta(type):
             else:
                 _none_objects[name].name = ' '.join(["p-null-Imaginary"] * HASHNUM_DEPTH_DEFAULT) # HASHNUM_DEPTH_DEFAULT fix!
                 _none_objects[name]._class_variable = gen_var_imaginary(name, prefix="null-")
+            cls._none_object = _none_objects[name]
         if hasattr(cls, "__annotations__"):
             for ann, tname in cls.__annotations__.items():
                 if hasattr(tname, "_name") and tname._name == "Set":
@@ -1287,6 +1295,7 @@ class Object(metaclass=BaseObjectMeta):
     def __init__(self, value=None, _force_name=None): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
         self._parse_history_self = [] # Self, non-merged parse history
+        self._parameter = False
         self._sealed = False
         self._new_fresh = False # will only become fresh and new if it is imaginary in effect compilation
         global _effect_compilation
@@ -1299,7 +1308,8 @@ class Object(metaclass=BaseObjectMeta):
         self._class_variable = gen_var(self.__class__.__name__, prefix="default-")
         self.value = value
         self.name = ""
-        if _problem_compilation:
+        # if _problem_compilation:
+        if True:
             if name is None: # WARNING name must always be none
                 frameinfo = getframeinfo(inspect.currentframe().f_back)
                 name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
@@ -1308,7 +1318,7 @@ class Object(metaclass=BaseObjectMeta):
             self.name = _force_name
         global _collected_objects
         global _collected_object_classes
-        if _problem_compilation:
+        if _problem_compilation: # poodle3-ignore
             self._parse_history = []
             self._class_variable = self.name
             if not self.__imaginary__:
@@ -1330,6 +1340,7 @@ class Object(metaclass=BaseObjectMeta):
                 #    - indicate that we are now a property of instantiated object
                 #    - have a reference to the mother instance of Object
                 getattr(self, key)._property_of_inst = self
+                # poodle3-ignore -->
                 if not self.__imaginary__ and _problem_compilation and \
                         not getattr(self,key)._value is None and \
                         not isinstance(getattr(self, key), Relation) and \
@@ -1386,15 +1397,16 @@ class Object(metaclass=BaseObjectMeta):
 
     def _get_all_predicates(self):
         all_preds = []
-        for k,v in self.__dict__.items():
+        for k,v in [[n,getattr(self,n)] for n in dir(self)]:
             if isinstance(v, Property):
                all_preds.append(v._pddl_gen_predicates_entry())
         return all_preds
 
     def _get_all_facts(self):
         all_facts = []
-        for k,v in self.__dict__.items():
+        for k,v in [[n,getattr(self,n)] for n in dir(self)]:
             if isinstance(v, Property):
+                print("MY CHECK VALLLLLL----", k, v)
                 all_facts.append(v._pddl_gen_fact())
         return all_facts
 
@@ -1404,6 +1416,7 @@ class Object(metaclass=BaseObjectMeta):
             return other.__eq__(self)
         elif not is_internall_call() and isinstance(other, Object) and \
                     (_compilation or _problem_compilation or _effect_compilation):
+                        # i believe this is actually not deeded in problem compilation, so poodle3 ignore
             assert self._class_variable and other._class_variable, "Expected fully initialized objects"
             global _collected_predicates
             global _collected_parameters
@@ -1412,6 +1425,9 @@ class Object(metaclass=BaseObjectMeta):
             push_selector_object(self)
             return self
         elif type(other) == type(True):
+            return True # WARNING! stub for asserts! TODO FIX
+        elif isinstance(other, int):
+            raise NotImplementedError()
             return True # WARNING! stub for asserts! TODO FIX
         else:
             return super().__eq__(other)
@@ -1444,7 +1460,24 @@ class Object(metaclass=BaseObjectMeta):
             if _compilation and name[0] != "_" and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter: # all system properties must start with _
             #if _compilation and not hasattr(self, name) and not "__unlock_setter" in name:
                 raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
-            super().__setattr__(name, value)
+    
+            if isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                getattr(self, name).set(value)
+            elif isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                if isinstance(getattr(self, name), Bool):
+                    getattr(self, name).set(value)
+                else:
+                    if value == True:
+                        getattr(self, name).set()
+                    elif value == False:
+                        getattr(self, name).unset()
+                    else:
+                        raise AssertionError("Something is wrong")
+            elif isinstance(value, int) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                from poodle.arithmetic import logSparseIntegerFactory
+                getattr(self, name).set(logSparseIntegerFactory.get(value))
+            else:
+                super().__setattr__(name, value)
 
     # def __getattr__(self, attr):
     #     print("GA-", self, attr)

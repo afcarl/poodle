@@ -7,13 +7,13 @@ class RequestState(Object):
 class IPAddr(Object): # -> ipaddr - object; ip-192.179.4.34 - ipaddr
     
     def gen_name(self, name):
-        return super(IPAddr, self).gen_name("IP-"+name)
+        return super().gen_name("IP-"+name)
 
 class Network(Object):
     is_default = StateFact()
     match_ip = Relation(IPAddr) # all ipaddresses that match this network
     def gen_name(self, name):
-        return super(Network, self).gen_name("NET-"+name)
+        return super().gen_name("NET-"+name)
 Network.is_narrower_than = Relation(Network)
 # TODO: define default behaviour with "default" net narrower-than
 
