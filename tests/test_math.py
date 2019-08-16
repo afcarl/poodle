@@ -32,6 +32,7 @@ cobj2.count = 1
 
 def test_math_add():
     # debug_plan([addValues], space=globals(), goal=Select(cobj2.count==3), plan=[addValues])
+    # TODO: these two combined do not work
     xschedule([addValues], space=globals(), goal=goal(cobj2.count==3))
 
 @planned

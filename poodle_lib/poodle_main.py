@@ -1416,8 +1416,8 @@ class Object(metaclass=BaseObjectMeta):
     def __eq__(self, other):
         if isinstance(other, Property):
             return other.__eq__(self)
-        elif not is_internall_call() and isinstance(other, Object) and \
-                    (_compilation or _problem_compilation or _effect_compilation):
+        elif isinstance(other, Object) and \
+                    (_compilation or _problem_compilation or _effect_compilation) and not is_internall_call():
                         # i believe this is actually not deeded in problem compilation, so poodle3 ignore
             assert self._class_variable and other._class_variable, "Expected fully initialized objects"
             global _collected_predicates

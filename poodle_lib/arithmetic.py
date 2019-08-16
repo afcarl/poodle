@@ -80,13 +80,15 @@ class LogSparseIntegerFactory:
                 list(self.sums)
     def generate_sparse_sums(self):
         self.sums=[]
-        for a, b in itertools.combinations(self.numbers.items(), 2):
+        for a, b in itertools.permutations(self.numbers.items(), 2):
             s = SumResult()
             s.operator1 = a[1]
             s.operator2 = b[1]
             sumn = a[0]+b[0]
             try:
                 s.result = self.get(sumn)
+                # print("MY CHECK SUM", s.operator1, "+", s.operator2, "=", s.result) # TODO: this does not work
+                # print("MY CHECK SUM", a[1], "+", b[1], "=", self.get(sumn), s, "need===", sumn)
                 self.sums.append(s)
             except:
                 pass
