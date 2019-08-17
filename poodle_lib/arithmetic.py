@@ -88,7 +88,7 @@ class LogSparseIntegerFactory:
             try:
                 s.result = self.get(sumn)
                 # print("MY CHECK SUM", s.operator1, "+", s.operator2, "=", s.result) # TODO: this does not work
-                # print("MY CHECK SUM", a[1], "+", b[1], "=", self.get(sumn), s, "need===", sumn)
+                # print("MY CHECK SUM", a[0], "+", b[0], "=", self.get(sumn), s, "need===", sumn)
                 self.sums.append(s)
             except:
                 pass
