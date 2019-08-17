@@ -141,6 +141,13 @@ def Select(what):
     return ret
 goal = Select
 
+def _reset_state():
+    global _selector_out
+    _selector_out = None
+    _compilation = False
+    _problem_compilation = False
+    _effect_compilation = False
+
 def Unselect(what):
     global _collected_predicates
     global _replaced_predicates
@@ -249,8 +256,8 @@ def class_or_hash(var_name, class_name):
 
 def push_selector_object(obj):
     global _selector_out
-    print("MY CHECK - pushing to selector %s" % obj)
-    traceback.print_stack()
+    # print("MY CHECK - pushing to selector %s" % obj)
+    # traceback.print_stack()
     if _selector_out:
         log.debug("CHECK - selector output not null")
         if type(_selector_out) == type([]):
