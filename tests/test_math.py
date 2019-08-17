@@ -29,23 +29,31 @@ def subValues(o1: Obj, o2: Obj):
 
 
 cobj1 = Obj()
-cobj1.type = TYPE_1
-cobj1.value2 = 1
-cobj1.count = 1
-
 cobj2 = Obj()
-cobj2.type = TYPE_2
-cobj2.value2 = 2
-cobj2.count = 1
-  
 def test_math_sub():
+
+    cobj1.type = TYPE_1
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 1
+  
     # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
-    # TODO: these two combined do not work
-    # for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1)): print(p)
-    print(xschedule([addValues], space=globals(), goal=goal(cobj1.count==3)))
+    for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1)): print(p)
 
 
 def test_math_add():
+
+    cobj1.type = TYPE_1
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 1
+    
     # debug_plan([addValues], space=globals(), goal=Select(cobj2.count==3), plan=[addValues])
     # TODO: these two combined do not work
     for p in schedule([addValues], space=globals(), goal=goal(cobj1.count==3)): print(p)
