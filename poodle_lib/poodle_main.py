@@ -28,6 +28,7 @@ import requests
 import base64 
 import json
 import itertools
+import traceback
 
 # import wrapt
 # import infix
@@ -131,8 +132,11 @@ def Select(what):
     global _selector_out
     global _compilation
     if not _compilation and type(_selector_out) == type([]):
-        raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method")
-    ret = _selector_out
+        raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method, content: %s" % repr(_selector_out))
+    if isinstance(_selector_out, list):
+        ret = _selector_out.copy()
+    else:
+        ret = _selector_out
     _selector_out = None
     return ret
 goal = Select
@@ -245,6 +249,8 @@ def class_or_hash(var_name, class_name):
 
 def push_selector_object(obj):
     global _selector_out
+    print("MY CHECK - pushing to selector %s" % obj)
+    traceback.print_stack()
     if _selector_out:
         log.debug("CHECK - selector output not null")
         if type(_selector_out) == type([]):
