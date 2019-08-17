@@ -31,6 +31,19 @@ def planned2(fun=None, *, cost=None):
     fun.plan_class = NewPlannedAction
     return fun
 
+# TODO: unfinished method
+def objwalk(obj, path=(), memo=None):
+    if memo is None:
+        memo = set()
+    if isinstance(obj, Property):
+        if id(obj) not in memo:
+            memo.add(id(obj)) 
+            for key, value in iteritems(obj):
+                for child in objwalk(value, path + (key,), memo):
+                    yield child
+    else:
+        yield path, obj
+
 def _create_problem(methods, space, exit=None, goal=None):
     """schedule methods within variables space space with exit method exit or goal goal"""
     # 1. for every variable in space, 
@@ -52,8 +65,9 @@ def _create_problem(methods, space, exit=None, goal=None):
     l_collected_classes = set()
     l_collected_facts = set()
     p.gen_hashnums()
-    # TODO: scan objects recursively
+    # TODO: scan objects recursively: expand space with recursive scan
     for ob in p.objectList + list(_system_objects.values()):
+        ob._parse_history = []
         l_collected_predicates |= set(ob._get_all_predicates())
         l_collected_objects[ob.__class__.__name__].append(ob.name.split()[0])
         if not ob.__class__._none_object in l_collected_objects[ob.__class__.__name__]:
@@ -83,6 +97,7 @@ def _create_problem(methods, space, exit=None, goal=None):
     p.get_types = lambda: ' '.join(list(filter(None, list(l_collected_classes))))
     p.get_predicates = lambda: "\n        ".join(list(set(l_collected_predicates)))
     
+    # assert p.collected_goal
     
     mcount = 0
     actions = [] 

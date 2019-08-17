@@ -972,12 +972,14 @@ class Property(object):
 
     def _i_operator(self, other, op="add"):
         from poodle.arithmetic import IntegerType
+        # TODO support for 'other' being IntegerType instead of Property
         if isinstance(other, Property) and issubclass(other._value, IntegerType):
+            # The following in reality seems to check _variable_mode
+            # TODO: rewrite this to use ._variable_mode checks
             if self._property_value is None and other._property_value is None:
-                # TODO HERE:
                 # 1. instantiate both objects,
-                self_ob = self._value()
-                other_ob = other._value()
+                self_ob = self._value(_variable_mode=True)
+                other_ob = other._value(_variable_mode=True)
                 # 2. add them to :parameters - already works
                 #     query all history at set(), add parameters and preconditinos
                 # 3. select them from self
@@ -998,6 +1000,7 @@ class Property(object):
             else:
                 raise TypeError("Unsupported combination of values")
         elif isinstance(other, Object):
+            raise NotImplementedError("Math with IntegerType objects is not implemented")
             pass
         else:
             raise TypeError("Operator '%s' for %s and %s is not supported" % (op, type(self), type(other)))
@@ -1008,8 +1011,43 @@ class Property(object):
     def __sub__(self, other):
         return self._i_operator(other, op="sub")
 
-    def __rsub__(self, other):
-        return self._i_operator(other, op="rsub")
+    def _ineq(self, other, op="gt"):
+        from poodle.arithmetic import IntegerType
+        # TODO support for 'other' being IntegerType instead of Property
+        # assert (isinstance(other, Property) and self._value == other._value) or \
+            # isinstance(other, Object) and self._value == type(other) 
+        if isinstance(other, Property) and issubclass(other._value, IntegerType):
+            # The following in reality seems to check _variable_mode
+            # there may be more situations, like var<>obj, obj<>var
+            # TODO: rewrite this to use ._variable_mode checks
+            if self._property_value is None and other._property_value is None:
+                # 1. instantiate both objects,
+                self_ob = self._value(_variable_mode=True)
+                other_ob = other._value(_variable_mode=True)
+                # 2. add them to :parameters - DOES NOT work by default
+                # ...
+                assert self == self_ob and other == other_ob
+                if op=="gt":
+                    return self_ob > other_ob
+                elif op=="lt":
+                    return other_ob > self_ob
+                elif op=="ge":
+                    return self_ob >= other_ob
+                elif op=="le":
+                    return other_ob >= self_ob
+                else:
+                    raise AssertionError()
+    def __gt__(self, other):
+        return self._ineq(other, "gt")
+    def __ge__(self, other):
+        return self._ineq(other, "ge")
+    def __lt__(self, other):
+        return self._ineq(other, "lt")
+    def __le__(self, other):
+        return self._ineq(other, "le")
+
+    # def __rsub__(self, other):
+        # return self._i_operator(other, op="rsub")
 
 
 class ProtectedProperty(Property):

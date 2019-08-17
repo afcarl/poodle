@@ -60,6 +60,21 @@ def test_math_add():
     # print(xschedule([addValues], space=globals(), goal=goal(cobj1.count==3)))
 
 @planned
+def addIfGreater(o1: Obj, o2: Obj):
+    assert o1.count > o2.count
+    o1.count = o1.count - o2.count
+
+def test_greater_than():
+    cobj1.type = TYPE_1
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 3
+    for p in schedule([addIfGreater], space=globals(), goal=goal(cobj1.count==2)): print(p)
+
+@planned
 def plus1(o1: Obj):
     assert o1.type == TYPE_1
     o1.count += 1

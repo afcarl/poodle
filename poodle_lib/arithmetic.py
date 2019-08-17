@@ -28,6 +28,7 @@ class LogSparseInteger(IntegerType):
     def gen_name(self, name):
         return super().gen_name(name+"-num-"+str(self.value))
 
+    # TODO: for every method here, support 'other' to be a 'int' value
     def sub(self, other: "LogSparseInteger"):
         resultVar = poodle.Any(LogSparseInteger, space=_system_objects)
         sumRes = poodle.Any(SumResult, space=_system_objects)
@@ -43,7 +44,33 @@ class LogSparseInteger(IntegerType):
         elif type(other) == LogSparseInteger:
             return self.sub(other)
         raise ValueError("Unsupported type for arithmetic operator")
-        
+    
+    def __gt__(self, other):
+        gt = poodle.Any(GreaterThan, space=_system_objects)
+        assert gt.val1 == self and gt.val2 == other
+        if self._variable_mode: return True
+        else: return self.value > other.value
+
+    def __lt__(self, other):
+        gt = poodle.Any(GreaterThan, space=_system_objects)
+        assert gt.val2 == self and gt.val1 == other
+        if self._variable_mode: return True
+        else: return self.value < other.value
+
+    def __ge__(self, other):
+        ge = poodle.Any(GreaterEqual, space=_system_objects)
+        assert ge.val1 == self and ge.val2 == other
+        if self._variable_mode: return True
+        else: return self.value >= other.value
+    
+    def __le__(self, other):
+        ge = poodle.Any(GreaterEqual, space=_system_objects)
+        assert ge.val2 == self and ge.val1 == other
+        if self._variable_mode: return True
+        else: return self.value <= other.value
+
+
+
     # TODO: __rsub__
 
     # def mul(self, other: LogSparseInteger, mulres: MulResult):
@@ -70,6 +97,7 @@ class LogSparseIntegerFactory:
         self.NONE = LogSparseInteger("NONE")
         self.NaN = LogSparseInteger("NaN")
         self.generate_sparse_sums()
+        self.generate_gt_ge()
     def get(self, x):
         if x < list(self.numbers.keys())[0]: raise ValueError(f"Value of {x} is not supported (lower than %s)" % list(self.numbers.keys())[0])
         for n, obj in reversed(list(self.numbers.items())):
@@ -77,11 +105,11 @@ class LogSparseIntegerFactory:
         raise ValueError(f"Value of {x} is not supported (bigger than %s)" % list(self.numbers.keys()[-1]))
     def get_objects(self):
         return list(self.numbers.values()) + \
-                list(self.sums)
+                list(self.sums) + self.gts + self.ges
     def generate_sparse_sums(self):
         self.sums=[]
         for a, b in itertools.product(self.numbers.items(), repeat=2):
-            s = SumResult()
+            s = SumResult("%s+%s"%(a[0],b[0]))
             s.operator1 = a[1]
             s.operator2 = b[1]
             sumn = a[0]+b[0]
@@ -92,6 +120,22 @@ class LogSparseIntegerFactory:
                 self.sums.append(s)
             except:
                 pass
+    
+    def generate_gt_ge(self):
+        self.gts = []
+        self.ges = []
+        for a, b in itertools.product(self.numbers.items(), repeat=2):
+            if a[0] > b[0]:
+                gt = GreaterThan("%s>%s"%(a[0],b[0]))
+                gt.val1 = a[1]
+                gt.val2 = b[1]
+                self.gts.append(gt)
+            if a[0] >= b[0]:
+                ge = GreaterEqual("%s>=%s"%(a[0],b[0]))
+                ge.val1 = a[1]
+                ge.val2 = b[1]
+                self.ges.append(ge)
+
         
     # TODO: spase_mults
 
@@ -101,6 +145,13 @@ class SumResult(poodle.Object):
     operator2: LogSparseInteger
     result: LogSparseInteger
 
+class GreaterThan(poodle.Object):
+    val1: LogSparseInteger
+    val2: LogSparseInteger
+
+class GreaterEqual(poodle.Object):
+    val1: LogSparseInteger
+    val2: LogSparseInteger
 class MulResult(poodle.Object):
     operator1: LogSparseInteger
     operator2: LogSparseInteger
