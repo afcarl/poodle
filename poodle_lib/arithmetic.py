@@ -2,15 +2,13 @@ import poodle
 import itertools
 from .poodle_main import _system_objects
 
-psystem = [] # Stub. TODO HERE
-
 class IntegerType(poodle.Object):
     pass
 
 class LogSparseInteger(IntegerType):
     def add(self, num: "LogSparseInteger"):
-        resultVar = poodle.Any(LogSparseInteger, space=psystem)  # TODO: implicit search in current context?
-        sumRes = poodle.Any(SumResult, space=psystem)
+        resultVar = poodle.Any(LogSparseInteger, space=_system_objects)  # TODO: implicit search in current context?
+        sumRes = poodle.Any(SumResult, space=_system_objects)
         assert sumRes.operator1 == self
         assert sumRes.operator2 == num
         assert sumRes.result == resultVar
@@ -30,21 +28,21 @@ class LogSparseInteger(IntegerType):
     def gen_name(self, name):
         return super().gen_name(name+"-num-"+str(self.value))
 
-    # def sub(self, other: "LogSparseInteger"):
-    #     resultVar = Any(LogSparseInteger, space=psystem)
-    #     sumRes = Any(SumResult, space=psystem)
-    #     assert sumRes.operator1 == resultVar
-    #     assert sumRes.operator2 == other
-    #     assert sumRes.result == self
+    def sub(self, other: "LogSparseInteger"):
+        resultVar = poodle.Any(LogSparseInteger, space=_system_objects)
+        sumRes = poodle.Any(SumResult, space=_system_objects)
+        assert sumRes.operator1 == resultVar
+        assert sumRes.operator2 == other
+        assert sumRes.result == self
 
-    #     return resultVar
+        return resultVar
 
-    # def __sub__(self, other):
-    #     if isinstance(other, int):
-    #         return self.sub(logSparseIntegerFactory.get(other))
-    #     elif type(other) == LogSparseInteger:
-    #         return self.sub(other)
-    #     raise ValueError("Unsupported type for arithmetic operator")
+    def __sub__(self, other):
+        if isinstance(other, int):
+            return self.sub(logSparseIntegerFactory.get(other))
+        elif type(other) == LogSparseInteger:
+            return self.sub(other)
+        raise ValueError("Unsupported type for arithmetic operator")
         
     # TODO: __rsub__
 
@@ -66,7 +64,9 @@ def logexp(x,a,b,c):
 
 class LogSparseIntegerFactory:
     def __init__(self, start=0, count=21, func=logexp, args={"a":0.0717876, "b":1.25545, "c":2.6032}):
-        self.numbers={func(i, **args):LogSparseInteger(func(i, **args)) for i in range(start, count)}
+        base10 = {i:LogSparseInteger(i) for i in range(start,10)}
+        base10.update({func(i, **args):LogSparseInteger(func(i, **args)) for i in range(start, count)})
+        self.numbers=base10
         self.NONE = LogSparseInteger("NONE")
         self.NaN = LogSparseInteger("NaN")
         self.generate_sparse_sums()

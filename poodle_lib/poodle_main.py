@@ -1726,7 +1726,10 @@ class PlannedAction(metaclass=ActionMeta):
         raise NotImplementedError("effect() in %s not implemented" % repr(self))
 
     def __call__(self):
-        return getattr(self.problem, self.methodName)(**self.kwargs)
+        if hasattr(self.problem, self.methodName):
+            return getattr(self.problem, self.methodName)(**self.kwargs)
+        else:
+            return self.wrappedMethod[0].__call__(**self.kwargs)
 
 
 class PlannedActionJinja2(PlannedAction):

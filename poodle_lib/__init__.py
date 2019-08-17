@@ -5,4 +5,4 @@ __all__ = ["arithmetic",
             "Property", "Relation", "Bool", "PlannedAction", "Select", "Unselect", # TODO REMOVE-second order
             "StateFact", # TODO: REMOVE-first order
             "planned", "Problem",
-            "xschedule", "debug_plan", "goal"]
+            "xschedule", "schedule", "debug_plan", "goal"]

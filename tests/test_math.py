@@ -19,6 +19,7 @@ TYPE_2 = ObjType()
 def addValues(o1: Obj, o2: Obj):
     assert o1.type == TYPE_1
     o1.count += o2.value2
+    return "DONE"
     
 cobj1 = Obj()
 cobj1.type = TYPE_1
@@ -33,7 +34,8 @@ cobj2.count = 1
 def test_math_add():
     # debug_plan([addValues], space=globals(), goal=Select(cobj2.count==3), plan=[addValues])
     # TODO: these two combined do not work
-    xschedule([addValues], space=globals(), goal=goal(cobj1.count==3))
+    for p in schedule([addValues], space=globals(), goal=goal(cobj1.count==3)): print(p)
+    # print(xschedule([addValues], space=globals(), goal=goal(cobj1.count==3)))
 
 @planned
 def plus1(o1: Obj):
