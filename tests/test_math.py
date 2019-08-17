@@ -32,7 +32,7 @@ cobj1 = Obj()
 cobj2 = Obj()
 def test_math_sub():
 
-    cobj1.type = TYPE_1
+    cobj1.type = TYPE_2
     cobj1.value2 = 1
     cobj1.count = 1
 
