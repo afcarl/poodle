@@ -951,13 +951,13 @@ class Property(object):
         else:
             raise AttributeError('%s object has no attribute %s' % (self.__value, attr))
 
-    # def __add__(self, other):
-    #     raise NotImplementedError()
-
     def __sub__(self, other):
         raise NotImplementedError()
 
     def __add__(self, other):
+        return self._i_operator(other)
+
+    def _i_operator(self, other, op="add"):
         from poodle.arithmetic import IntegerType
         if isinstance(other, Property) and issubclass(other._value, IntegerType):
             if self._property_value is None and other._property_value is None:
@@ -971,18 +971,32 @@ class Property(object):
                 assert self == self_ob and other == other_ob
                 # 4. set self value to sum
                 # self.set(self_ob + other_ob)
-                return self_ob + other_ob
+                if op=="add":
+                    return self_ob + other_ob
+                elif op=="sub":
+                    return self_ob - other_ob
+                elif op=="rsub":
+                    return other_ob - self_ob
+
             elif not self._property_value is None and not other._property_value is None:
+                raise NotImplementedError("Python type arithmetics is not currently supported")
                 self.set(self._property_value + other._property_value)
+                # TODO HERE: support for different types of python based arithmetics
             else:
                 raise TypeError("Unsupported combination of values")
         elif isinstance(other, Object):
             pass
         else:
-            raise TypeError("Operator += for %s and %s is not supported" % (type(self), type(other)))
+            raise TypeError("Operator '%s' for %s and %s is not supported" % (op, type(self), type(other)))
+    
+    def __radd__(self, other):
+        return self.__add__(other)
 
-    def __isub__(self, other):
-        raise NotImplementedError()
+    def __sub__(self, other):
+        return self._i_operator(other, op="sub")
+
+    def __rsub__(self, other):
+        return self._i_operator(other, op="rsub")
 
 
 class ProtectedProperty(Property):
@@ -2312,8 +2326,8 @@ def planned(fun=None, *, cost=None):
         def effect(self):
             global _effect_compilation
             global _selector_out
-            _effect_compilation = False
-            _effect_compilation = True
+            # _effect_compilation = False
+            # _effect_compilation = True
             fun(self.problem, **kwargs)
             _selector_out = None
     for k, v in kwargs.items(): setattr(NewPlannedAction, k, v)
