@@ -80,7 +80,7 @@ class LogSparseIntegerFactory:
                 list(self.sums)
     def generate_sparse_sums(self):
         self.sums=[]
-        for a, b in itertools.permutations(self.numbers.items(), 2):
+        for a, b in itertools.product(self.numbers.items(), repeat=2):
             s = SumResult()
             s.operator1 = a[1]
             s.operator2 = b[1]
