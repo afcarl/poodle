@@ -1,6 +1,7 @@
 import pytest
 from poodle import *
 from poodle.arithmetic import *
+import poodle.problem
 
 class Obj(Object):
     type: "ObjType"
@@ -41,7 +42,7 @@ def test_math_sub():
     cobj2.count = 1
   
     # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
-    for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1)): print(p)
+    for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1)): p
 
 
 def test_math_add():
@@ -56,7 +57,7 @@ def test_math_add():
     
     # debug_plan([addValues], space=globals(), goal=Select(cobj2.count==3), plan=[addValues])
     # TODO: these two combined do not work
-    for p in schedule([addValues], space=globals(), goal=goal(cobj1.count==3)): print(p)
+    for p in schedule([addValues], space=globals(), goal=goal(cobj1.count==3)): p
     # print(xschedule([addValues], space=globals(), goal=goal(cobj1.count==3)))
 
 @planned
@@ -73,7 +74,7 @@ def test_greater_than():
     cobj2.value2 = 2
     cobj2.count = 3
     # debug_plan([addIfGreater], space=globals(), goal=goal(cobj1.count==2), plan=[addIfGreater])
-    for p in schedule([addIfGreater], space=globals(), goal=goal(cobj2.count==2)): print(p)
+    for p in schedule([addIfGreater], space=globals(), goal=goal(cobj2.count==2)): p
 
 def test_debugging_formally_executes():
     cobj1.type = TYPE_1
@@ -98,7 +99,31 @@ def test_advanced_multi_add_inequality():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq], space=globals(), goal=goal(cobj2.count==2)): print(p)
+    for p in schedule([addComplecIneq], space=globals(), goal=goal(cobj2.count==2)): p
+
+
+class ProblemExample(poodle.problem.Problem):
+    @planned
+    def addComplecIneq(o1: Obj, o2: Obj):
+        assert o1.count + o2.count > o1.value2 - o2.value2
+        o1.count = o1.count - o2.count
+    def problem(self):
+        self.cobj1 = self.addObject(Obj())
+        self.cobj2 = self.addObject(Obj())
+
+        self.cobj1.type = TYPE_1 # test for recursive object imports
+        self.cobj1.value2 = 1
+        self.cobj1.count = 1
+
+        self.cobj2.type = TYPE_2
+        self.cobj2.value2 = 2
+        self.cobj2.count = 3
+    def goal(self):
+        return self.cobj2.count == 2
+
+def test_class_and_recursive_object_import():
+    p = ProblemExample()
+    for a in p.run(): print(a)
 
 
 @planned

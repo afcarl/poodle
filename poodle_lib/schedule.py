@@ -8,6 +8,15 @@ class SchedulingError(Exception):
 class EmptyPlanError(Exception):
     pass
 
+def _space_to_list(sp):
+    if isinstance(sp, collections.abc.Mapping):
+        r = list(set([o for o in sp.values() if isinstance(o, Object)]))
+    else: r = list(set(sp))
+    rec = []
+    for o in r:
+        rec += _get_recursive_objects(o)
+    return list(set(rec))
+
 def planned2(fun=None, *, cost=None):
     global _selector_out
     _selector_out = None
@@ -35,17 +44,35 @@ def planned2(fun=None, *, cost=None):
     return fun
 
 # TODO: unfinished method
-def objwalk(obj, path=(), memo=None):
+def _objwalk(obj, path=(), memo=None):
     if memo is None:
         memo = set()
-    if isinstance(obj, Property):
+    if isinstance(obj, Object):
         if id(obj) not in memo:
             memo.add(id(obj)) 
-            for key, value in iteritems(obj):
-                for child in objwalk(value, path + (key,), memo):
-                    yield child
+            for k in dir(obj):
+                val = getattr(obj, k)
+                if isinstance(val, Property):
+                    for child in _objwalk(val, path + (k,), memo):
+                        yield child
+                    if val._property_value:
+                        for child in _objwalk(val._property_value, path + (k,), memo):
+                            yield child
+                    else:
+                        # has no value, return default value
+                        pass
     else:
         yield path, obj
+
+def _get_recursive_objects(obj):
+    ret = set()
+    for p in _objwalk(obj):
+        v = p[1]._property_value
+        if v: ret.add(v)
+        else: ret.add(p[1]._value._none_object)
+    return ret | set([obj])
+
+
 
 def _create_problem(methods, space, exit=None, goal=None):
     """schedule methods within variables space space with exit method exit or goal goal"""
@@ -53,7 +80,7 @@ def _create_problem(methods, space, exit=None, goal=None):
     #    - create a full :predicates description of the object 
     #    - create init objects
     # 2. for every method, add them to planning problem
-    assert isinstance(space, collections.abc.Mapping)
+    assert isinstance(space, list)
     global _selector_out
     _selector_out = None
 
@@ -61,7 +88,7 @@ def _create_problem(methods, space, exit=None, goal=None):
         pass
     
     p = XSProblem()
-    p.objectList = [x for x in list(space.values()) if isinstance(x, Object)]
+    p.objectList = [x for x in space if isinstance(x, Object)]
     
     l_collected_predicates = set()
     l_collected_objects = collections.defaultdict(list)
@@ -123,6 +150,7 @@ def _create_problem(methods, space, exit=None, goal=None):
     return p
 
 def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=50):
+    space = _space_to_list(space)
     p = _create_problem(methods, space, exit, goal)
     p.solution = lambda: plan
     r = p.check_solution(iterations)
@@ -132,12 +160,13 @@ def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=50):
     
 
 def schedule(methods, space, exit=None, goal=None):
+    space = _space_to_list(space)
     p = _create_problem(methods, space, exit, goal)
     p.run()
     _reset_state()
     if p.plan is None: raise SchedulingError("Unable to solve")
     if not p.plan: raise EmptyPlanError("Empty plan")
-    for o,v in space.items(): 
+    for v in space: 
         if isinstance(v, Object): v._sealed = False
     return p.plan
     
