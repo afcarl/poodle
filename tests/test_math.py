@@ -75,6 +75,17 @@ def test_greater_than():
     # debug_plan([addIfGreater], space=globals(), goal=goal(cobj1.count==2), plan=[addIfGreater])
     for p in schedule([addIfGreater], space=globals(), goal=goal(cobj2.count==2)): print(p)
 
+def test_debugging_formally_executes():
+    cobj1.type = TYPE_1
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 3
+    assert debug_plan([addIfGreater], space=globals(), goal=goal(cobj1.count==2), plan=[addIfGreater])
+ 
+
 @planned
 def plus1(o1: Obj):
     assert o1.type == TYPE_1
