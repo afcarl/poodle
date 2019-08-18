@@ -5,6 +5,9 @@ from .poodle_main import Select, _collected_predicates, _collected_effects, _non
 class SchedulingError(Exception):
     pass
 
+class EmptyPlanError(Exception):
+    pass
+
 def planned2(fun=None, *, cost=None):
     global _selector_out
     _selector_out = None
@@ -65,6 +68,10 @@ def _create_problem(methods, space, exit=None, goal=None):
     l_collected_classes = set()
     l_collected_facts = set()
     p.gen_hashnums()
+    l_collected_goal = []
+    if goal:
+        for ph in goal._parse_history:
+            l_collected_goal += ph["text_predicates"]
     # TODO: scan objects recursively: expand space with recursive scan
     for ob in p.objectList + list(_system_objects.values()):
         ob._parse_history = []
@@ -79,10 +86,6 @@ def _create_problem(methods, space, exit=None, goal=None):
     # global _collected_predicates
     global _collected_effects
     # l_collected_goal = list(filter(None, list(collections.OrderedDict.fromkeys(_collected_predicates + _collected_effects))))
-    l_collected_goal = []
-    if goal:
-        for ph in goal._parse_history:
-            l_collected_goal += ph["text_predicates"]
     _collected_predicates = []
     _collected_effects = []
     _selector_out = None
@@ -97,7 +100,7 @@ def _create_problem(methods, space, exit=None, goal=None):
     p.get_types = lambda: ' '.join(list(filter(None, list(l_collected_classes))))
     p.get_predicates = lambda: "\n        ".join(list(set(l_collected_predicates)))
     
-    # assert p.collected_goal
+    assert p.collected_goal
     
     mcount = 0
     actions = [] 
@@ -131,8 +134,9 @@ def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=50):
 def schedule(methods, space, exit=None, goal=None):
     p = _create_problem(methods, space, exit, goal)
     p.run()
-    if p.plan is None: raise SchedulingError("Unable to solve")
     _reset_state()
+    if p.plan is None: raise SchedulingError("Unable to solve")
+    if not p.plan: raise EmptyPlanError("Empty plan")
     for o,v in space.items(): 
         if isinstance(v, Object): v._sealed = False
     return p.plan

@@ -72,7 +72,8 @@ def test_greater_than():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addIfGreater], space=globals(), goal=goal(cobj1.count==2)): print(p)
+    # debug_plan([addIfGreater], space=globals(), goal=goal(cobj1.count==2), plan=[addIfGreater])
+    for p in schedule([addIfGreater], space=globals(), goal=goal(cobj2.count==2)): print(p)
 
 @planned
 def plus1(o1: Obj):
