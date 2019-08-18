@@ -4,7 +4,7 @@ from poodle.arithmetic import *
 
 class Obj(Object):
     type: "ObjType"
-    count: LogSparseInteger
+    count: int
     value2: LogSparseInteger
     not_initialized: LogSparseInteger
     not_initialized2: "ObjType"
