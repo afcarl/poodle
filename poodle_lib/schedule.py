@@ -97,7 +97,19 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
             l_collected_objects[ob.__class__.__name__].append(ob.__class__._none_object.name.split()[0])
         l_collected_classes.add(ob.__class__.__name__)
         l_collected_facts |= set(ob._get_all_facts())
-        
+    
+    #################################
+    # TEST OBJECT SPACE
+    l_all_objects_defs = set()
+    for o in l_collected_objects.values():
+        l_all_objects_defs |= set(o)
+    for f in l_collected_facts:
+        for fct in f.replace("(", "").replace(")", "").split()[1:]:
+            if not fct in l_all_objects_defs:
+                raise AssertionError()
+    #################################
+
+
     # 3. extract the created goal from global stack
     # global _collected_predicates
     global _collected_effects
