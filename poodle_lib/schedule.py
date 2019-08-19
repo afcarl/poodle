@@ -123,6 +123,7 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
 
     
     # TODO: collected_classes should derive from collected_ojbects
+    l_collected_classes |= set(l_collected_objects.keys())
     p.collected_objects = l_collected_objects
     p.collected_classes = list(l_collected_classes)
     p.collected_facts = list(l_collected_facts)
