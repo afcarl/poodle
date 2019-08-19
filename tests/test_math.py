@@ -130,6 +130,21 @@ def test_debugging_formally_executes():
     cobj2.count = 3
     assert debug_plan([addIfGreater], space=globals(), goal=goal(cobj1.count==2), plan=[addIfGreater])
  
+def test_complex_integer_comp():
+    @planned
+    def findNonNegativeIngegerObj(o: Obj):
+        assert o.count > -1
+        o.value2 = o.count
+    cobj1.type = TYPE_1
+    cobj1.value2 = 0
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = -1
+    for p in schedule([findNonNegativeIngegerObj], space=[cobj1, cobj2], goal=goal(cobj1.value2==1)): p
+
+
 @planned
 def addComplecIneq(o1: Obj, o2: Obj):
     assert o1.count + o2.count > o1.value2 - o2.value2

@@ -1082,6 +1082,22 @@ class Property(object):
                     raise AssertionError()
             else:
                 raise AssertionError("Objects have mixed/existing values")
+        else:
+            other = resolve_poodle_special_object(other)
+            assert self._property_value is None
+            self_ob = self._value(_variable_mode=True)
+            assert self == self_ob
+            if op=="gt":
+                return self_ob > other
+            elif op=="lt":
+                return other > self_ob
+            elif op=="ge":
+                return self_ob >= other
+            elif op=="le":
+                return other >= self_ob
+            else:
+                raise AssertionError()
+
     def __gt__(self, other):
         return self._ineq(other, "gt")
     def __ge__(self, other):
@@ -1569,6 +1585,12 @@ class Object(metaclass=BaseObjectMeta):
         if (_compilation or _problem_compilation) and isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             # print("EXEC SET ---------------------------------------", name, value)
             getattr(self, name).set(value)
+        elif (_compilation or _problem_compilation) and isinstance(value, Property) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+            print("MY CHECK calling for", self, name, value)
+            traceback.print_stack()
+            local_obj = value._value(_variable_mode=True)
+            assert local_obj == value
+            getattr(self, name).set(local_obj)
         elif (_effect_compilation or _problem_compilation) and isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             if isinstance(getattr(self, name), Bool):
                 getattr(self, name).set(value)
@@ -2426,7 +2448,7 @@ def planned(fun=None, *, cost=None):
         return functools.partial(planned, cost=cost)
     cost = cost if cost else 1
     if not getattr(fun, "__annotations__", None):
-        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter")
+        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter: %s" % fun)
     fun._cost = cost
     fun._planned = True
     return fun
@@ -2436,7 +2458,7 @@ def _planned_internal(fun=None, *, cost=None):
         return functools.partial(planned, cost=cost)
     cost = cost if cost else 1
     if not getattr(fun, "__annotations__", None):
-        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter")
+        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter: %s" % fun)
     kwargs = {}
     for k, v in fun.__annotations__.items():
         if isinstance(v, str):
@@ -2461,5 +2483,10 @@ def _planned_internal(fun=None, *, cost=None):
 
 def Any(what, space=[]):
     # TODO: implement "Any" selection
-    return what(_variable_mode=True)
+    global _compilation
+    l_compilation = _compilation
+    _compilation = False
+    ob = what(_variable_mode=True)
+    _compilation = l_compilation
+    return ob
 
