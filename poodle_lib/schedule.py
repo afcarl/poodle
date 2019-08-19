@@ -1,6 +1,6 @@
 from poodle import *
 import collections.abc
-from .poodle_main import ListLike, Select, Problem, _collected_predicates, _collected_effects, _none_objects, _system_objects, HASHNUM_CLASS_NAME, _selector_out, _reset_state
+from .poodle_main import ListLike, Select, Problem, _collected_predicates, _collected_effects, _none_objects, _system_objects, HASHNUM_CLASS_NAME, _selector_out, _reset_state, _planned_internal
 
 class SchedulingError(Exception):
     pass
@@ -119,10 +119,11 @@ def _create_problem(methods, space, exit=None, goal=None):
     
     for m in methods:
         if not callable(m): continue
-        if not hasattr(m, "plan_class"): continue
-        # pm = planned(m, cost=m.plan_class.cost)
-        # actions.append(pm.plan_class)
-        actions.append(m.plan_class)
+        # if not hasattr(m, "plan_class"): continue
+        if not hasattr(m, "_planned"): continue
+        pm = _planned_internal(m, cost=m._cost)
+        actions.append(pm.plan_class)
+        # actions.append(m.plan_class)
         # def methodWrapper(self, *args, **kwargs):
         #     return pm(*args, **kwargs)
         # methodWrapper.__name__ = m.__name__
@@ -138,7 +139,7 @@ def _create_problem(methods, space, exit=None, goal=None):
 def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=50):
     space = _space_to_list(space)
     p = _create_problem(methods, space, exit, goal)
-    p.solution = lambda: plan
+    p.solution = lambda: [_planned_internal(a, cost=a._cost) for a in plan ]
     r = p.check_solution(iterations)
     # clean up after debugging
     _reset_state()

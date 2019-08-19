@@ -2380,6 +2380,16 @@ def planned(fun=None, *, cost=None):
     cost = cost if cost else 1
     if not getattr(fun, "__annotations__", None):
         raise ValueError("For planning to work function parameters must be type annotated with at least one parameter")
+    fun._cost = cost
+    fun._planned = True
+    return fun
+
+def _planned_internal(fun=None, *, cost=None):
+    if fun is None:
+        return functools.partial(planned, cost=cost)
+    cost = cost if cost else 1
+    if not getattr(fun, "__annotations__", None):
+        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter")
     kwargs = {}
     for k, v in fun.__annotations__.items():
         if isinstance(v, str):
@@ -2395,8 +2405,10 @@ def planned(fun=None, *, cost=None):
     NewPlannedAction.__name__ = fun.__name__
     NewPlannedAction.cost = cost
     NewPlannedAction.wrappedMethod = [fun]
-    fun.plan_class = NewPlannedAction
-    return fun
+    def wrapped(**kwargs):
+        return fun(**kwargs)
+    wrapped.plan_class = NewPlannedAction
+    return wrapped
 
 def Any(what, space=[]):
     # TODO: implement "Any" selection
