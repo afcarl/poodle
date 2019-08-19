@@ -106,7 +106,7 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     for f in l_collected_facts:
         for fct in f.replace("(", "").replace(")", "").split()[1:]:
             if not fct in l_all_objects_defs:
-                raise AssertionError()
+                raise AssertionError("Fact %s is not in classes space!" % fct)
     #################################
 
 
