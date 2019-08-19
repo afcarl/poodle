@@ -185,6 +185,19 @@ def test_class_and_recursive_object_import():
     p.run()
     for a in p.plan: a
 
+def test_math_add_int():
+    @planned
+    def addComplecIneq_num(o1: Obj, o2: Obj):
+        assert o1.count + 1 > o1.value2 - o2.value2
+        o1.count = o1.count - o2.count
+    cobj1.type = TYPE_1
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 3
+    for p in schedule([addComplecIneq], space=globals(), goal=goal(cobj2.count==2)): p
 
 @planned
 def plus1(o1: Obj):

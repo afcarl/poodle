@@ -1015,6 +1015,7 @@ class Property(object):
 
     def _i_operator(self, other, op="add"):
         from poodle.arithmetic import IntegerType
+        other = resolve_poodle_special_object(other)
         # TODO support for 'other' being IntegerType instead of Property
         if isinstance(other, Property) and issubclass(other._value, IntegerType):
             # The following in reality seems to check _variable_mode
@@ -1042,9 +1043,17 @@ class Property(object):
                 # TODO HERE: support for different types of python based arithmetics
             else:
                 raise TypeError("Unsupported combination of values")
-        elif isinstance(other, Object):
-            raise NotImplementedError("Math with IntegerType objects is not implemented")
-            pass
+        elif isinstance(other, IntegerType):
+            assert self._property_value is None and \
+                self._property_of_inst._variable_mode
+            self_ob = self._value(_variable_mode=True)
+            assert self == self_ob
+            if op=="add":
+                return self_ob + other
+            elif op=="sub":
+                return self_ob - other
+            elif op=="rsub":
+                return other - self_ob
         else:
             raise TypeError("Operator '%s' for %s and %s is not supported" % (op, type(self), type(other)))
     
