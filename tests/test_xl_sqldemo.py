@@ -171,6 +171,14 @@ class SQLDemoTest(SQLActionModel):
             self.applyLikeConditions
         ]
         
+def test_solution_demo():
+    p = SQLDemoTest()
+    p.problem()
+    debug_plan(
+        methods=[getattr(p,m) for m in dir(p) if callable(getattr(p,m))], 
+        space=list(p.__dict__.values())+p.objectList,
+        goal=goal(p.goal())
+    )
 def test_sql_demo():
     p = SQLDemoTest()
     # p.check_solution(50)
