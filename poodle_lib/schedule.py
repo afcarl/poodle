@@ -82,8 +82,11 @@ def _create_problem(methods, space, exit=None, goal=None):
     p.gen_hashnums()
     l_collected_goal = []
     if goal:
-        for ph in goal._parse_history:
-            l_collected_goal += ph["text_predicates"]
+        if not type(goal) == list:
+            goal = [goal]
+        for g in goal:
+            for ph in g._parse_history:
+                l_collected_goal += ph["text_predicates"]
     # TODO: scan objects recursively: expand space with recursive scan
     for ob in p.objectList + list(_system_objects.values()):
         ob._parse_history = []

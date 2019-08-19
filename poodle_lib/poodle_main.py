@@ -131,8 +131,8 @@ def Select(what):
     # WARNING! This is very thread unsafe!!!
     global _selector_out
     global _compilation
-    if not _compilation and type(_selector_out) == type([]):
-        raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method, content: %s" % repr(_selector_out))
+    # if not _compilation and type(_selector_out) == type([]):
+        # raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method, content: %s" % repr(_selector_out))
     if isinstance(_selector_out, list):
         ret = _selector_out.copy()
     else:

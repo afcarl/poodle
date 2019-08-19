@@ -44,6 +44,36 @@ def test_math_sub():
     # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
     for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1)): p
 
+def test_math_sub_multigoal():
+
+    cobj1.type = TYPE_2
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 1
+  
+    # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
+    for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1 and cobj1.type==TYPE_2)): p
+    
+@pytest.mark.skip(reason="TODO")
+def test_isolation():
+
+    cobj1.type = TYPE_2
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 1
+  
+    # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
+    try:
+        for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1 and cobj.type==TYPE_2)): p
+    except:
+        pass
+    for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1 and cobj1.type==TYPE_2)): p
 
 def test_math_add():
 
