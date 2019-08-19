@@ -492,7 +492,8 @@ class Property(object):
                 pred_name=self.gen_predicate_name(),
                 parent_name=self._property_of_inst.name,
                 prop_name=obj.name)
-
+    def _get_none_object(self):
+        return self._value._none_object
     def _pddl_gen_fact(self):
         if self._property_value is None:
             val = self._value._none_object
@@ -1562,6 +1563,13 @@ class Object(metaclass=BaseObjectMeta):
             if isinstance(v, Property):
                 all_facts += v._pddl_gen_fact()
         return all_facts
+
+    def _get_all_none_objects(self):
+        none_objects = set()
+        for k,v in [[n,getattr(self,n)] for n in dir(self)]:
+            if isinstance(v, Property):
+                none_objects.add(v._get_none_object())
+        return none_objects
 
 
     def __eq__(self, other):
