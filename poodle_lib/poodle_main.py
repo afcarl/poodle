@@ -1468,7 +1468,8 @@ class Object(metaclass=BaseObjectMeta):
             # print(key)
             if isinstance(getattr(self, key), Property):
                 # print("copying propeorty", key)
-                setattr(self, key, copy.copy(getattr(self,key)))
+                # setattr(self, key, copy.copy(getattr(self,key)))
+                self.__setattr__(key, copy.copy(getattr(self,key)), _init_mode=True)
                 if isinstance(getattr(self, key), Relation):
                     getattr(self, key)._property_value = ListLike()
                 # for the every property in my Object,
@@ -1575,7 +1576,7 @@ class Object(metaclass=BaseObjectMeta):
         else:
             return super().__eq__(other)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name, value, _init_mode=False):
         global _problem_compilation
         global _compilation
 
@@ -1585,7 +1586,7 @@ class Object(metaclass=BaseObjectMeta):
         if (_compilation or _problem_compilation) and isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             # print("EXEC SET ---------------------------------------", name, value)
             getattr(self, name).set(value)
-        elif (_compilation or _problem_compilation) and isinstance(value, Property) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+        elif not _init_mode and (_compilation or _problem_compilation) and isinstance(value, Property) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             local_obj = value._value(_variable_mode=True)
             assert local_obj == value
             getattr(self, name).set(local_obj)
