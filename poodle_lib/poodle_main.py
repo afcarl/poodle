@@ -1586,8 +1586,6 @@ class Object(metaclass=BaseObjectMeta):
             # print("EXEC SET ---------------------------------------", name, value)
             getattr(self, name).set(value)
         elif (_compilation or _problem_compilation) and isinstance(value, Property) and hasattr(self, name) and isinstance(getattr(self, name), Property):
-            print("MY CHECK calling for", self, name, value)
-            traceback.print_stack()
             local_obj = value._value(_variable_mode=True)
             assert local_obj == value
             getattr(self, name).set(local_obj)
