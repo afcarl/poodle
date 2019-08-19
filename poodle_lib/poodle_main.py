@@ -1371,9 +1371,11 @@ class BaseObjectMeta(type):
         if hasattr(cls, "__annotations__"):
             for ann, tname in cls.__annotations__.items():
                 if hasattr(tname, "_name") and tname._name == "Set":
-                    trname = tname.__args__[0].__forward_arg__
+                    tname = tname.__args__[0]
+                    if hasattr(tname, "__forward_arg__"):
+                        tname = tname.__forward_arg__
                     # TODO HERE: support for special BOOL and INT
-                    setattr(cls, ann, Relation(trname))
+                    setattr(cls, ann, Relation(tname))
                 elif tname == int:
                     from poodle.arithmetic import LogSparseInteger
                     setattr(cls, ann, Property(LogSparseInteger))

@@ -1,29 +1,29 @@
 from poodle import *
 import pytest
 from poodle.problem import Problem
+from typing import Set
 
 class StrObject(Object):
     def __str__(self):
         return str(self.value)
 
 class Table(StrObject):
-    # TODO HERE: reimplement these:::
-    columns = Relation("Column")
+    columns: Set["Column"]
     is_selected: bool
 
 class Column(StrObject):
-    contains_elements_from = Relation("Column")
+    contains_elements_from: Set["Column"]
 
 class Select(StrObject):
-    columns_available = Relation("Column")
-    started = Bool(False)
-    completed = Bool(False)
+    columns_available: Set[Column]
+    started: bool
+    completed: bool
     
 class Condition(StrObject):
-    applied = Bool(False)
+    applied: bool
     
 class SimpleLikeCondition(Condition):
-    lhs_column = Property("Column")
+    lhs_column: Column
 
 class SQLActionModel(Problem):
         
