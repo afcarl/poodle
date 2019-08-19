@@ -2,6 +2,7 @@ import pytest
 from poodle import *
 from poodle.schedule import _objwalk, _get_recursive_objects
 from poodle.arithmetic import logSparseIntegerFactory, LogSparseInteger
+from typing import Set
 
 def test_objwalk():
     class OT(Object):
@@ -45,4 +46,37 @@ def test_recursive_obj():
         OT._none_object in ro and\
         LogSparseInteger._none_object in ro and\
         Newo._none_object in ro
-        
+
+def test_integer_set_obj():
+    class S(Object):
+        i: Set[int]
+        r: int
+    
+    @planned
+    def check_int_in_set(o: S, i: int):
+        assert i in o.i
+        o.r = i
+
+    s=S()
+    s.i.add(2)
+    s.i.add(1)
+
+    for p in schedule([check_int_in_set], space=[s], goal=goal(s.r==1),
+                sessionName="test_integer_set_obj"): p
+
+@pytest.mark.skip(reason="TODO")
+def test_integer_set():
+    class S(Object):
+        i: Set[int]
+        r: int
+    
+    @planned
+    def check_int_in_set(o: S, i: int):
+        assert 1 in o.i
+        o.r = i
+
+    s=S()
+    s.i.add(2)
+    s.i.add(1)
+
+    for p in schedule([check_int_in_set], space=[s], goal=goal(s.r==1)): p

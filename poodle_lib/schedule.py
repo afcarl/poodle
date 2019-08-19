@@ -59,7 +59,7 @@ def _get_recursive_objects(obj, leveldeep=0):
 
 
 
-def _create_problem(methods, space, exit=None, goal=None):
+def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     """schedule methods within variables space space with exit method exit or goal goal"""
     # 1. for every variable in space, 
     #    - create a full :predicates description of the object 
@@ -72,6 +72,7 @@ def _create_problem(methods, space, exit=None, goal=None):
     class XSProblem(Problem):
         pass
     
+    if sessionName: XSProblem.__name__ = sessionName
     p = XSProblem()
     p.objectList = [x for x in space if isinstance(x, Object)]
     
@@ -152,9 +153,9 @@ def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=10):
     return r
     
 
-def schedule(methods, space, exit=None, goal=None):
+def schedule(methods, space, exit=None, goal=None, sessionName=None):
     space = _space_to_list(space)
-    p = _create_problem(methods, space, exit, goal)
+    p = _create_problem(methods, space, exit, goal, sessionName)
     p.run()
     _reset_state()
     if p.plan is None: raise SchedulingError("Unable to solve")
@@ -165,8 +166,8 @@ def schedule(methods, space, exit=None, goal=None):
     
     
 
-def xschedule(methods, space, exit=None, goal=None):
+def xschedule(methods, space, exit=None, goal=None, sessionName=None):
     """schedule methods within variables space space with exit method exit or goal goal
     this function returns a composable method that has the resulting algorithm built in"""
-    return [x() for x in schedule(methods, space, exit, goal)][-1]
+    return [x() for x in schedule(methods, space, exit, goal, sessionName)][-1]
     

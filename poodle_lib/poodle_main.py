@@ -1157,6 +1157,7 @@ class Relation(Property):
     #     raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
 
     def add(self, what):
+        what = resolve_poodle_special_object(what)
         if isinstance(what, Object): self._property_value.append(what)
         self._unset = True
         super().set(what)
@@ -1375,6 +1376,7 @@ class BaseObjectMeta(type):
                     if hasattr(tname, "__forward_arg__"):
                         tname = tname.__forward_arg__
                     # TODO HERE: support for special BOOL and INT
+                    if not isinstance(tname, str): tname = resolve_poodle_type(tname)
                     setattr(cls, ann, Relation(tname))
                 elif tname == int:
                     from poodle.arithmetic import LogSparseInteger
