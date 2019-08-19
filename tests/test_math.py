@@ -123,7 +123,8 @@ class ProblemExample(poodle.problem.Problem):
 
 def test_class_and_recursive_object_import():
     p = ProblemExample()
-    for a in p.run(): print(a)
+    p.run()
+    for a in p.plan: a
 
 
 @planned

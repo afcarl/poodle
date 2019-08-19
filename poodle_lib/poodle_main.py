@@ -256,7 +256,6 @@ def class_or_hash(var_name, class_name):
 
 def push_selector_object(obj):
     global _selector_out
-    # print("MY CHECK - pushing to selector %s" % obj)
     # traceback.print_stack()
     if _selector_out:
         log.debug("CHECK - selector output not null")
@@ -860,7 +859,10 @@ class Property(object):
                 # assume init mode
                 init_mode = True
         assert type(value) == self._value, "Type mismatch: setting %s to %s.%s expecting %s" % (value, self._property_of_inst.__class__.__name__, self._property_name, self._value)
-        if not isinstance(self, Relation): self._property_value = value # protect from re-setting value as Relation did same above...
+        if not isinstance(self, Relation) and not self._property_of_inst._variable_mode: 
+            self._property_value = value # protect from re-setting value as Relation did same above...
+        elif isinstance(self, Relation) and not self._property_of_inst._variable_mode:
+            self._property_value.append(value)
         if _problem_compilation: # poodle3 ignore, as we collect sets from props
             global _collected_facts
             text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
@@ -1037,6 +1039,8 @@ class Property(object):
                     return other_ob >= self_ob
                 else:
                     raise AssertionError()
+            else:
+                raise AssertionError("Objects have mixed/existing values")
     def __gt__(self, other):
         return self._ineq(other, "gt")
     def __ge__(self, other):
@@ -2369,7 +2373,7 @@ def planned(fun=None, *, cost=None):
         return functools.partial(planned, cost=cost)
     cost = cost if cost else 1
     if not getattr(fun, "__annotations__", None):
-        raise ValueError("For planning to work function parameters must be type annotated")
+        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter")
     kwargs = {}
     for k, v in fun.__annotations__.items():
         if isinstance(v, str):
@@ -2378,15 +2382,13 @@ def planned(fun=None, *, cost=None):
             kwargs[k] = v(_variable_mode=True)
     class NewPlannedAction(PlannedAction):
         def effect(self):
-            global _effect_compilation
             global _selector_out
-            # _effect_compilation = False
-            # _effect_compilation = True
-            fun(self.problem, **kwargs)
+            fun(**kwargs)
             _selector_out = None
     for k, v in kwargs.items(): setattr(NewPlannedAction, k, v)
     NewPlannedAction.__name__ = fun.__name__
     NewPlannedAction.cost = cost
+    NewPlannedAction.wrappedMethod = [fun]
     fun.plan_class = NewPlannedAction
     return fun
 

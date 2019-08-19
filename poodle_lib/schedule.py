@@ -11,37 +11,11 @@ class EmptyPlanError(Exception):
 def _space_to_list(sp):
     if isinstance(sp, collections.abc.Mapping):
         r = list(set([o for o in sp.values() if isinstance(o, Object)]))
-    else: r = list(set(sp))
+    else: r = list(set([o for o in sp if isinstance(o, Object)]))
     rec = []
     for o in r:
         rec += _get_recursive_objects(o)
     return list(set(rec))
-
-def planned2(fun=None, *, cost=None):
-    global _selector_out
-    _selector_out = None
-    if fun is None:
-        return functools.partial(planned, cost=cost)
-    cost = cost if cost else 1
-    if not getattr(fun, "__annotations__", None):
-        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter")
-    kwargs = {}
-    for k, v in fun.__annotations__.items(): 
-        if isinstance(v, str):
-            raise ValueError("Forward references are not suported in methods yet")
-        else:
-            kwargs[k] = v(_variable_mode=True)
-    class NewPlannedAction(PlannedAction):
-        def effect(self):
-            global _selector_out
-            fun(**kwargs)
-            _selector_out = None
-    for k, v in kwargs.items(): setattr(NewPlannedAction, k, v)
-    NewPlannedAction.__name__ = fun.__name__
-    NewPlannedAction.cost = cost
-    NewPlannedAction.wrappedMethod = [fun]
-    fun.plan_class = NewPlannedAction
-    return fun
 
 # TODO: unfinished method
 def _objwalk(obj, path=(), memo=None):
@@ -135,8 +109,9 @@ def _create_problem(methods, space, exit=None, goal=None):
     for m in methods:
         if not callable(m): continue
         if not hasattr(m, "plan_class"): continue
-        pm = planned2(m, cost=m.plan_class.cost)
-        actions.append(pm.plan_class)
+        # pm = planned(m, cost=m.plan_class.cost)
+        # actions.append(pm.plan_class)
+        actions.append(m.plan_class)
         # def methodWrapper(self, *args, **kwargs):
         #     return pm(*args, **kwargs)
         # methodWrapper.__name__ = m.__name__
