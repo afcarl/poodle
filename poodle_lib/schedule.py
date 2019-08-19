@@ -1,6 +1,6 @@
 from poodle import *
 import collections.abc
-from .poodle_main import Select, Problem, _collected_predicates, _collected_effects, _none_objects, _system_objects, HASHNUM_CLASS_NAME, _selector_out, _reset_state
+from .poodle_main import ListLike, Select, Problem, _collected_predicates, _collected_effects, _none_objects, _system_objects, HASHNUM_CLASS_NAME, _selector_out, _reset_state
 
 class SchedulingError(Exception):
     pass
@@ -18,32 +18,43 @@ def _space_to_list(sp):
     return list(set(rec))
 
 # TODO: unfinished method
-def _objwalk(obj, path=(), memo=None):
+def _objwalk(obj, path=(), memo=None, recursion=0):
     if memo is None:
         memo = set()
     if isinstance(obj, Object):
-        if id(obj) not in memo:
+        if id(obj) not in memo and recursion < 4:
             memo.add(id(obj)) 
             for k in dir(obj):
                 val = getattr(obj, k)
                 if isinstance(val, Property):
-                    for child in _objwalk(val, path + (k,), memo):
+                    for child in _objwalk(val, path + (k,), memo, recursion+1):
                         yield child
                     if val._property_value:
-                        for child in _objwalk(val._property_value, path + (k,), memo):
+                        for child in _objwalk(val._property_value, path + (k,), memo, recursion+1):
                             yield child
                     else:
                         # has no value, return default value
                         pass
+    elif isinstance(obj, ListLike):
+        if id(obj) not in memo and recursion < 4:
+            memo.add(id(obj)) 
+            for index, value in enumerate(obj):
+                for child in _objwalk(value, path + (index,), memo, recursion+1):
+                    yield child
     else:
         yield path, obj
 
-def _get_recursive_objects(obj):
+def _get_recursive_objects(obj, leveldeep=0):
+    if leveldeep > 10: return set([obj])
     ret = set()
-    for p in _objwalk(obj):
+    for p in _objwalk(obj, recursion=leveldeep+1):
         v = p[1]._property_value
-        if v: ret.add(v)
-        else: ret.add(p[1]._value._none_object)
+        if isinstance(v, ListLike):
+            for o in v:
+                ret |= _get_recursive_objects(o, leveldeep+1)
+        else:
+            if v: ret.add(v)
+            else: ret.add(p[1]._value._none_object)
     return ret | set([obj])
 
 

@@ -104,7 +104,7 @@ def test_advanced_multi_add_inequality():
 
 class ProblemExample(poodle.problem.Problem):
     @planned
-    def addComplecIneq(o1: Obj, o2: Obj):
+    def addComplecIneq(self, o1: Obj, o2: Obj):
         assert o1.count + o2.count > o1.value2 - o2.value2
         o1.count = o1.count - o2.count
     def problem(self):

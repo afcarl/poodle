@@ -288,7 +288,7 @@ def get_property_class_name(prop):
     elif has_po and has_poi:
         my_class_name = prop._property_of.__name__
     else:
-        raise ValueError("Can not detect who I am")
+        raise ValueError("Can not detect who I am %s - %s (value %s)" % (prop, prop._value, prop._property_value))
     return my_class_name
 
 def gen_hashnum_templates(var, prefix="var"):
@@ -436,7 +436,7 @@ class Property(object):
         elif has_po and has_poi:
             my_class = self._property_of
         else:
-            raise ValueError("Can not detect who I am")
+            raise ValueError("Can not detect who I am %s - %s (value %s)" % (self, self._value, self._property_value))
         return my_class
 
     def gen_predicate_name(self):
@@ -450,17 +450,22 @@ class Property(object):
             pred_name=self.gen_predicate_name(),
             cls_name=self.get_property_class_name(),
             prop_cls_name=self.get_value_class_name())
+    
+    def _pddl_gen_one_fact(self, obj):
+            return "({pred_name} {parent_name} {prop_name})".format(\
+                pred_name=self.gen_predicate_name(),
+                parent_name=self._property_of_inst.name,
+                prop_name=obj.name)
 
     def _pddl_gen_fact(self):
         if self._property_value is None:
             val = self._value._none_object
         else:
             val = self._property_value
-            
-        return "({pred_name} {parent_name} {prop_name})".format(\
-            pred_name=self.gen_predicate_name(),
-            parent_name=self._property_of_inst.name,
-            prop_name=val.name)
+        if isinstance(val, ListLike): 
+            return [self._pddl_gen_one_fact(v) for v in val]
+        else:
+            return [self._pddl_gen_one_fact(val)]
 
     def find_parameter_variable(self):
         "finds the variable that holds the class or our value"
@@ -1474,14 +1479,15 @@ class Object(metaclass=BaseObjectMeta):
         all_preds = []
         for k,v in [[n,getattr(self,n)] for n in dir(self)]:
             if isinstance(v, Property):
-               all_preds.append(v._pddl_gen_predicates_entry())
+                v._property_of_inst = self # fixes stuff for Bool: bug!
+                all_preds.append(v._pddl_gen_predicates_entry())
         return all_preds
 
     def _get_all_facts(self):
         all_facts = []
         for k,v in [[n,getattr(self,n)] for n in dir(self)]:
             if isinstance(v, Property):
-                all_facts.append(v._pddl_gen_fact())
+                all_facts += v._pddl_gen_fact()
         return all_facts
 
 
