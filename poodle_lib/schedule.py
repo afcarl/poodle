@@ -1,6 +1,6 @@
 from poodle import *
 import collections.abc
-from .poodle_main import Select, _collected_predicates, _collected_effects, _none_objects, _system_objects, HASHNUM_CLASS_NAME, _selector_out, _reset_state
+from .poodle_main import Select, Problem, _collected_predicates, _collected_effects, _none_objects, _system_objects, HASHNUM_CLASS_NAME, _selector_out, _reset_state
 
 class SchedulingError(Exception):
     pass
