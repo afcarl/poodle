@@ -136,8 +136,11 @@ def _create_problem(methods, space, exit=None, goal=None):
     p.format_problem()
     return p
 
-def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=50):
+def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=10):
     space = _space_to_list(space)
+    assert methods
+    assert space
+    assert plan
     p = _create_problem(methods, space, exit, goal)
     p.solution = lambda: [_planned_internal(a, cost=a._cost) for a in plan ]
     r = p.check_solution(iterations)

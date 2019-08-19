@@ -1233,9 +1233,9 @@ class Bool(Property):
 
     def __init__(self, initialValue):
         if type(initialValue) != type(True): raise ValueError("Bool must be initialized with True of False")
+        self._init_value = initialValue
         super().__init__(BooleanObject)
         # self.__init_value = _system_objects["object-%s" % str(initialValue)]
-        self._init_value = initialValue
 
     def set(self, value):
         if value == True:
@@ -1409,11 +1409,13 @@ class Object(metaclass=BaseObjectMeta):
                     _collected_objects[self.__class__.__name__].append(self.name)
         # TODO HERE: in effect, do the same if we are imaginary!
         # when class is instantiated, make sure to "proxy" all properties
-        for key in type(self).__dict__:
+        for key in dir(self):
             # print(key)
             if isinstance(getattr(self, key), Property):
                 # print("copying propeorty", key)
                 setattr(self, key, copy.copy(getattr(self,key)))
+                if isinstance(getattr(self, key), Relation):
+                    getattr(self, key)._property_value = ListLike()
                 # for the every property in my Object,
                 #    when instantiating the class
                 #    set _property_of_inst to:
@@ -1421,15 +1423,17 @@ class Object(metaclass=BaseObjectMeta):
                 #    - have a reference to the mother instance of Object
                 getattr(self, key)._property_of_inst = self
                 # poodle3-ignore -->
-                if not self.__imaginary__ and _problem_compilation and \
+                if hasattr(getattr(self,key), "_init_value"):
+                    null_object = getattr(self,key)._init_value
+                    getattr(self,key).init_unsafe_internal(null_object)
+                if False and not self.__imaginary__ and \
                         not getattr(self,key)._value is None and \
-                        not isinstance(getattr(self, key), Relation) and \
-                        not value == "POODLE-NULL":
+                        not isinstance(getattr(self, key), Relation):
                     if hasattr(getattr(self,key), "_init_value"):
                         null_object = getattr(self,key)._init_value
                     else:
                         # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
-                        null_object = getattr(self,key)._value("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
+                        null_object = getattr(self,key)._value._none_object # ("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
                     getattr(self,key).init_unsafe_internal(null_object)
         self.__unlock_setter = False
     def gen_name(self, name):
@@ -2408,6 +2412,8 @@ def _planned_internal(fun=None, *, cost=None):
     def wrapped(**kwargs):
         return fun(**kwargs)
     wrapped.plan_class = NewPlannedAction
+    wrapped.__name__ = fun.__name__
+    wrapped.wrappedMethod = [fun]
     return wrapped
 
 def Any(what, space=[]):
