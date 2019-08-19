@@ -9,7 +9,7 @@ class StrObject(Object):
 class Table(StrObject):
     # TODO HERE: reimplement these:::
     columns = Relation("Column")
-    is_selected = Bool(False)
+    is_selected: bool
 
 class Column(StrObject):
     contains_elements_from = Relation("Column")
