@@ -141,6 +141,42 @@ def Select(what):
     return ret
 goal = Select
 
+def resolve_poodle_type(obj):
+    assert inspect.isclass(obj)
+    if obj == int:
+        from poodle.arithmetic import LogSparseInteger
+        return LogSparseInteger
+    elif obj == bool:
+        return BooleanObject
+    elif obj == str:
+        raise NotImplementedError("String primitives are not currently implemented")
+    elif inspect.isclass(obj) and issubclass(obj, Object):
+        return obj
+    else:
+        raise ValueError("Type %s is not supported" % obj)
+
+def resolve_poodle_special_object(obj):
+    if isinstance(obj, int):
+        from poodle.arithmetic import logSparseIntegerFactory
+        return logSparseIntegerFactory.get(obj)
+    elif isinstance(obj, bool):
+        if obj:
+            return _system_objects["object-True"]
+        else:
+            return _system_objects["object-False"]
+    elif isinstance(obj, Object):
+        return obj
+    elif isinstance(obj, Property): # this is needed to pass props
+        return obj
+    elif inspect.isclass(obj) and issubclass(obj, Object):
+        # used to pass internal asserts
+        return obj
+    elif isinstance(obj, str):
+        # needed to support internal "in" comparison operations
+        return obj
+    else:
+        raise NotImplementedError("Objects of type %s are not supported for %s" % (type(obj), obj))
+
 def _reset_state():
     global _selector_out
     _selector_out = None
@@ -1499,6 +1535,7 @@ class Object(metaclass=BaseObjectMeta):
 
 
     def __eq__(self, other):
+        other = resolve_poodle_special_object(other)
         if isinstance(other, Property):
             return other.__eq__(self)
         elif isinstance(other, Object) and \
@@ -1512,8 +1549,11 @@ class Object(metaclass=BaseObjectMeta):
             push_selector_object(self)
             return self
         elif type(other) == type(True):
+            # never reached
+            raise NotImplementedError()
             return True # WARNING! stub for asserts! TODO FIX
         elif isinstance(other, int):
+            # never reached
             raise NotImplementedError()
             return True # WARNING! stub for asserts! TODO FIX
         else:
@@ -2402,7 +2442,7 @@ def _planned_internal(fun=None, *, cost=None):
         if isinstance(v, str):
             raise ValueError("Forward references are not suported in methods yet")
         else:
-            kwargs[k] = v(_variable_mode=True)
+            kwargs[k] = resolve_poodle_type(v)(_variable_mode=True)
     class NewPlannedAction(PlannedAction):
         def effect(self):
             global _selector_out

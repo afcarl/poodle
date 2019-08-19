@@ -28,9 +28,14 @@ def subValues(o1: Obj, o2: Obj):
     o1.value2 -= o2.value2
     return "DONE"
 
+@planned
+def findNonNegativeIngeger(i: int, o: Obj):
+    assert i > 0 and i == 1
+    o.value2 = i
 
 cobj1 = Obj()
 cobj2 = Obj()
+
 def test_math_sub():
 
     cobj1.type = TYPE_2
@@ -43,6 +48,15 @@ def test_math_sub():
   
     # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
     for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1)): p
+
+def test_integers_parameters():
+    cobj1.type = TYPE_2
+    cobj1.value2 = 0
+    cobj1.count = 1
+    for p in schedule([
+        findNonNegativeIngeger], 
+        space=globals(), 
+        goal=goal(cobj1.value2==1)): p
 
 def test_math_sub_multigoal():
 
