@@ -102,29 +102,29 @@ from functools import partial
 # class Prox(wrapt.ObjectProxy):
 #     isproxy = True
 
-class Infix(object):
-    def __init__(self, func):
-        self.func = func
-    def __or__(self, other):
-        return self.func(other)
-    def __ror__(self, other):
-        return Infix(partial(self.func, other))
-    def __call__(self, v1, v2):
-        return self.func(v1, v2)
+# class Infix(object):
+#     def __init__(self, func):
+#         self.func = func
+#     def __or__(self, other):
+#         return self.func(other)
+#     def __ror__(self, other):
+#         return Infix(partial(self.func, other))
+#     def __call__(self, v1, v2):
+#         return self.func(v1, v2)
 
-@Infix
-def IN(what, where):
-    ret = where.contains(what)
-    global _selector_out
-    _selector_out = None
-    return ret
+# @Infix
+# def IN(what, where):
+#     ret = where.contains(what)
+#     global _selector_out
+#     _selector_out = None
+#     return ret
 
-@Infix
-def EQ(what1, what2):
-    ret = what1.equals(what2)
-    global _selector_out
-    _selector_out = None
-    return ret
+# @Infix
+# def EQ(what1, what2):
+#     ret = what1.equals(what2)
+#     global _selector_out
+#     _selector_out = None
+#     return ret
 
 def Select(what):
     "Selector decorator"
@@ -1522,32 +1522,32 @@ class Object(metaclass=BaseObjectMeta):
         #        break
         #return myclass_genvar
 
-    @classmethod
-    def Select(cls, **kwargs):
-        "ret = Class.Select(prop1=inst1,prop2=inst2,...) is equivalent to \
-        v1=Select(Class.prop1 in/== inst1) and ret = Select(v1.prop2 in/== inst2)"
-        global _compilation
-        ret = cls
-        _compilation = True
-        for k,v in kwargs.items():
-            ret = getattr(ret,k).operator(v)
-        _compilation = False
-        return ret
+    # @classmethod
+    # def Select(cls, **kwargs):
+    #     "ret = Class.Select(prop1=inst1,prop2=inst2,...) is equivalent to \
+    #     v1=Select(Class.prop1 in/== inst1) and ret = Select(v1.prop2 in/== inst2)"
+    #     global _compilation
+    #     ret = cls
+    #     _compilation = True
+    #     for k,v in kwargs.items():
+    #         ret = getattr(ret,k).operator(v)
+    #     _compilation = False
+    #     return ret
 
-    @classmethod
-    def RSelect(cls, **kwargs):
-        "ret = Class.RSelect(prop1=inst1,prop2=inst2,...) is equivalent to \
-        v1=Select(inst1 in/== Class.prop1) and ret = Select(inst2 in/== v1.prop2)"
-        global _compilation
-        # ret1 = list(kwargs.items())[0][1].operator(getattr(cls,list(kwargs.items())[0][0]))
-        # ret = ret1
-        ret = cls
-        _compilation = True
-        # for k,v in list(kwargs.items())[1:]:
-        for k,v in kwargs.items():
-            ret = v.operator(getattr(ret,k),dir_hint="reverse")
-        _compilation = False
-        return ret
+    # @classmethod
+    # def RSelect(cls, **kwargs):
+    #     "ret = Class.RSelect(prop1=inst1,prop2=inst2,...) is equivalent to \
+    #     v1=Select(inst1 in/== Class.prop1) and ret = Select(inst2 in/== v1.prop2)"
+    #     global _compilation
+    #     # ret1 = list(kwargs.items())[0][1].operator(getattr(cls,list(kwargs.items())[0][0]))
+    #     # ret = ret1
+    #     ret = cls
+    #     _compilation = True
+    #     # for k,v in list(kwargs.items())[1:]:
+    #     for k,v in kwargs.items():
+    #         ret = v.operator(getattr(ret,k),dir_hint="reverse")
+    #     _compilation = False
+    #     return ret
 
     def _get_all_predicates(self):
         all_preds = []
