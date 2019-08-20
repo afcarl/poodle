@@ -81,15 +81,15 @@ def test_integer_set():
 
     for p in schedule([check_int_in_set], space=[s], goal=goal(s.r==1)): p
 
-# def test_normal_numeric_asserts():
-#     class TestObj(Object):
-#         i1: int
-#         i2: int
-#     o = TestObj()
-#     o.i1 = 1
-#     o.i2 = 1
-#     assert o.i1 == 1
-#     assert o.i2 == 1
+def test_normal_numeric_asserts():
+    class TestObj(Object):
+        i1: int
+        i2: int
+    o = TestObj()
+    o.i1 = 1
+    o.i2 = 1
+    assert o.i1 == 1
+    assert o.i2 == 1
 
 # def test_numeric_ineq_asserts():
 #     class TestObj(Object):

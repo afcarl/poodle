@@ -447,6 +447,11 @@ class Property(object):
             # return self._value
         return self
 
+    def _is_variable(self):
+        if hasattr(self, "_property_of_inst") and self._property_of_inst:
+            return self._property_of_inst._is_variable()
+        return False
+
     def get_property_class_name(self):
         return self.get_parent_class().__name__
 
@@ -533,6 +538,7 @@ class Property(object):
         global _collected_predicate_templates
         global _problem_compilation
         global _collected_effects
+        if not _compilation and not self._is_variable() and not other._is_variable(): return True
         # TODO: multi-positional checks
 
         # PART 1.
@@ -1508,6 +1514,9 @@ class Object(metaclass=BaseObjectMeta):
         self.__unlock_setter = False
     def gen_name(self, name):
         return ''.join([x if x in (string.ascii_letters+string.digits) else '-' for x in name])
+    
+    def _is_variable(self):
+        return self._variable_mode
 
     def class_variable(self):
         "we assume to have a variable assigned"
