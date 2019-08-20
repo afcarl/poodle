@@ -197,7 +197,22 @@ def test_math_add_int():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq], space=globals(), goal=goal(cobj2.count==2)): p
+    for p in schedule([addComplecIneq_num], space=globals(), goal=goal(cobj2.count==2)): p
+
+def test_math_multi_eq():
+    @planned
+    def addComplecIneq_num(o1: Obj, o2: Obj):
+        assert o1.count == 3
+        assert o1.value2 == 2
+        o1.count = 4
+    cobj1.type = TYPE_1
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 3
+    for p in schedule([addComplecIneq_num], space=globals(), goal=goal(cobj2.count==4)): p
 
 @planned
 def plus1(o1: Obj):

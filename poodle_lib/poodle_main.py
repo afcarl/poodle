@@ -1624,8 +1624,8 @@ class Object(metaclass=BaseObjectMeta):
         else:
             # WARNING! please check the proper usage of __unlock_setter
             # setter must probably unlock only for non-existent class attributes or only for existing properties
-            if ( _problem_compilation or _compilation) and hasattr(self, name) and not self.__unlock_setter and isinstance(getattr(self, name), Property):
-                raise AssertionError("No support for setting of type %s to property %s (in compilation mode)" % (str(type(value)), name))
+            # if ( _problem_compilation or _compilation) and hasattr(self, name) and not self.__unlock_setter and isinstance(getattr(self, name), Property):
+                # raise AssertionError("No support for setting of type %s to property %s (in compilation mode)" % (str(type(value)), name))
             if _compilation and name[0] != "_" and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter: # all system properties must start with _
             #if _compilation and not hasattr(self, name) and not "__unlock_setter" in name:
                 raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
