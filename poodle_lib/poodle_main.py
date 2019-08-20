@@ -1198,98 +1198,98 @@ class StateProperty(Property):
     # nothing special for now...
     pass
 
-class StateFact(Property): # TODO HERE Rename to Bool()
-    "state fact can only be set or unset and contains no relaitons"
+# class StateFact(Property): # TODO HERE Rename to Bool()
+#     "state fact can only be set or unset and contains no relaitons"
 
-    # TODO: remove this method as we have same one in base Property class!!
-    def _prepare(self):
-        global _compilation
-        if not _compilation:
-            raise BaseException("Parameter mutation outside of compilation")
-        # TODO: also detect that we are outside of effect block!
-        global _collected_predicates
-        global _collected_parameters
-        for ph in self._property_of_inst._parse_history:
-            _collected_predicates += ph["text_predicates"]
-            _collected_parameters.update(ph["parameters"])
+#     # TODO: remove this method as we have same one in base Property class!!
+#     def _prepare(self):
+#         global _compilation
+#         if not _compilation:
+#             raise BaseException("Parameter mutation outside of compilation")
+#         # TODO: also detect that we are outside of effect block!
+#         global _collected_predicates
+#         global _collected_parameters
+#         for ph in self._property_of_inst._parse_history:
+#             _collected_predicates += ph["text_predicates"]
+#             _collected_parameters.update(ph["parameters"])
 
-    def set(self):
-        global _collected_effects
-        global _collected_facts
-        global _problem_compilation
-        # print("EFFECT-PDDL: TODO", self._property_of_inst.__class__.__name__)
-        # print("EFFECT-PDDL: TODO", self._property_of_inst._parse_history)
-        # now find in our instance's _parse_history our instance's class name variable
+#     def set(self):
+#         global _collected_effects
+#         global _collected_facts
+#         global _problem_compilation
+#         # print("EFFECT-PDDL: TODO", self._property_of_inst.__class__.__name__)
+#         # print("EFFECT-PDDL: TODO", self._property_of_inst._parse_history)
+#         # now find in our instance's _parse_history our instance's class name variable
 
-        if _problem_compilation: # poodle3: ignore stateFact...
-            text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
-            _collected_facts.append(text_predicate)
-        else:
-            self._prepare()
-            text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
-            _collected_effects.append(text_predicate)
-        self._value = True
-    def unset(self):
-        self._prepare()
-        global _collected_effects
-        # TODO: do we need to generate this??
-        text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
-        # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
-        _collected_effects.append("(not %s)" % text_predicate)
-        self._value = False
+#         if _problem_compilation: # poodle3: ignore stateFact...
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
+#             _collected_facts.append(text_predicate)
+#         else:
+#             self._prepare()
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+#             _collected_effects.append(text_predicate)
+#         self._value = True
+#     def unset(self):
+#         self._prepare()
+#         global _collected_effects
+#         # TODO: do we need to generate this??
+#         text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+#         # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
+#         _collected_effects.append("(not %s)" % text_predicate)
+#         self._value = False
 
-    def __eq__(self, other):
-        push_selector_object(self.equals(other))
-        return True
+#     def __eq__(self, other):
+#         push_selector_object(self.equals(other))
+#         return True
 
-    def equals(self, other):
-        "StateFact can only be compared to True or False"
-        assert other == True or other == False, "Only True or False for StateFact"
-        global _collected_effects
-        global _collected_predicates
-        global _collected_parameters
-        if other == False:
-            # TODO: could call self.unset() if run in effect compilation, not problem compilation!!
-            # (add below...)
-            raise NotImplementedError("Comparing StateFact to False is not supported")
-        global _problem_compilation # poodle3: ignore stateface
-        if _problem_compilation:
-            text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
-            # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
-            # _collected_predicates.append(text_predicate)
-            _collected_effects.append(text_predicate) # in problem compilation, we collect effects...
-        else:
-            self._prepare() # not sure if this is needed here???
-            # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
-            text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
-            _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
-            _collected_predicates.append(text_predicate)
-            _collected_predicates.append(None) # WARNING! last None has secret meaning for Unselect checks
+#     def equals(self, other):
+#         "StateFact can only be compared to True or False"
+#         assert other == True or other == False, "Only True or False for StateFact"
+#         global _collected_effects
+#         global _collected_predicates
+#         global _collected_parameters
+#         if other == False:
+#             # TODO: could call self.unset() if run in effect compilation, not problem compilation!!
+#             # (add below...)
+#             raise NotImplementedError("Comparing StateFact to False is not supported")
+#         global _problem_compilation # poodle3: ignore stateface
+#         if _problem_compilation:
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
+#             # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
+#             # _collected_predicates.append(text_predicate)
+#             _collected_effects.append(text_predicate) # in problem compilation, we collect effects...
+#         else:
+#             self._prepare() # not sure if this is needed here???
+#             # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+#             _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
+#             _collected_predicates.append(text_predicate)
+#             _collected_predicates.append(None) # WARNING! last None has secret meaning for Unselect checks
 
-        ph = {
-                "operator": "check_bool",
-                "self": self,
-                "self-propname": self._property_name,
-                "other": None,
-                "other-propname": None,
-                "otherClass": None,
-                "self-prop": self._value,
-                #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
-                "variables": {}, # TODO: what if we have two same classes?
-                "class_variables": { },
-                "text_predicates": [ text_predicate, None ], # WARNING! last None has secret meaning for Unselect checks
-                "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
-                "frame": get_source_frame_dict()
-            }
-        if hasattr(self, "_property_of_inst") and self._property_of_inst:
-            if self._property_of_inst._parse_history:
-                self._property_of_inst._parse_history.append(ph)
-            else:
-                self._property_of_inst._parse_history=[ph]
-        else:
-            raise AssertionError("Selecting a variable by StateFact is not supported; please use selector() syntax")
-        return self._property_of_inst
-        #raise NotImplementedError("Equality of StateFact called outside of supported context")
+#         ph = {
+#                 "operator": "check_bool",
+#                 "self": self,
+#                 "self-propname": self._property_name,
+#                 "other": None,
+#                 "other-propname": None,
+#                 "otherClass": None,
+#                 "self-prop": self._value,
+#                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+#                 "variables": {}, # TODO: what if we have two same classes?
+#                 "class_variables": { },
+#                 "text_predicates": [ text_predicate, None ], # WARNING! last None has secret meaning for Unselect checks
+#                 "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
+#                 "frame": get_source_frame_dict()
+#             }
+#         if hasattr(self, "_property_of_inst") and self._property_of_inst:
+#             if self._property_of_inst._parse_history:
+#                 self._property_of_inst._parse_history.append(ph)
+#             else:
+#                 self._property_of_inst._parse_history=[ph]
+#         else:
+#             raise AssertionError("Selecting a variable by StateFact is not supported; please use selector() syntax")
+#         return self._property_of_inst
+#         #raise NotImplementedError("Equality of StateFact called outside of supported context")
 
 
 class Bool(Property):
