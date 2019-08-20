@@ -1453,7 +1453,7 @@ class Object(metaclass=BaseObjectMeta):
             raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
         self.__unlock_setter = True
         name = None
-        self._class_variable = gen_var(self.__class__.__name__, prefix="default-")
+        self._class_variable = gen_var(self.__class__.__name__, prefix="")
         self._variable_mode = _variable_mode
         self.value = value
         self.name = ""
@@ -1696,7 +1696,7 @@ class Imaginary(Object):
     def __init__(self, value=None, _force_name=None):
         self.__imaginary__ = True
         super().__init__(value, _force_name)
-        self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-default-")
+        self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-")
         global _effect_compilation
         global _collected_predicates
         global _collected_effects
