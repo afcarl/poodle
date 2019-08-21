@@ -1,6 +1,8 @@
 from poodle import *
 import collections.abc
-from .poodle_main import ListLike, Select, Problem, _collected_predicates, _collected_effects, _none_objects, _system_objects, HASHNUM_CLASS_NAME, _selector_out, _reset_state, _planned_internal
+from .poodle_main import ListLike, Select, Problem, _collected_predicates, \
+    _collected_effects, _none_objects, _system_objects, _compilation_enable, \
+        HASHNUM_CLASS_NAME, _selector_out, _reset_state, _planned_internal
 
 class SchedulingError(Exception):
     pass
@@ -83,11 +85,15 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     p.gen_hashnums()
     l_collected_goal = []
     if goal:
+        _reset_state()
+        _compilation_enable()
+        goal = Select(goal())
         if not type(goal) == list:
             goal = [goal]
         for g in goal:
             for ph in g._parse_history:
                 l_collected_goal += ph["text_predicates"]
+        _compilation_enable(False)
     # TODO: scan objects recursively: expand space with recursive scan
     l_collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
     for ob in p.objectList + list(_system_objects.values()):

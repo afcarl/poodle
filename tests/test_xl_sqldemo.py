@@ -180,7 +180,7 @@ def test_solution_demo():
         methods=[getattr(p,m) for m in dir(p) if callable(getattr(p,m))], 
         space=list(p.__dict__.values())+p.objectList,
         plan=p.solution(),
-        goal=goal(p.goal())
+        goal=lambda:(p.goal())
     )
 
 def test_sql_plan():

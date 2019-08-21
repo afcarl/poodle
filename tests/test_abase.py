@@ -61,7 +61,7 @@ def test_integer_set_obj():
     s.i.add(2)
     s.i.add(1)
 
-    for p in schedule([check_int_in_set], space=[s], goal=goal(s.r==1),
+    for p in schedule([check_int_in_set], space=[s], goal=lambda:(s.r==1),
                 sessionName="test_integer_set_obj"): p
 
 @pytest.mark.skip(reason="TODO")
@@ -79,7 +79,7 @@ def test_integer_set():
     s.i.add(2)
     s.i.add(1)
 
-    for p in schedule([check_int_in_set], space=[s], goal=goal(s.r==1)): p
+    for p in schedule([check_int_in_set], space=[s], goal=lambda:(s.r==1)): p
 
 def test_normal_numeric_asserts():
     class TestObj(Object):

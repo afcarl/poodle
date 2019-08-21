@@ -1,4 +1,4 @@
-from poodle import schedule, goal
+from poodle import schedule
 from poodle.schedule import SchedulingError
 
 class Problem:
@@ -14,7 +14,7 @@ class Problem:
             self.plan = schedule(
                 methods=[getattr(self,m) for m in dir(self) if callable(getattr(self,m))], 
                 space=list(self.__dict__.values())+self.objectList,
-                goal=goal(self.goal())
+                goal=lambda:(self.goal())
                 #exit=self.exit
             )
         except SchedulingError:

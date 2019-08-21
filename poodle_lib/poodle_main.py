@@ -139,7 +139,11 @@ def Select(what):
         ret = _selector_out
     _selector_out = None
     return ret
-goal = Select
+# goal = Select
+
+def _compilation_enable(en=True):
+    global _compilation
+    _compilation=en
 
 def resolve_poodle_type(obj):
     assert inspect.isclass(obj)
@@ -538,7 +542,9 @@ class Property(object):
         global _collected_predicate_templates
         global _problem_compilation
         global _collected_effects
-        if not _compilation and not self._is_variable() and not other._is_variable(): return True
+        if not _compilation and not self._is_variable() and not other._is_variable(): 
+            # TODO: STUB. Full assert implementation needed
+            return True
         # TODO: multi-positional checks
 
         # PART 1.

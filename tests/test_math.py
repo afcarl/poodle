@@ -46,8 +46,8 @@ def test_math_sub():
     cobj2.value2 = 2
     cobj2.count = 1
   
-    # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
-    for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1)): p
+    # debug_plan([subValues], space=globals(), goal=lambda:(cobj2.value2==1), plan=[subValues])
+    for p in schedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1)): p
 
 def test_integers_parameters():
     cobj1.type = TYPE_2
@@ -56,7 +56,7 @@ def test_integers_parameters():
     for p in schedule([
         findNonNegativeIngeger], 
         space=globals(), 
-        goal=goal(cobj1.value2==1)): p
+        goal=lambda:(cobj1.value2==1)): p
 
 def test_math_sub_multigoal():
 
@@ -68,8 +68,8 @@ def test_math_sub_multigoal():
     cobj2.value2 = 2
     cobj2.count = 1
   
-    # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
-    for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1 and cobj1.type==TYPE_2)): p
+    # debug_plan([subValues], space=globals(), goal=lambda:(cobj2.value2==1), plan=[subValues])
+    for p in schedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1 and cobj1.type==TYPE_2)): p
     
 @pytest.mark.skip(reason="TODO")
 def test_isolation():
@@ -82,12 +82,12 @@ def test_isolation():
     cobj2.value2 = 2
     cobj2.count = 1
   
-    # debug_plan([subValues], space=globals(), goal=goal(cobj2.value2==1), plan=[subValues])
+    # debug_plan([subValues], space=globals(), goal=lambda:(cobj2.value2==1), plan=[subValues])
     try:
-        for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1 and cobj.type==TYPE_2)): p
+        for p in schedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1 and cobj.type==TYPE_2)): p
     except:
         pass
-    for p in schedule([subValues], space=globals(), goal=goal(cobj2.value2==1 and cobj1.type==TYPE_2)): p
+    for p in schedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1 and cobj1.type==TYPE_2)): p
 
 def test_math_add():
 
@@ -101,8 +101,8 @@ def test_math_add():
     
     # debug_plan([addValues], space=globals(), goal=Select(cobj2.count==3), plan=[addValues])
     # TODO: these two combined do not work
-    for p in schedule([addValues], space=globals(), goal=goal(cobj1.count==3)): p
-    # print(xschedule([addValues], space=globals(), goal=goal(cobj1.count==3)))
+    for p in schedule([addValues], space=globals(), goal=lambda:(cobj1.count==3)): p
+    # print(xschedule([addValues], space=globals(), goal=lambda:(cobj1.count==3)))
 
 @planned
 def addIfGreater(o1: Obj, o2: Obj):
@@ -117,8 +117,8 @@ def test_greater_than():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    # debug_plan([addIfGreater], space=globals(), goal=goal(cobj1.count==2), plan=[addIfGreater])
-    for p in schedule([addIfGreater], space=globals(), goal=goal(cobj2.count==2)): p
+    # debug_plan([addIfGreater], space=globals(), goal=lambda:(cobj1.count==2), plan=[addIfGreater])
+    for p in schedule([addIfGreater], space=globals(), goal=lambda:(cobj2.count==2)): p
 
 def test_debugging_formally_executes():
     cobj1.type = TYPE_1
@@ -128,7 +128,7 @@ def test_debugging_formally_executes():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    assert debug_plan([addIfGreater], space=globals(), goal=goal(cobj1.count==2), plan=[addIfGreater])
+    assert debug_plan([addIfGreater], space=globals(), goal=lambda:(cobj1.count==2), plan=[addIfGreater])
  
 def test_complex_integer_comp():
     @planned
@@ -142,7 +142,7 @@ def test_complex_integer_comp():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = -1
-    for p in schedule([findNonNegativeIngegerObj], space=[cobj1, cobj2], goal=goal(cobj1.value2==1)): p
+    for p in schedule([findNonNegativeIngegerObj], space=[cobj1, cobj2], goal=lambda:(cobj1.value2==1)): p
 
 
 @planned
@@ -158,7 +158,7 @@ def test_advanced_multi_add_inequality():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq], space=globals(), goal=goal(cobj2.count==2)): p
+    for p in schedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2)): p
 
 
 class ProblemExample(poodle.problem.Problem):
@@ -197,7 +197,7 @@ def test_math_add_int():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq_num], space=globals(), goal=goal(cobj2.count==2)): p
+    for p in schedule([addComplecIneq_num], space=globals(), goal=lambda:(cobj2.count==2)): p
 
 def test_math_multi_eq():
     @planned
@@ -212,7 +212,7 @@ def test_math_multi_eq():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq_num], space=globals(), goal=goal(cobj2.count==4)): p
+    for p in schedule([addComplecIneq_num], space=globals(), goal=lambda:(cobj2.count==4)): p
 
 @planned
 def plus1(o1: Obj):
