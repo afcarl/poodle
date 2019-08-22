@@ -179,10 +179,10 @@ def schedule(methods, space, exit=None, goal=None, sessionName=None):
     p = _create_problem(methods, space, exit, goal, sessionName)
     p.run()
     _reset_state()
-    if p.plan is None: raise SchedulingError("Unable to solve")
-    if not p.plan: raise EmptyPlanError("Empty plan")
     for v in space: 
         if isinstance(v, Object): v._sealed = False
+    if p.plan is None: raise SchedulingError("Unable to solve")
+    if not p.plan: raise EmptyPlanError("Empty plan")
     return p.plan
     
     

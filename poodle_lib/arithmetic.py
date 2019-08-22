@@ -90,9 +90,10 @@ def logexp(x,a,b,c):
     return int(a*pow(b,x*c))
 
 class LogSparseIntegerFactory:
-    def __init__(self, start=0, count=15, func=logexp, args={"a":0.0717876, "b":1.25545, "c":2.6032}):
-        base10 = {i:LogSparseInteger(i) for i in range(-1,10)}
-        base10.update({func(i, **args):LogSparseInteger(func(i, **args)) for i in range(11, count)})
+    def __init__(self, start=0, lincount=10, logcount=15, func=logexp, args={"a":0.0717876, "b":1.25545, "c":2.6032}):
+        base10 = {i:LogSparseInteger(i) for i in range(-1,lincount)}
+        base10.update({func(i, **args):LogSparseInteger(func(i, **args)) \
+            for i in range(0, logcount)})
         self.numbers=base10
         self.NONE = LogSparseInteger("NONE")
         self.NaN = LogSparseInteger("NaN")
@@ -158,7 +159,7 @@ class MulResult(poodle.Object):
     result: LogSparseInteger
 
 
-logSparseIntegerFactory = LogSparseIntegerFactory()
+logSparseIntegerFactory = LogSparseIntegerFactory(lincount=17, logcount=15)
 
 _system_objects.update({ob.name:ob for ob in logSparseIntegerFactory.get_objects()})
 # TODO HERE: generate all SumResult
