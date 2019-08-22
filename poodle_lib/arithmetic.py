@@ -1,6 +1,6 @@
 import poodle
 import itertools
-from .poodle_main import _system_objects
+from .poodle_main import _system_objects, resolve_poodle_special_object
 
 class IntegerType(poodle.Object):
     pass
@@ -39,6 +39,7 @@ class LogSparseInteger(IntegerType):
         return resultVar
 
     def __sub__(self, other):
+        other = resolve_poodle_special_object(other)
         if isinstance(other, int):
             return self.sub(logSparseIntegerFactory.get(other))
         elif type(other) == LogSparseInteger:
@@ -46,24 +47,28 @@ class LogSparseInteger(IntegerType):
         raise ValueError("Unsupported type for arithmetic operator")
     
     def __gt__(self, other):
+        other = resolve_poodle_special_object(other)
         gt = poodle.Any(GreaterThan, space=_system_objects)
         assert gt.val1 == self and gt.val2 == other
         if self._variable_mode: return True
         else: return self.value > other.value
 
     def __lt__(self, other):
+        other = resolve_poodle_special_object(other)
         gt = poodle.Any(GreaterThan, space=_system_objects)
         assert gt.val2 == self and gt.val1 == other
         if self._variable_mode: return True
         else: return self.value < other.value
 
     def __ge__(self, other):
+        other = resolve_poodle_special_object(other)
         ge = poodle.Any(GreaterEqual, space=_system_objects)
         assert ge.val1 == self and ge.val2 == other
         if self._variable_mode: return True
         else: return self.value >= other.value
     
     def __le__(self, other):
+        other = resolve_poodle_special_object(other)
         ge = poodle.Any(GreaterEqual, space=_system_objects)
         assert ge.val2 == self and ge.val1 == other
         if self._variable_mode: return True

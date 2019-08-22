@@ -654,15 +654,18 @@ class Property(object):
         _parse_history = []
         if has_poi and hasattr(self._property_of_inst, "_parse_history"):
             #print("OPERATOR HIST:", "1. we are property of instance")
-            if not _compilation: assert _parse_history == []
+            # if not _compilation: assert _parse_history == [], repr(_parse_history)
+            if not _compilation: _parse_history = []
             _parse_history += self._property_of_inst._parse_history
         if isinstance(other, Object) and hasattr(other, "_parse_history"):
             #print("OPERATOR HIST:", "2. the other is instance")
-            if not _compilation: assert _parse_history == []
+            # if not _compilation: assert _parse_history == [], repr(_parse_history)
+            if not _compilation: _parse_history = []
             _parse_history += other._parse_history
         if isinstance(other, Property) and hasattr(other, "_property_of_inst") and hasattr(other._property_of_inst, "_parse_history"):
             #print("OPERATOR HIST:", "3. the other is property of instance")
-            if not _compilation: assert _parse_history == []
+            # if not _compilation: assert _parse_history == [], repr(_parse_history)
+            if not _compilation: _parse_history = []
             _parse_history += other._property_of_inst._parse_history
         #print("OPERATOR-HIST-1", _parse_history)
         other_genvar = None

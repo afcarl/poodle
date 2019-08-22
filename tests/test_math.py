@@ -33,6 +33,7 @@ def subValues(o1: Obj, o2: Obj):
 def findNonNegativeIngeger(i: int, o: Obj):
     assert i > 0 and i == 1
     o.value2 = i
+    return "HI"
 
 cobj1 = Obj()
 cobj2 = Obj()
@@ -58,6 +59,14 @@ def test_integers_parameters():
         findNonNegativeIngeger], 
         space=globals(), 
         goal=lambda:(cobj1.value2==1)): p
+
+def test_exec_integers_parameters():
+    cobj1.type = TYPE_2
+    cobj1.value2 = 0
+    cobj1.count = 1
+    assert xschedule([ findNonNegativeIngeger], space=globals(), 
+        goal=lambda:(cobj1.value2==1)) == "HI"
+
 
 def test_math_sub_multigoal():
 
@@ -109,6 +118,7 @@ def test_math_add():
 def addIfGreater(o1: Obj, o2: Obj):
     assert o1.count > o2.count
     o1.count = o1.count - o2.count
+    return "DONE"
 
 def test_greater_than():
     cobj1.type = TYPE_1
@@ -136,6 +146,7 @@ def test_complex_integer_comp():
     def findNonNegativeIngegerObj(o: Obj):
         assert o.count > -1
         o.value2 = o.count
+        return "DONE"
     cobj1.type = TYPE_1
     cobj1.value2 = 0
     cobj1.count = 1
@@ -150,6 +161,7 @@ def test_complex_integer_comp():
 def addComplecIneq(o1: Obj, o2: Obj):
     assert o1.count + o2.count > o1.value2 - o2.value2
     o1.count = o1.count - o2.count
+    return "DONE"
 
 def test_advanced_multi_add_inequality_timout():
     cobj1.type = TYPE_1
@@ -183,6 +195,7 @@ class ProblemExample(poodle.problem.Problem):
     def addComplecIneq(self, o1: Obj, o2: Obj):
         assert o1.count + o2.count > o1.value2 - o2.value2
         o1.count = o1.count - o2.count
+        return "DONE"
     def problem(self):
         self.cobj1 = self.addObject(Obj())
         self.cobj2 = self.addObject(Obj())
@@ -207,6 +220,7 @@ def test_math_add_int():
     def addComplecIneq_num(o1: Obj, o2: Obj):
         assert o1.count + 1 > o1.value2 - o2.value2
         o1.count = o1.count - o2.count
+        return "DONE"
     cobj1.type = TYPE_1
     cobj1.value2 = 1
     cobj1.count = 1
@@ -222,6 +236,7 @@ def test_math_multi_eq():
         assert o1.count == 3
         assert o1.value2 == 2
         o1.count = 4
+        return "DONE"
     cobj1.type = TYPE_1
     cobj1.value2 = 1
     cobj1.count = 1
@@ -235,14 +250,16 @@ def test_math_multi_eq():
 def plus1(o1: Obj):
     assert o1.type == TYPE_1
     o1.count += 1
+    return "DONE"
     
 @pytest.mark.skip(reason="no way of currently testing this")
 def test_math_plus1():
-    xschedule([plus1], space=globals(), goal=(cobj1.count==3))
+    assert xschedule([plus1], space=globals(), goal=(cobj1.count==3)) == "DONE"
     
 @planned
 def check3(obj: Obj):
     assert obj.count == 3
+    return "DONE"
 
 @pytest.mark.skip(reason="no way of currently testing this")
 def test_math_add_funcgoal():
