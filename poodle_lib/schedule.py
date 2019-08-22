@@ -1,3 +1,4 @@
+import sys
 from poodle import *
 import collections.abc
 from .poodle_main import ListLike, Select, Problem, _collected_predicates, \
@@ -87,7 +88,12 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     if goal:
         _reset_state()
         _compilation_enable()
-        goal = Select(goal())
+        try:
+            goal = Select(goal())
+        except Exception as e:
+            et, ei, tb = sys.exc_info()
+            _compilation_enable(False)
+            raise ei.with_traceback(tb)
         if not type(goal) == list:
             goal = [goal]
         for g in goal:
