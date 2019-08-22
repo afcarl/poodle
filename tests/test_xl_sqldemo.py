@@ -189,9 +189,10 @@ def test_sql_plan():
     for a in p.plan: a
     # print(' '.join(x() for x in p.plan))
 
-@pytest.mark.skip(reason="TODO")
+# @pytest.mark.skip(reason="TODO")
 def test_sql_exec():
     p = SQLDemoTest()
     p.run()
-    print(' '.join(x() for x in p.plan))
+    assert (' '.join(x() for x in p.plan)).strip() == \
+        """SELECT tbl1.col1 FROM tbl1  JOIN tbl2.col7 ON (tbl1.col3 = tbl2.col7) JOIN tbl3.col10 ON (tbl2.col8 = tbl3.col10)  WHERE column4 LIKE 'Hello' column11 LIKE 'world'"""
 

@@ -7,11 +7,13 @@ class IntegerType(poodle.Object):
 
 class LogSparseInteger(IntegerType):
     def add(self, num: "LogSparseInteger"):
+        num = resolve_poodle_special_object(num)
         resultVar = poodle.Any(LogSparseInteger, space=_system_objects)  # TODO: implicit search in current context?
         sumRes = poodle.Any(SumResult, space=_system_objects)
         assert sumRes.operator1 == self
         assert sumRes.operator2 == num
         assert sumRes.result == resultVar
+        if not self._variable_mode: resultVar.value = self.value + num.value
 
         return resultVar
 
@@ -30,11 +32,13 @@ class LogSparseInteger(IntegerType):
 
     # TODO: for every method here, support 'other' to be a 'int' value
     def sub(self, other: "LogSparseInteger"):
+        other = resolve_poodle_special_object(other)
         resultVar = poodle.Any(LogSparseInteger, space=_system_objects)
         sumRes = poodle.Any(SumResult, space=_system_objects)
         assert sumRes.operator1 == resultVar
         assert sumRes.operator2 == other
         assert sumRes.result == self
+        if not self._variable_mode: resultVar.value = self.value - other.value
 
         return resultVar
 
