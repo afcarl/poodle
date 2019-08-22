@@ -93,8 +93,8 @@ class Problem(poodle.problem.Problem):
         self.nodeList1.totalfreeCapacity = 0
         self.nodeList1.totalCapacity = 0
         
-        amountOfpodsSize= [[1,10],[2,10]] # [size,amount]
-        amountOfnodesSize= [[10,1],[4,5]] # [size,amount]
+        amountOfpodsSize= [[1,5],[2,5]] # [size,amount]
+        amountOfnodesSize= [[5,1],[2,5]] # [size,amount]
         
         pendingPodsCounterLoc = 0
         
