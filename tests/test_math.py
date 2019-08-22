@@ -158,7 +158,7 @@ def test_advanced_multi_add_inequality():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2)): p
+    for p in schedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2), sessionName="test_advanced_multi_add_inequality"): p
 
 
 class ProblemExample(poodle.problem.Problem):
