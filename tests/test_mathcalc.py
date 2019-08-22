@@ -128,7 +128,6 @@ class Goal1(Problem):
     def goal(self):
         return self.nodeList1.totalfreeCapacity == 0 and self.podList1.pendingPodsCounter == 0
 
-@pytest.mark.skip(reason="Does not pass - TODO FIXME")
 def test_math_split1():
     p = Goal1()
     p.run()
