@@ -71,7 +71,7 @@ SOLVER_ERROR_STATUS = 'ERROR'
 SOLVER_UNKNOWN_STATUS = 'UNKNOWN'
 SOLVER_DONE_STATUS = 'DONE'
 SOLVER_KILLED_STATUS = 'KILLED'
-SOLVER_MAX_TIME = 60
+SOLVER_MAX_TIME = 30
 SOLVER_CHECK_TIME = 2
 SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", 'http://devapi.xhop.ai:8082') #'http://127.0.0.1:8082' # 
 
@@ -1984,8 +1984,8 @@ class Problem:
                 if proccessing_time_start == 0 :
                     proccessing_time_start = time.time()
                     continue
-                elif  time.time() - proccessing_time_start > SOLVER_MAX_TIME :
-                    log.debug(str(SOLVER_MAX_TIME) + ' sec break')
+                elif  time.time() - proccessing_time_start > self.solve_timeout:
+                    log.debug(str(self.solve_timeout) + ' sec break')
                     response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})   
                     status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
                     return 1
@@ -2074,7 +2074,8 @@ class Problem:
                 self._plan = actionClassLoader._plan
         return retcode
         
-    def run(self, url = SOLVER_URL):
+    def run(self, url = SOLVER_URL, timeout=SOLVER_MAX_TIME):
+        self.solve_timeout=timeout
         for ob in self.objectList: ob._sealed = False # seal all objects
         if os.environ.get("POODLE_LOCAL_PLANNER"):
             r = self.run_local()

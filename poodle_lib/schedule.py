@@ -180,10 +180,10 @@ def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=10):
     return r
     
 
-def schedule(methods, space, exit=None, goal=None, sessionName=None):
+def schedule(methods, space, exit=None, goal=None, sessionName=None, timeout=30):
     space = _space_to_list(space)
     p = _create_problem(methods, space, exit, goal, sessionName)
-    p.run()
+    p.run(timeout=timeout)
     _reset_state()
     for v in space: 
         if isinstance(v, Object): v._sealed = False
@@ -193,8 +193,8 @@ def schedule(methods, space, exit=None, goal=None, sessionName=None):
     
     
 
-def xschedule(methods, space, exit=None, goal=None, sessionName=None):
+def xschedule(methods, space, exit=None, goal=None, sessionName=None, timeout=30):
     """schedule methods within variables space space with exit method exit or goal goal
     this function returns a composable method that has the resulting algorithm built in"""
-    return [x() for x in schedule(methods, space, exit, goal, sessionName)][-1]
+    return [x() for x in schedule(methods, space, exit, goal, sessionName, timeout)][-1]
     

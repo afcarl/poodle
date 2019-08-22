@@ -2,6 +2,7 @@ import pytest
 from poodle import *
 from poodle.arithmetic import *
 import poodle.problem
+from poodle.schedule import SchedulingError
 
 class Obj(Object):
     type: "ObjType"
@@ -150,6 +151,21 @@ def addComplecIneq(o1: Obj, o2: Obj):
     assert o1.count + o2.count > o1.value2 - o2.value2
     o1.count = o1.count - o2.count
 
+def test_advanced_multi_add_inequality_timout():
+    cobj1.type = TYPE_1
+    cobj1.value2 = 1
+    cobj1.count = 1
+
+    cobj2.type = TYPE_2
+    cobj2.value2 = 2
+    cobj2.count = 3
+    ok = False
+    try:
+        for p in schedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2), sessionName="test_advanced_multi_add_inequality", timeout=2): p
+    except SchedulingError:
+        ok = True
+    assert ok
+
 def test_advanced_multi_add_inequality():
     cobj1.type = TYPE_1
     cobj1.value2 = 1
@@ -158,7 +174,8 @@ def test_advanced_multi_add_inequality():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2), sessionName="test_advanced_multi_add_inequality"): p
+    for p in schedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2), sessionName="test_advanced_multi_add_inequality", timeout=60): p
+
 
 
 class ProblemExample(poodle.problem.Problem):
