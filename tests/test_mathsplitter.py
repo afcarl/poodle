@@ -272,6 +272,103 @@ class Problem6(ProblemExample):
         podStarted.status = STATUS_TEST6
 
 
+class Problem7(ProblemExample):
+
+    @planned
+    def TestOf7Sums(self, 
+        podStarted: Pod,
+        node1: Node,
+        scheduler1: Scheduler,
+        serviceTargetForPod: Service,
+        globalVar1: GlobalVar
+        ):
+
+        assert podStarted.targetService == serviceTargetForPod
+        node1.currentFormalCpuConsumption += podStarted.cpuRequest
+        node1.currentFormalMemConsumption += podStarted.memRequest
+        globalVar1.currentFormalCpuConsumption += podStarted.cpuRequest
+        globalVar1.currentFormalMemConsumption += podStarted.memRequest
+        serviceTargetForPod.amountOfActivePods += 1
+        podStarted.cpuRequest += 1
+        
+
+        scheduler1.queueLength -= 1
+
+        podStarted.atNode = node1        
+        podStarted.status = STATUS_TEST7
+
+class Problem8(ProblemExample):
+    @planned
+    def TestOf8Sums(self, 
+        podStarted: Pod,
+        node1: Node,
+        scheduler1: Scheduler,
+        serviceTargetForPod: Service,
+        globalVar1: GlobalVar
+        ):
+
+        assert podStarted.targetService == serviceTargetForPod
+        node1.currentFormalCpuConsumption += podStarted.cpuRequest
+        node1.currentFormalMemConsumption += podStarted.memRequest
+        globalVar1.currentFormalCpuConsumption += podStarted.cpuRequest
+        globalVar1.currentFormalMemConsumption += podStarted.memRequest
+        serviceTargetForPod.amountOfActivePods += 1
+        podStarted.cpuRequest += 1
+        podStarted.memRequest += 1
+
+        scheduler1.queueLength -= 1
+
+        podStarted.atNode = node1        
+        podStarted.status = STATUS_TEST8
+
+class Problem9(ProblemExample):
+    @planned
+    def TestOf9Sums(self, 
+        podStarted: Pod,
+        node1: Node,
+        scheduler1: Scheduler,
+        serviceTargetForPod: Service,
+        globalVar1: GlobalVar
+        ):
+
+        assert podStarted.targetService == serviceTargetForPod
+        node1.currentFormalCpuConsumption += podStarted.cpuRequest
+        node1.currentFormalMemConsumption += podStarted.memRequest
+        globalVar1.currentFormalCpuConsumption += podStarted.cpuRequest
+        globalVar1.currentFormalMemConsumption += podStarted.memRequest
+        serviceTargetForPod.amountOfActivePods += 1
+        podStarted.cpuRequest += 1
+        podStarted.memRequest += 1
+        node1.currentFormalCpuConsumption += 1
+        scheduler1.queueLength -= 1
+
+        podStarted.atNode = node1        
+        podStarted.status = STATUS_TEST9
+
+class Problem10(ProblemExample):
+    @planned
+    def TestOf10Sums(self, 
+        podStarted: Pod,
+        node1: Node,
+        scheduler1: Scheduler,
+        serviceTargetForPod: Service,
+        globalVar1: GlobalVar
+        ):
+
+        assert podStarted.targetService == serviceTargetForPod
+        node1.currentFormalCpuConsumption += podStarted.cpuRequest
+        node1.currentFormalMemConsumption += podStarted.memRequest
+        globalVar1.currentFormalCpuConsumption += podStarted.cpuRequest
+        globalVar1.currentFormalMemConsumption += podStarted.memRequest
+        serviceTargetForPod.amountOfActivePods += 1
+        podStarted.cpuRequest += 1
+        podStarted.memRequest += 1
+        node1.currentFormalCpuConsumption += 1
+        scheduler1.queueLength -= 1
+        node1.currentFormalMemConsumption += 1
+
+        podStarted.atNode = node1        
+        podStarted.status = STATUS_TEST10
           
 class Goal1(ProblemExample):
     def goal(self):
@@ -324,5 +421,50 @@ class Goal6(Problem6):
 
 def test_math_split6():
     p = Goal6()
+    p.run()
+    for a in p.plan: a
+    
+class Goal6(Problem6):
+    def goal(self):
+        return self.pod1.status == STATUS_TEST6
+
+def test_math_split7():
+    p = Goal7()
+    p.run()
+    for a in p.plan: a
+
+class Goal7(Problem7):
+    def goal(self):
+        return self.pod1.status == STATUS_TEST7
+
+def test_math_split8():
+    p = Goal8()
+    p.run()
+    for a in p.plan: a
+
+class Goal8(Problem8):
+    def goal(self):
+        return self.pod1.status == STATUS_TEST8
+
+def test_math_split9():
+    p = Goal9()
+    p.run()
+    for a in p.plan: a
+
+class Goal9(Problem9):
+    def goal(self):
+        return self.pod1.status == STATUS_TEST9
+
+def test_math_split9():
+    p = Goal9()
+    p.run()
+    for a in p.plan: a
+
+class Goal10(Problem10):
+    def goal(self):
+        return self.pod1.status == STATUS_TEST10
+
+def test_math_split10():
+    p = Goal10()
     p.run()
     for a in p.plan: a
