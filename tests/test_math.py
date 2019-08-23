@@ -80,7 +80,7 @@ def test_math_sub_multigoal():
     cobj2.count = 1
   
     # debug_plan([subValues], space=globals(), goal=lambda:(cobj2.value2==1), plan=[subValues])
-    for p in schedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1 and cobj1.type==TYPE_2)): p
+    assert xschedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1 and cobj1.type==TYPE_2))=="DONE"
     
 @pytest.mark.skip(reason="TODO")
 def test_isolation():
@@ -112,7 +112,7 @@ def test_math_add():
     
     # debug_plan([addValues], space=globals(), goal=Select(cobj2.count==3), plan=[addValues])
     # TODO: these two combined do not work
-    for p in schedule([addValues], space=globals(), goal=lambda:(cobj1.count==3)): p
+    assert xschedule([addValues], space=globals(), goal=lambda:(cobj1.count==3)) == "DONE"
     # print(xschedule([addValues], space=globals(), goal=lambda:(cobj1.count==3)))
 
 @planned
@@ -130,7 +130,7 @@ def test_greater_than():
     cobj2.value2 = 2
     cobj2.count = 3
     # debug_plan([addIfGreater], space=globals(), goal=lambda:(cobj1.count==2), plan=[addIfGreater])
-    for p in schedule([addIfGreater], space=globals(), goal=lambda:(cobj2.count==2)): p
+    assert xschedule([addIfGreater], space=globals(), goal=lambda:(cobj2.count==2)) == "DONE"
 
 def test_debugging_formally_executes():
     cobj1.type = TYPE_1
@@ -155,7 +155,7 @@ def test_complex_integer_comp():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = -1
-    for p in schedule([findNonNegativeIngegerObj], space=[cobj1, cobj2], goal=lambda:(cobj1.value2==1)): p
+    assert xschedule([findNonNegativeIngegerObj], space=[cobj1, cobj2], goal=lambda:(cobj1.value2==1)) == "DONE"
 
 
 @planned
@@ -187,7 +187,7 @@ def test_advanced_multi_add_inequality():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2), sessionName="test_advanced_multi_add_inequality", timeout=60): p
+    assert xschedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2), sessionName="test_advanced_multi_add_inequality", timeout=60) == "DONE"
 
 
 
@@ -229,7 +229,7 @@ def test_math_add_int():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq_num], space=globals(), goal=lambda:(cobj2.count==2)): p
+    assert xschedule([addComplecIneq_num], space=globals(), goal=lambda:(cobj2.count==2)) == "DONE"
 
 def test_math_multi_eq():
     @planned
@@ -245,7 +245,7 @@ def test_math_multi_eq():
     cobj2.type = TYPE_2
     cobj2.value2 = 2
     cobj2.count = 3
-    for p in schedule([addComplecIneq_num], space=globals(), goal=lambda:(cobj2.count==4)): p
+    assert xschedule([addComplecIneq_num], space=globals(), goal=lambda:(cobj2.count==4)) == "DONE"
 
 @planned
 def plus1(o1: Obj):
