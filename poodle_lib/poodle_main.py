@@ -1697,7 +1697,7 @@ class Object(metaclass=BaseObjectMeta):
             elif isinstance(value, int) and hasattr(self, name) and isinstance(getattr(self, name), Property):
                 from poodle.arithmetic import logSparseIntegerFactory
                 getattr(self, name).set(logSparseIntegerFactory.get(value))
-            elif isinstance(value, Property) and not value._property_value is None and hasattr(self, name) and isinstance(getattr(self, name), Property):
+            elif not _init_mode and isinstance(value, Property) and not value._property_value is None and hasattr(self, name) and isinstance(getattr(self, name), Property):
                 getattr(self, name)._property_value = value._property_value
             else:
                 if not _init_mode and hasattr(self, name) and isinstance(getattr(self, name), Property):
