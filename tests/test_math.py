@@ -49,7 +49,8 @@ def test_math_sub():
     cobj2.count = 1
   
     # debug_plan([subValues], space=globals(), goal=lambda:(cobj2.value2==1), plan=[subValues])
-    for p in schedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1)): p
+    # for p in schedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1)): p
+    xschedule([subValues], space=globals(), goal=lambda:(cobj2.value2==1)) == "DONE"
 
 def test_integers_parameters():
     cobj1.type = TYPE_2

@@ -637,6 +637,7 @@ class Property(object):
                 who_instantiating = None
             else:
                 raise ValueError("No class to select is present in selector expression. Both LHS and RHS are instances.")
+        # assert not obj is None
 
         if isinstance(subjObjectClass, Object):
             other_class_name = type(subjObjectClass).__name__
@@ -1054,9 +1055,13 @@ class Property(object):
                     return other_ob - self_ob
 
             elif not self._property_value is None and not other._property_value is None:
-                raise NotImplementedError("Python type arithmetics is not currently supported")
-                self.set(self._property_value + other._property_value)
-                # TODO HERE: support for different types of python based arithmetics
+                # raise NotImplementedError("Python type arithmetics is not currently supported")
+                if op=="add":
+                    return self._property_value + other._property_value
+                elif op=="sub":
+                    return self._property_value - other._property_value
+                elif op=="rsub":
+                    return  other._property_value - self._property_value
             else:
                 raise TypeError("Unsupported combination of values")
         elif isinstance(other, IntegerType):
@@ -1072,6 +1077,7 @@ class Property(object):
                 return other - self_ob
         else:
             raise TypeError("Operator '%s' for %s and %s is not supported" % (op, type(self), type(other)))
+        raise
     
     def __radd__(self, other):
         return self.__add__(other)
@@ -1664,6 +1670,8 @@ class Object(metaclass=BaseObjectMeta):
                 from poodle.arithmetic import logSparseIntegerFactory
                 getattr(self, name).set(logSparseIntegerFactory.get(value))
             else:
+                if not _init_mode and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                    raise AssertionError("Rewriting object for property %s with value %s" % (name, value))
                 super().__setattr__(name, value)
 
     # def __getattr__(self, attr):
