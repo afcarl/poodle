@@ -130,6 +130,6 @@ class Goal1(Problem):
 
 def test_math_split1():
     p = Goal1()
-    p.run()
+    p.run(timeout=60)
     for a in p.plan: a
     

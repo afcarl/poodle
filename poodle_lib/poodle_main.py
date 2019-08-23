@@ -1064,6 +1064,15 @@ class Property(object):
                     return  other._property_value - self._property_value
             else:
                 raise TypeError("Unsupported combination of values")
+        elif isinstance(other, IntegerType) and not self._property_value is None and \
+                 isinstance(resolve_poodle_special_object(self._property_value), IntegerType):
+            self_ob = resolve_poodle_special_object(self._property_value)
+            if op=="add":
+                return self_ob + other
+            elif op=="sub":
+                return self_ob - other
+            elif op=="rsub":
+                return other - self_ob
         elif isinstance(other, IntegerType):
             assert self._property_value is None and \
                 self._property_of_inst._variable_mode
@@ -1111,11 +1120,30 @@ class Property(object):
                     return other_ob >= self_ob
                 else:
                     raise AssertionError()
+            elif not self._property_value is None and not other._property_value is None:
+                if op=="gt":
+                    return self._property_value > other._property_value
+                elif op=="lt":
+                    return other._property_value > self._property_value
+                elif op=="ge":
+                    return self._property_value >= other._property_value
+                elif op=="le":
+                    return other._property_value >= self._property_value
             else:
                 raise AssertionError("Objects have mixed/existing values")
         else:
             other = resolve_poodle_special_object(other)
-            assert self._property_value is None
+            if isinstance(self._property_value, Object) and isinstance(other, Object):
+                if op=="gt":
+                    return self._property_value > other
+                elif op=="lt":
+                    return other > self._property_value
+                elif op=="ge":
+                    return self._property_value >= other
+                elif op=="le":
+                    return other >= self._property_value
+                
+            assert self._property_value is None, "My property value is %s and we're doing %s with %s" % (self._property_value, op, other)
             self_ob = self._value(_variable_mode=True)
             assert self == self_ob
             if op=="gt":
@@ -1669,6 +1697,8 @@ class Object(metaclass=BaseObjectMeta):
             elif isinstance(value, int) and hasattr(self, name) and isinstance(getattr(self, name), Property):
                 from poodle.arithmetic import logSparseIntegerFactory
                 getattr(self, name).set(logSparseIntegerFactory.get(value))
+            elif isinstance(value, Property) and not value._property_value is None and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                getattr(self, name)._property_value = value._property_value
             else:
                 if not _init_mode and hasattr(self, name) and isinstance(getattr(self, name), Property):
                     raise AssertionError("Rewriting object for property %s with value %s" % (name, value))

@@ -8,13 +8,14 @@ class Problem:
     def addObject(self, obj):
         self.objectList.append(obj)
         return obj
-    def run(self):
+    def run(self, timeout=30):
         self.problem()
         try:
             self.plan = schedule(
                 methods=[getattr(self,m) for m in dir(self) if callable(getattr(self,m))], 
                 space=list(self.__dict__.values())+self.objectList,
-                goal=lambda:(self.goal())
+                goal=lambda:(self.goal()),
+                timeout=timeout
                 #exit=self.exit
             )
         except SchedulingError:
