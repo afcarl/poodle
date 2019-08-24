@@ -174,7 +174,7 @@ def test_advanced_multi_add_inequality_timout():
     cobj2.count = 3
     ok = False
     try:
-        for p in schedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2), sessionName="test_advanced_multi_add_inequality", timeout=2): p
+        xschedule([addComplecIneq], space=globals(), goal=lambda:(cobj2.count==2), sessionName="test_advanced_inequality_timout", timeout=2) == "DONE"
     except SchedulingError:
         ok = True
     assert ok

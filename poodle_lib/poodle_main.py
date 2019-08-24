@@ -2014,7 +2014,8 @@ class Problem:
         url_check = url.strip('/') + '/check'
         url_result = url.strip('/') + '/result'
         url_kill = url.strip('/') + '/kill'
-        proccessing_time_start = 0
+        proccessing_time_start = time.time()
+        errorCount = 0
         while 1:
             time.sleep(SOLVER_CHECK_TIME)    
             response = requests.post(url_check, data={'id': crypt(SOLVER_KEY, str(task_id))})   
@@ -2033,7 +2034,8 @@ class Problem:
                 continue
             elif status ==  SOLVER_UNKNOWN_STATUS:
                 log.debug('UNKNOWN SOLVER_ID')
-                return 1
+                if errorCount > 5: return 1
+                else: errorCount += 1
             elif status ==  SOLVER_DONE_STATUS:
                 response = requests.post(url_result, data={'id': crypt(SOLVER_KEY, str(task_id))})   
                 response_plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))  
@@ -2053,8 +2055,8 @@ class Problem:
                 return 1    
             else:
                 log.debug('UNKNOWN_STATUS')
-                return 1
-        
+                if errorCount > 5: return 1
+                else: errorCount += 1
 
     def run_cloud(self, url):
        
