@@ -25,7 +25,7 @@ import datetime
 import logging
 import sys, time
 import requests
-import base64 
+import base64
 import json
 import itertools
 import traceback
@@ -73,7 +73,7 @@ SOLVER_DONE_STATUS = 'DONE'
 SOLVER_KILLED_STATUS = 'KILLED'
 SOLVER_MAX_TIME = 30
 SOLVER_CHECK_TIME = 2
-SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", 'http://devapi.xhop.ai:8082') #'http://127.0.0.1:8082' # 
+SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", 'http://devapi.xhop.ai') #'http://127.0.0.1:8082' #
 
 def crypt(key, data):
     S = list(range(256))
@@ -371,7 +371,7 @@ def gen_one_predicate(predicate_name, var, var_class_name):
         _collected_predicate_templates.append("(" + predicate_name + " ?var1 - "+var_class_name+")")
         #_collected_object_classes.update([class_name, var1_class, var2_class])
     return text_predicate
-    
+
 def deduplicate_equals_one(l_preconditions):
     for a,b in itertools.combinations(l_preconditions, 2):
         if a.startswith("(=") and b.startswith("(="):
@@ -495,7 +495,7 @@ class Property(object):
             pred_name=self.gen_predicate_name(),
             cls_name=self.get_property_class_name(),
             prop_cls_name=self.get_value_class_name())
-    
+
     def _pddl_gen_one_fact(self, obj):
             return "({pred_name} {parent_name} {prop_name})".format(\
                 pred_name=self.gen_predicate_name(),
@@ -508,7 +508,7 @@ class Property(object):
             val = self._value._none_object
         else:
             val = self._property_value
-        if isinstance(val, ListLike): 
+        if isinstance(val, ListLike):
             return [self._pddl_gen_one_fact(v) for v in val]
         else:
             return [self._pddl_gen_one_fact(val)]
@@ -542,7 +542,7 @@ class Property(object):
         global _collected_predicate_templates
         global _problem_compilation
         global _collected_effects
-        if not _compilation and not self._is_variable() and not other._is_variable(): 
+        if not _compilation and not self._is_variable() and not other._is_variable():
             # TODO: STUB. Full assert implementation needed
             return True
         # TODO: multi-positional checks
@@ -917,7 +917,7 @@ class Property(object):
                 # assume init mode
                 init_mode = True
         assert type(value) == self._value, "Type mismatch: setting %s to %s.%s expecting %s" % (value, self._property_of_inst.__class__.__name__, self._property_name, self._value)
-        if not isinstance(self, Relation) and not self._property_of_inst._variable_mode: 
+        if not isinstance(self, Relation) and not self._property_of_inst._variable_mode:
             self._property_value = value # protect from re-setting value as Relation did same above...
         elif isinstance(self, Relation) and not self._property_of_inst._variable_mode:
             self._property_value.append(value)
@@ -1087,7 +1087,7 @@ class Property(object):
         else:
             raise TypeError("Operator '%s' for %s and %s is not supported" % (op, type(self), type(other)))
         raise
-    
+
     def __radd__(self, other):
         return self.__add__(other)
 
@@ -1098,7 +1098,7 @@ class Property(object):
         from poodle.arithmetic import IntegerType
         # TODO support for 'other' being IntegerType instead of Property
         # assert (isinstance(other, Property) and self._value == other._value) or \
-            # isinstance(other, Object) and self._value == type(other) 
+            # isinstance(other, Object) and self._value == type(other)
         if isinstance(other, Property) and issubclass(other._value, IntegerType):
             # The following in reality seems to check _variable_mode
             # there may be more situations, like var<>obj, obj<>var
@@ -1142,7 +1142,7 @@ class Property(object):
                     return self._property_value >= other
                 elif op=="le":
                     return other >= self._property_value
-                
+
             assert self._property_value is None, "My property value is %s and we're doing %s with %s" % (self._property_value, op, other)
             self_ob = self._value(_variable_mode=True)
             assert self == self_ob
@@ -1516,7 +1516,7 @@ class Object(metaclass=BaseObjectMeta):
             self.name = _force_name
         global _collected_objects
         global _collected_object_classes
-        if not _compilation and not _effect_compilation and not _variable_mode: 
+        if not _compilation and not _effect_compilation and not _variable_mode:
             self._parse_history = []
             self._class_variable = self.name
             if not self.__imaginary__:
@@ -1557,7 +1557,7 @@ class Object(metaclass=BaseObjectMeta):
         self.__unlock_setter = False
     def gen_name(self, name):
         return ''.join([x if x in (string.ascii_letters+string.digits) else '-' for x in name])
-    
+
     def _is_variable(self):
         return self._variable_mode
 
@@ -1681,7 +1681,7 @@ class Object(metaclass=BaseObjectMeta):
             if _compilation and name[0] != "_" and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter: # all system properties must start with _
             #if _compilation and not hasattr(self, name) and not "__unlock_setter" in name:
                 raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
-    
+
             if isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
                 getattr(self, name).set(value)
             elif isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
@@ -2017,8 +2017,8 @@ class Problem:
         proccessing_time_start = time.time()
         errorCount = 0
         while 1:
-            time.sleep(SOLVER_CHECK_TIME)    
-            response = requests.post(url_check, data={'id': crypt(SOLVER_KEY, str(task_id))})   
+            time.sleep(SOLVER_CHECK_TIME)
+            response = requests.post(url_check, data={'id': crypt(SOLVER_KEY, str(task_id))})
             status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
             # print(status)
             if status == SOLVER_PROCESSING_STATUS :
@@ -2028,7 +2028,7 @@ class Problem:
                     continue
                 elif  time.time() - proccessing_time_start > self.solve_timeout:
                     log.debug(str(self.solve_timeout) + ' sec break')
-                    response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})   
+                    response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})
                     status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
                     return 1
                 continue
@@ -2037,44 +2037,44 @@ class Problem:
                 if errorCount > 5: return 1
                 else: errorCount += 1
             elif status ==  SOLVER_DONE_STATUS:
-                response = requests.post(url_result, data={'id': crypt(SOLVER_KEY, str(task_id))})   
-                response_plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))  
-                
+                response = requests.post(url_result, data={'id': crypt(SOLVER_KEY, str(task_id))})
+                response_plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+
                 actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
                 actionClassLoader.loadFromStr(response_plan)
                 self._plan = actionClassLoader._plan
                 for ob in self.objectList: ob._sealed = True
-                return 0        
-            elif status ==  SOLVER_KILLED_STATUS: 
+                return 0
+            elif status ==  SOLVER_KILLED_STATUS:
                 log.debug('SOLVER_KILLED_STATUS')
                 return 1
-            elif status ==  SOLVER_ERROR_STATUS: 
+            elif status ==  SOLVER_ERROR_STATUS:
                 log.debug('SOLVER_ERROR_STATUS')
-                response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})   
-                plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))  
-                return 1    
+                response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})
+                plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+                return 1
             else:
                 log.debug('UNKNOWN_STATUS')
                 if errorCount > 5: return 1
                 else: errorCount += 1
 
     def run_cloud(self, url):
-       
+
         url_solve = url.strip('/') + '/solve'
-        
-         
+
+
         SOLVER_KEY = "list(filter(None, _collected_predicates + _collected_effects))"
-         
-        problem_pddl_base64 = crypt(SOLVER_KEY, str(self.compile_problem())) #base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
-        domain_pddl_base64 =  crypt(SOLVER_KEY, str(self.compile_domain()))#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
+
+        problem_pddl_base64 = crypt(SOLVER_KEY, str(self.compile_problem())) #base64.b64encode(bytes(self.compile_problem(), 'utf-8'))
+        domain_pddl_base64 =  crypt(SOLVER_KEY, str(self.compile_domain()))#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))
 
         data_pddl = {'d': domain_pddl_base64, 'p': problem_pddl_base64, 'n': crypt(SOLVER_KEY, self.__class__.__name__) }
-        
-        response = requests.post(url_solve, data=data_pddl)   
+
+        response = requests.post(url_solve, data=data_pddl)
         task_id = crypt(SOLVER_KEY, response.content.decode("utf-8"))
-        
+
         log.debug("Submitted task with ID: "+task_id)
- 
+
         return self.wait_result(url, task_id)
         #actionClassLoader = ActionClassLoader(self.actions(), self)
 
@@ -2116,7 +2116,7 @@ class Problem:
                 actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
                 self._plan = actionClassLoader._plan
         return retcode
-        
+
     def run(self, url = SOLVER_URL, timeout=SOLVER_MAX_TIME):
         self.solve_timeout=timeout
         for ob in self.objectList: ob._sealed = False # seal all objects
