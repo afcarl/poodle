@@ -1,6 +1,7 @@
-from poodle.poodle import * 
+from poodle import * 
 from action.pydlNetAction import *
 from object.networkObject import *
+from poodle import log
 
 class IPFactory():
     def __init__(self):
@@ -49,17 +50,19 @@ class NetworkGoal(Problem):
         return self.packet.is_consumed == True
         
 
-class SimpleTestProblem1(NetworkGoal):
+class SimpleTestProblem1(NetworkGoal, PacketActionModel, HopToRouteAction):
 
     def actions(self):
-        return [ ConsumePacketSelect, ForwardPacketToInterface, CreateRoute, 
+        return [ ForwardPacketToInterface, 
+                CreateRoute, 
                 HopToRoute, 
-                PacketAtOutputReturn,
-                # PacketAtOutputReturnInput
-                RouteExistsReturn
+                # PacketAtOutputReturn,
+                # RouteExistsReturn
                 ]
 
     def problem(self):
+        self.null_interface = Interface("NULL")
+        self.null_table = Table("NULL")
         
         self.ip_factory = self.addObject(IPFactory()) # need IP factory as all new objects would be different
         ip_factory = self.ip_factory
@@ -72,10 +75,10 @@ class SimpleTestProblem1(NetworkGoal):
         
         self.packet.dst_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.3"))
         self.host1 = self.addObject(Host())
-        interface = self.addObject(Interface(value='eth0'))
-        interface.has_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.1"))
+        self.interface = self.addObject(Interface(value='eth0'))
+        self.interface.has_ipaddr = self.addObject(ip_factory.gen_ip("192.168.3.1"))
         self.interface_dummyinput = self.addObject(Interface("eth1"))
-        self.host1.has_interface.add(interface)
+        self.host1.has_interface.add(self.interface)
         self.host1.has_interface.add(self.interface_dummyinput)
         self.host2 = Host()
         self.interface2 = self.addObject(Interface(value='eth0'))
@@ -92,14 +95,14 @@ class SimpleTestProblem1(NetworkGoal):
         self.host2.has_interface.add(self.interface2)
         self.host2.has_interface.add(self.interface3)
         
-        interface.adjacent_interface.add(self.interface2)
-        self.interface2.adjacent_interface.add(interface)
+        self.interface.adjacent_interface.add(self.interface2)
+        self.interface2.adjacent_interface.add(self.interface)
         
         # host2.has_interface = [interface2, interface3] # TODO
         
         # this does not work! TODO: protect from this happening
         #self.packet.at_interface_input = self.host1.has_interface
-        # self.packet.at_interface_output = interface
+        # self.packet.at_interface_output = self.interface
         # Imaginary test:
         self.packet.at_interface_input = self.interface_dummyinput
     
@@ -120,8 +123,7 @@ class SimpleTestProblem1(NetworkGoal):
 
 p = SimpleTestProblem1()
 
-if p.check_solution():
-    print("PLAN CHECK OK")
+if p.check_solution(50): print("PLAN CHECK OK")
 
 retCode = p.run()
 log.info("fast downward retcode {0}".format(retCode))

@@ -1,8 +1,14 @@
-from poodle.poodle import *
+from poodle import *
+
+class Digit(Object):
+    pass
 
 class Number(Digit): # alias for Digit!!! TODO rename number to digit
+    higher_than = Relation("Number")
+    lower_than = Relation("Number")
     pass
 Number.higher_than = Relation(Number)
+Number.lower_than = Relation(Number)
 
 class Number4Bit(Imaginary):
     pass

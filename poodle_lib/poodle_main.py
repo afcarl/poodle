@@ -9,16 +9,15 @@
 
 # TODO: required properties
 # TODO: difference property vs. relation? one-to-many?
-# TODO: if property is not protected; or it is a stateRelation: 
+# TODO: if property is not protected; or it is a stateRelation:
 #       explicitly define the state changes that it can take!
 
 # TODO: required properties
 # TODO: if/else concept!
 
-from jinja2 import Template
 import string
 import random
-import inspect
+import inspect, functools
 import copy, subprocess, tempfile
 from collections import OrderedDict
 import os
@@ -26,17 +25,19 @@ import datetime
 import logging
 import sys, time
 import requests
-import base64 
+import base64
 import json
+import itertools
+import traceback
 
 # import wrapt
 # import infix
 
 log = logging.getLogger()
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.ERROR)
 
 handler = logging.StreamHandler(sys.stdout) # loggging driver
-handler.setLevel(logging.DEBUG) #loglevel ->> CRITICAL ERROR WARNING INFO DEBUG NOTSET
+handler.setLevel(logging.ERROR) #loglevel ->> CRITICAL ERROR WARNING INFO DEBUG NOTSET
 log.addHandler(handler)
 
 _compilation = False
@@ -54,6 +55,9 @@ _collected_facts = []
 _poodle_object_classes = {}
 _replaced_predicates = {}
 
+_none_objects = {}
+_system_objects = {}
+
 HASHNUM_VAR_NAME = "hashnum"
 HASHNUM_ID_PREDICATE = HASHNUM_VAR_NAME
 HASHNUM_CLASS_NAME = "PoodleHashnum"
@@ -61,50 +65,129 @@ HASHNUM_EXISTS_PFX = "-hashnum-exists" # predicate postfix to indicate existence
 HASHNUM_DEPTH_DEFAULT = 2 # "bit" depth of hashnums
 HASHNUM_COUNT_DEFAULT = 10 # default amount of generated hashnums
 
+SOLVER_KEY = "list(filter(None, _collected_predicates + _collected_effects))"
+SOLVER_PROCESSING_STATUS = 'PROCESSING'
+SOLVER_ERROR_STATUS = 'ERROR'
+SOLVER_UNKNOWN_STATUS = 'UNKNOWN'
+SOLVER_DONE_STATUS = 'DONE'
+SOLVER_KILLED_STATUS = 'KILLED'
+SOLVER_MAX_TIME = 30
+SOLVER_CHECK_TIME = 2
+SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", 'http://devapi.xhop.ai') #'http://127.0.0.1:8082' #
+
+def crypt(key, data):
+    S = list(range(256))
+    j = 0
+
+    for i in list(range(256)):
+        j = (j + S[i] + ord(key[i % len(key)])) % 256
+        S[i], S[j] = S[j], S[i]
+
+    j = 0
+    y = 0
+    out = []
+
+    for char in data:
+        j = (j + 1) % 256
+        y = (y + S[j]) % 256
+        S[j], S[y] = S[y], S[j]
+
+        out.append(chr(ord(char) ^ S[(S[j] + S[y]) % 256]))
+
+    return ''.join(out)
+
+
 from functools import partial
 
 # class Prox(wrapt.ObjectProxy):
 #     isproxy = True
 
-class Infix(object):
-    def __init__(self, func):
-        self.func = func
-    def __or__(self, other):
-        return self.func(other)
-    def __ror__(self, other):
-        return Infix(partial(self.func, other))
-    def __call__(self, v1, v2):
-        return self.func(v1, v2)
-        
-@Infix
-def IN(what, where):
-    # frame = inspect.currentframe()
-    # frame = inspect.getouterframes(frame)[2]
-    # c_string = inspect.getframeinfo(frame[0]).code_context[0].strip()
-    # print("FRAME", c_string)
-    ret = where.contains(what)
-    global _selector_out
-    _selector_out = None
-    return ret
-    
-@Infix
-def EQ(what1, what2):
-    ret = what1.equals(what2)
-    global _selector_out
-    _selector_out = None
-    return ret
+# class Infix(object):
+#     def __init__(self, func):
+#         self.func = func
+#     def __or__(self, other):
+#         return self.func(other)
+#     def __ror__(self, other):
+#         return Infix(partial(self.func, other))
+#     def __call__(self, v1, v2):
+#         return self.func(v1, v2)
+
+# @Infix
+# def IN(what, where):
+#     ret = where.contains(what)
+#     global _selector_out
+#     _selector_out = None
+#     return ret
+
+# @Infix
+# def EQ(what1, what2):
+#     ret = what1.equals(what2)
+#     global _selector_out
+#     _selector_out = None
+#     return ret
 
 def Select(what):
     "Selector decorator"
     # WARNING! This is very thread unsafe!!!
     global _selector_out
     global _compilation
-    if not _compilation and type(_selector_out) == type([]):
-        raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method")
-    ret = _selector_out
+    # if not _compilation and type(_selector_out) == type([]):
+        # raise AssertionError("Object comparison outside of Select() or complex selector outside of selector() method, content: %s" % repr(_selector_out))
+    if isinstance(_selector_out, list):
+        ret = _selector_out.copy()
+    else:
+        ret = _selector_out
     _selector_out = None
     return ret
-    
+# goal = Select
+
+def _compilation_enable(en=True):
+    global _compilation
+    _compilation=en
+
+def resolve_poodle_type(obj):
+    assert inspect.isclass(obj)
+    if obj == int:
+        from poodle.arithmetic import LogSparseInteger
+        return LogSparseInteger
+    elif obj == bool:
+        return BooleanObject
+    elif obj == str:
+        raise NotImplementedError("String primitives are not currently implemented")
+    elif inspect.isclass(obj) and issubclass(obj, Object):
+        return obj
+    else:
+        raise ValueError("Type %s is not supported" % obj)
+
+def resolve_poodle_special_object(obj):
+    if isinstance(obj, int):
+        from poodle.arithmetic import logSparseIntegerFactory
+        return logSparseIntegerFactory.get(obj)
+    elif isinstance(obj, bool):
+        if obj:
+            return _system_objects["object-True"]
+        else:
+            return _system_objects["object-False"]
+    elif isinstance(obj, Object):
+        return obj
+    elif isinstance(obj, Property): # this is needed to pass props
+        return obj
+    elif inspect.isclass(obj) and issubclass(obj, Object):
+        # used to pass internal asserts
+        return obj
+    elif isinstance(obj, str):
+        # needed to support internal "in" comparison operations
+        return obj
+    else:
+        raise NotImplementedError("Objects of type %s are not supported for %s" % (type(obj), obj))
+
+def _reset_state():
+    global _selector_out
+    _selector_out = None
+    _compilation = False
+    _problem_compilation = False
+    _effect_compilation = False
+
 def Unselect(what):
     global _collected_predicates
     global _replaced_predicates
@@ -130,15 +213,52 @@ def Unselect(what):
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
+from inspect import FrameInfo, istraceback, isframe, getsourcefile, getfile, findsource, Traceback
+def getouterframes(frame, context=1):
+    framelist = []
+    while frame:
+        frameinfo = (frame,) + getframeinfo(frame, context)
+        framelist.append(FrameInfo(*frameinfo))
+        frame = frame.f_back
+    return framelist
+
+def getframeinfo(frame, context=1):
+    if istraceback(frame):
+        lineno = frame.tb_lineno
+        frame = frame.tb_frame
+    else:
+        lineno = frame.f_lineno
+    if not isframe(frame):
+        raise TypeError('{!r} is not a frame or traceback object'.format(frame))
+
+    filename = getsourcefile(frame) or getfile(frame)
+    if context > 0:
+        start = lineno - 1 - context//2
+        try:
+            lines, lnum = findsource(frame)
+        except (OSError, IndexError): # fix: added IndexError
+            lines = index = None
+        else:
+            start = max(0, min(start, len(lines) - context))
+            lines = lines[start:start+context]
+            index = lineno - 1 - start
+    else:
+        lines = index = None
+
+    return Traceback(filename, lineno, frame.f_code.co_name, lines, index)
+
 def get_source_frame_dict():
-    frame = inspect.getouterframes(inspect.currentframe())[4]
-    for f in inspect.getouterframes(inspect.currentframe()):
-        frameinfo = inspect.getframeinfo(f[0])
-        if frameinfo.code_context and  "Select(" in frameinfo.code_context[0].strip().replace(" ",""):
+    frame = getouterframes(inspect.currentframe())[4]
+    for f in getouterframes(inspect.currentframe()):
+        frameinfo = getframeinfo(f[0])
+        if frameinfo.code_context and  ("Select(" in frameinfo.code_context[0].strip().replace(" ","") or frameinfo.code_context[0].strip().startswith("assert")):
             frame = f
             break
-    frameinfo = inspect.getframeinfo(frame[0])
-    c_string = frameinfo.code_context[0].strip()
+    frameinfo = getframeinfo(frame[0])
+    try:
+        c_string = frameinfo.code_context[0].strip()
+    except TypeError:
+        c_string = "(UNKNOWN)"
     return {
                     "code": c_string,
                     "line": frameinfo.lineno,
@@ -162,7 +282,7 @@ def gen_var_imaginary(name, depth=2, prefix=""):
 def gen_hashnums(amount):
     global _collected_facts
     hashnums_generated = []
-    for i in range(amount): 
+    for i in range(amount):
         hashnum = PoodleHashnum()
         hashnums_generated.append(hashnum)
         _collected_facts.append("({pred} {hname})".format(pred=HASHNUM_ID_PREDICATE, hname=hashnum.name))
@@ -173,9 +293,10 @@ def class_or_hash(var_name, class_name):
     if HASHNUM_VAR_NAME in var_name:
         return HASHNUM_CLASS_NAME
     return class_name
-    
+
 def push_selector_object(obj):
     global _selector_out
+    # traceback.print_stack()
     if _selector_out:
         log.debug("CHECK - selector output not null")
         if type(_selector_out) == type([]):
@@ -184,7 +305,7 @@ def push_selector_object(obj):
             _selector_out = [_selector_out, obj]
     else:
         _selector_out = obj
-    
+
 def get_property_class_name(prop):
     # PART 2.
     # We can have either of the following:
@@ -194,12 +315,12 @@ def get_property_class_name(prop):
     #                                         operator instantiates returning object to allow attributes modification
     has_po = False
     has_poi = False
-    if hasattr(prop, "_property_of_inst"): 
+    if hasattr(prop, "_property_of_inst"):
         has_poi = prop._property_of_inst
     if hasattr(prop, "_property_of"):
         has_po = prop._property_of
     #print("get_property_class: _property_of:", has_po, "_property_of_inst:", has_poi)
-    
+
     if has_po and not has_poi:
         my_class_name = prop._property_of.__name__
     elif not has_po and has_poi:
@@ -207,7 +328,7 @@ def get_property_class_name(prop):
     elif has_po and has_poi:
         my_class_name = prop._property_of.__name__
     else:
-        raise ValueError("Can not detect who I am")
+        raise ValueError("Can not detect who I am %s - %s (value %s)" % (prop, prop._value, prop._property_value))
     return my_class_name
 
 def gen_hashnum_templates(var, prefix="var"):
@@ -219,7 +340,7 @@ def gen_text_predicate_push_globals(class_name, property_name, var1, var1_class,
     global _collected_predicate_templates
     global _collected_object_classes
     if property_name: predicate_name = class_name+"-"+property_name
-    else: 
+    else:
         predicate_name = class_name
         class_name = None
     #if not imaginary:
@@ -250,14 +371,29 @@ def gen_one_predicate(predicate_name, var, var_class_name):
         _collected_predicate_templates.append("(" + predicate_name + " ?var1 - "+var_class_name+")")
         #_collected_object_classes.update([class_name, var1_class, var2_class])
     return text_predicate
-    
+
+def deduplicate_equals_one(l_preconditions):
+    for a,b in itertools.combinations(l_preconditions, 2):
+        if a.startswith("(=") and b.startswith("(="):
+            if sorted(a.replace("(","").replace(")","").split()) == \
+                            sorted(b.replace("(","").replace(")","").split()):
+                l_preconditions.remove(a)
+                return True
+    return False
+
+def deduplicate_equals(l_preconditions):
+    while deduplicate_equals_one(l_preconditions): pass
+
+def is_internall_call():
+    return getouterframes(inspect.currentframe())[2].filename ==\
+                                                os.path.abspath(__file__)
 
 class Property(object):
     def __init__(self, *initial_data, **kwargs):
         # WARNGING
         # in some cases, property is not being requested from a class (???)
         # (probably when we're instantiating and it is requested from an instance)
-        # in this case we have no idea about our name 
+        # in this case we have no idea about our name
         #    THIS has since been fixed by __set_name__ hack. Think what to do.
         self._property_of = None # for reference only
         self._order = []
@@ -268,8 +404,10 @@ class Property(object):
             self._singleton = True
             classtype = initial_data[0]
             if type(initial_data[0])==type(str()):
+                if classtype == "Object": raise ValueError("Object can not be used directly")
                 self._value = classtype
             else:
+                if classtype == Object: raise ValueError("Object can not be used directly")
                 self._value = initial_data[0]
             return
         else:
@@ -283,25 +421,25 @@ class Property(object):
             self._order.append(key)
         for key in kwargs:
             setattr(self, key, kwargs[key])
-    
+
     @property
     def _value(self):
         if type(self.__value) == type(str()):
-            global _poodle_object_classes 
+            global _poodle_object_classes
             if not self.__value in _poodle_object_classes:
                 raise AssertionError("Dereferencing Object '%s' failed: undefined class %s" % (self.__value, self.__value))
             assert issubclass(_poodle_object_classes[self.__value], Object)
             self.__value = _poodle_object_classes[self.__value]
         return self.__value
-    
+
     @_value.setter
     def _value(self, v):
         self.__value = v
-    
+
     def __set_name__(self, owner, name):
         if not hasattr(self, "_property_name"):
             self._property_name = name
-    
+
     def __get__(self, instance, owner):
         # if hasattr(self, "_property_of_inst") and self._property_of_inst and self._property_of_inst._sealed:
         # this does not work and is not needed:::: -->
@@ -312,6 +450,11 @@ class Property(object):
             # print("BLABLABLA")
             # return self._value
         return self
+
+    def _is_variable(self):
+        if hasattr(self, "_property_of_inst") and self._property_of_inst:
+            return self._property_of_inst._is_variable()
+        return False
 
     def get_property_class_name(self):
         return self.get_parent_class().__name__
@@ -325,12 +468,12 @@ class Property(object):
         #                                         operator instantiates returning object to allow attributes modification
         has_po = False
         has_poi = False
-        if hasattr(self, "_property_of_inst"): 
+        if hasattr(self, "_property_of_inst"):
             has_poi = self._property_of_inst
         if hasattr(self, "_property_of"):
             has_po = self._property_of
         #print("get_property_class: _property_of:", has_po, "_property_of_inst:", has_poi) # nosiy!
-        
+
         if has_po and not has_poi:
             my_class = self._property_of
         elif not has_po and has_poi:
@@ -338,12 +481,38 @@ class Property(object):
         elif has_po and has_poi:
             my_class = self._property_of
         else:
-            raise ValueError("Can not detect who I am")
+            raise ValueError("Can not detect who I am %s - %s (value %s)" % (self, self._value, self._property_value))
         return my_class
 
     def gen_predicate_name(self):
         return self.get_property_class_name()+"-"+self._property_name
-        
+
+    def get_value_class_name(self):
+        return self._value.__name__
+
+    def _pddl_gen_predicates_entry(self):
+        return "({pred_name} ?var1 - {cls_name} ?var2 - {prop_cls_name})".format(\
+            pred_name=self.gen_predicate_name(),
+            cls_name=self.get_property_class_name(),
+            prop_cls_name=self.get_value_class_name())
+
+    def _pddl_gen_one_fact(self, obj):
+            return "({pred_name} {parent_name} {prop_name})".format(\
+                pred_name=self.gen_predicate_name(),
+                parent_name=self._property_of_inst.name,
+                prop_name=obj.name)
+    def _get_none_object(self):
+        return self._value._none_object
+    def _pddl_gen_fact(self):
+        if self._property_value is None:
+            val = self._value._none_object
+        else:
+            val = self._property_value
+        if isinstance(val, ListLike):
+            return [self._pddl_gen_one_fact(v) for v in val]
+        else:
+            return [self._pddl_gen_one_fact(val)]
+
     def find_parameter_variable(self):
         "finds the variable that holds the class or our value"
         myclass_genvar = None
@@ -351,8 +520,8 @@ class Property(object):
             myclass_genvar = ph["prop_variables"].get(self._property_name)
             if myclass_genvar: break
         return myclass_genvar
-    
-    
+
+
     def find_class_variable(self):
         "finds the variable that holds the class that we are property of"
         my_class_name = self.get_property_class_name()
@@ -364,7 +533,7 @@ class Property(object):
         #         myclass_genvar = ph["variables"][my_class_name]
         #         break
         # return myclass_genvar
-    
+
     def operator(self, other, operator="equals", dir_hint="straight"):
         assert operator == "equals" or operator == "contains"
         global _compilation
@@ -373,8 +542,11 @@ class Property(object):
         global _collected_predicate_templates
         global _problem_compilation
         global _collected_effects
+        if not _compilation and not self._is_variable() and not other._is_variable():
+            # TODO: STUB. Full assert implementation needed
+            return True
         # TODO: multi-positional checks
-        
+
         # PART 1.
         # If type of the thing we are comparing ourself to (we are Property!!)
         #    is also Property (we also need to check if it is not a class (type obj)
@@ -382,7 +554,7 @@ class Property(object):
         # then subject to compare with is other._value (but still we generate other's name predicate)
         # otherwise, we are comparing ourself with an Object directly ...
         # ... (as in Interface in Host.has_interface or interface1 in Host.has_interface)
-        # [ ] Predicate to be constructed: subj.__name__ + 
+        # [ ] Predicate to be constructed: subj.__name__ +
         if type(other) != type and isinstance(other, Property):
             assert other._value == self._value, "Property-Property check type mismatch: %s != %s" % (other._value, self._value)
             if operator == "contains":
@@ -393,9 +565,9 @@ class Property(object):
             assert other == self._value or type(other) == self._value, "Object-Property Type mismatch: %s != %s" % (other, self._value) # if we're working with pure classes of objects
             subjObjectClass = other # this object may not have any _property_of
             property_property_comparison = False
-        
+
         log.debug("OPERATOR-1: {0}{1}{2}{3}{4}".format(self._property_name, operator, subjObjectClass, self._property_of, type(self._property_of)))
-        
+
         # PART 2.
         # We can have either of the following:
         #    _property_of, no _property_of_inst - means that we are direct clas-property of some class Object
@@ -404,12 +576,12 @@ class Property(object):
         #                                         operator instantiates returning object to allow attributes modification
         has_po = False
         has_poi = False
-        if hasattr(self, "_property_of_inst"): 
+        if hasattr(self, "_property_of_inst"):
             has_poi = self._property_of_inst
         if hasattr(self, "_property_of"):
             has_po = self._property_of
         # print("OPERATOR: _property_of:", has_po, "_property_of_inst:", has_poi) # nosiy!
-        
+
         # if has_po and not has_poi:
         #     my_class_name = self._property_of.__name__
         # elif not has_po and has_poi:
@@ -420,17 +592,17 @@ class Property(object):
         #     raise ValueError("Can not detect who I am")
         my_class_name = self.get_property_class_name()
         my_class = self.get_parent_class()
-        
+
         # PART 3.
         # We need to understand what are we going to return:
-        #   an instance of Object that is selected from property of obj Class, 
-        #   like: 
+        #   an instance of Object that is selected from property of obj Class,
+        #   like:
         #   Object in instance.my_prop,
         #   instance in Object.my_prop
         #   Object.my_prop in instance.my_prop
         #   finally instance1.my_prop in instance2.my_prop - in this case return True ...
         #           ... and store the constructed return in global Selector state (TODO XXX)
-        
+
         # If we are property of an Object and this Object is not an instance
         #     then someone requested us to return our parent Object type when matched
         if not hasattr(self, "_property_of_inst") and not hasattr(other, "_property_of_inst") and not isinstance(other, Object):
@@ -443,17 +615,17 @@ class Property(object):
         #    vvv---always-true--------------vvv         vvv----check-if-subj-is-instance--vvv
         elif type(subjObjectClass) is BaseObjectMeta and not isinstance(subjObjectClass, Object) and not hasattr(other, "_property_of_inst"):
             log.debug("OPERATOR: Decided to return subj() objecs")
-            who_instantiating = "other" 
+            who_instantiating = "other"
             # The following is the fix for scenario Select(Class.prop1 in inst.prop2)
             #    in this scenario, without this fix return value and class name are wrong
             if hasattr(other, "_value") and subjObjectClass == other._value:
-                obj = other._property_of() 
+                obj = other._property_of()
                 who_instantiating_fix = True # Fix for bug with instantiating Class.prop in inst.prop2
             else:
                 obj = subjObjectClass()
                 who_instantiating_fix = False # Fix for bug with instantiating Class.prop in inst.prop2
         else:
-            if _compilation: # actually means "running selector" and would be better renamed as `_selector_mode`
+            if True or _compilation: # actually means "running selector" and would be better renamed as `_selector_mode`
                 # PART 3.1.
                 # in compilation mode, we can return anything we want as result is not being used in later computations
                 log.debug("OPERATOR IN COMPILATION/SELECTOR MODE")
@@ -465,14 +637,15 @@ class Property(object):
                 who_instantiating = None
             else:
                 raise ValueError("No class to select is present in selector expression. Both LHS and RHS are instances.")
-            
+        # assert not obj is None
+
         if isinstance(subjObjectClass, Object):
             other_class_name = type(subjObjectClass).__name__
             other_class = type(subjObjectClass)
         else:
             other_class_name = subjObjectClass.__name__
             other_class = subjObjectClass
-        
+
         # Part 5. Get history of generated variables
         # Variants:
         # 1. we are property of instance, thus self._property_of_inst._parse_history
@@ -482,20 +655,23 @@ class Property(object):
         _parse_history = []
         if has_poi and hasattr(self._property_of_inst, "_parse_history"):
             #print("OPERATOR HIST:", "1. we are property of instance")
-            if not _compilation: assert _parse_history == []
+            # if not _compilation: assert _parse_history == [], repr(_parse_history)
+            if not _compilation: _parse_history = []
             _parse_history += self._property_of_inst._parse_history
         if isinstance(other, Object) and hasattr(other, "_parse_history"):
             #print("OPERATOR HIST:", "2. the other is instance")
-            if not _compilation: assert _parse_history == []
+            # if not _compilation: assert _parse_history == [], repr(_parse_history)
+            if not _compilation: _parse_history = []
             _parse_history += other._parse_history
         if isinstance(other, Property) and hasattr(other, "_property_of_inst") and hasattr(other._property_of_inst, "_parse_history"):
             #print("OPERATOR HIST:", "3. the other is property of instance")
-            if not _compilation: assert _parse_history == []
+            # if not _compilation: assert _parse_history == [], repr(_parse_history)
+            if not _compilation: _parse_history = []
             _parse_history += other._property_of_inst._parse_history
         #print("OPERATOR-HIST-1", _parse_history)
         other_genvar = None
         myclass_genvar = None
-        
+
         # no need to generate other_genvar if other is an instance and already has a variable
         if who_instantiating != "other": # means that other is already an instance, both in regular and compilatioin mode
             # it is either an instance itself or is a property of instance
@@ -510,7 +686,7 @@ class Property(object):
             else:
                 log.debug("OPERATOR Skipping getting variable from instances")
                 pass
-                
+
         if has_poi and self._property_of_inst._class_variable:
             myclass_genvar = self._property_of_inst._class_variable
         # WARNING@!!!! finding variables in history is obsolete and UNSAFE!!!
@@ -529,21 +705,21 @@ class Property(object):
         #                 myclass_genvar = ph["variables"][my_class_name]
         #                 log.debug("WARNING! myclass Variable found in history - resulted PDDL may be wrong")
         #                 break
-                    
-        if myclass_genvar is None: 
+
+        if myclass_genvar is None:
             if issubclass(my_class, Imaginary):
                 myclass_genvar = gen_var_imaginary(my_class_name)
                 my_class_name = HASHNUM_CLASS_NAME
             else:
                 myclass_genvar = gen_var(my_class_name)
-        if other_genvar is None: 
+        if other_genvar is None:
             if issubclass(other_class, Imaginary):
                 other_genvar = gen_var_imaginary(other_class_name)
                 other_class_name = HASHNUM_CLASS_NAME
             else:
                 other_genvar = gen_var(other_class_name)
             log.debug("OPERATOR: generating new var for other! {0}".format(other_genvar))
-        
+
         collected_parameters = {other_genvar: class_or_hash(other_genvar, other_class_name), myclass_genvar: class_or_hash(myclass_genvar, my_class_name)}
         other_property_class_name = None
         other_property_genvar = None
@@ -556,7 +732,7 @@ class Property(object):
             #         if other_property_class_name in ph["variables"] and who_instantiating != "other": # only generate new var if we are instantiating it here
             #             other_property_genvar = ph["variables"][other_property_class_name]
             #             break
-            if other_property_genvar is None: 
+            if other_property_genvar is None:
                 if issubclass(other_property_class, Imaginary):
                     other_property_genvar = gen_var_imaginary(other_property_class_name)
                     other_property_class_name = HASHNUM_CLASS_NAME
@@ -571,16 +747,16 @@ class Property(object):
             text_predicate = gen_text_predicate_push_globals(my_class_name, self._property_name, myclass_genvar, my_class_name, other_genvar, other_class_name)
             text_predicate_2 = None
             log.debug("OPERATOR-PRECOND-PDDL: {0}".format(text_predicate))
-        
+
         # print("OPERATOR-PARAM-PDDL:", collected_parameters)
-        
+
         if not hasattr(obj, "_parse_history"):
             obj._parse_history = _parse_history
         else:
             obj._parse_history += _parse_history
-        
+
         # TODO: what if we have two same classes?
-        
+
         # TODO: a new method for variable storage!
         #       store the variable in object returned - and use it first whenever needed
 
@@ -594,7 +770,7 @@ class Property(object):
                 obj._class_variable = other_property_genvar
             else:
                 obj._class_variable = other_genvar
-            
+
         # also store variable for the instantiated object that we are comparing with, if not created before
         if has_poi: # is exactly equivalent to who_instantiating == other, means that we(who we property of) are not a class
             if not self._property_of_inst._class_variable is None:
@@ -602,7 +778,7 @@ class Property(object):
                 pass
             else:
                 self._property_of_inst._class_variable = myclass_genvar
-        
+
         # in compilation mode, we need to set other variable's class variable with ours
         # if _compilation:
         if who_instantiating is None:
@@ -612,37 +788,30 @@ class Property(object):
                 else:
                     log.warning("WARNING! Not setting other variable to {0} as it already has {1}".format(other_genvar, other._class_variable))
 
-        frame = inspect.getouterframes(inspect.currentframe())[3]
-        for f in inspect.getouterframes(inspect.currentframe()):
-            frameinfo = inspect.getframeinfo(f[0])
-            if frameinfo.code_context and  "Select(" in frameinfo.code_context[0].strip().replace(" ",""):
-                frame = f
-                break
-        frameinfo = inspect.getframeinfo(frame[0])
-        c_string = frameinfo.code_context[0].strip()
         if isinstance(other, Property):
             otherPropName = other._property_name
         else:
             otherPropName = None
         ph_entry = {
-                "operator": operator, 
+                "operator": operator,
                 "self-propname": self._property_name,
                 "other-propname": otherPropName,
                 "self": self,
                 "other": other,
-                "otherClass": subjObjectClass, 
-                "self-prop": self._value, 
+                "otherClass": subjObjectClass,
+                "self-prop": self._value,
                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
                 "variables": {my_class_name: myclass_genvar, other_class_name: other_genvar }, # TODO: what if we have two same classes?
-                # "prop_variables": {self._property_name: 
+                # "prop_variables": {self._property_name:
                 "class_variables": { my_class_name: myclass_genvar },
                 "text_predicates": [text_predicate, text_predicate_2],
                 "parameters": collected_parameters,
-                "frame": {
-                    "code": c_string,
-                    "line": frameinfo.lineno,
-                    "file": frameinfo.filename
-                }
+                "frame": get_source_frame_dict()
+                # "frame": {
+                #     "code": c_string,
+                #     "line": frameinfo.lineno,
+                #     "file": frameinfo.filename
+                # }
             }
         if not other_property_class_name is None and not other_property_genvar is None:
             ph_entry["variables"][other_property_class_name] = other_property_genvar
@@ -681,7 +850,7 @@ class Property(object):
             other._property_of_inst._parse_history_self.append({"prop_variables": {other._property_name: other_genvar}})
         else:
             raise AssertionError("Not supported.")
-            
+
         # 7 in case of inst1 == inst2
         #       - in this case no variables are created
         # add set initial
@@ -691,7 +860,7 @@ class Property(object):
         # if has_poi and _compilation and not hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history = _parse_history
         if has_poi and not hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history = _parse_history
         if has_poi and hasattr(self._property_of_inst, "_parse_history"): self._property_of_inst._parse_history += _parse_history
-        
+
         if _problem_compilation:
             _collected_effects += [text_predicate, text_predicate_2]
         elif _compilation:
@@ -701,24 +870,27 @@ class Property(object):
                 _collected_parameters.update(ph["parameters"])
         _collected_predicates += [text_predicate, text_predicate_2] # this is required for Unselect() to work as it depends on order of output
         return obj
-        
+
     def equals(self, other):
         return self.operator(other, "equals")
 
     def __eq__(self, other):
+        from poodle.arithmetic import IntegerType, logSparseIntegerFactory
+        if isinstance(other, int) and issubclass(self._value, IntegerType):
+            other = logSparseIntegerFactory.get(other)
         if hasattr(self, "_property_of_inst") and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
             log.warning("!!!!!! ALT BEH 1 - me is {0} {1} other is {2} ".format(self, self._property_of_inst, other))
             push_selector_object(other.equals(self))
         else:
             push_selector_object(self.equals(other))
         return True
-    
-    # TODO: write a setter operator to call this 
-    
+
+    # TODO: write a setter operator to call this
+
     def _prepare(self, valueObjectObject=None):
         global _compilation
-        if not _compilation:
-            raise BaseException("Parameter mutation outside of compilation")
+        # if not _compilation:
+            # raise BaseException("Parameter mutation outside of compilation")
         # TODO: also detect that we are outside of effect block!
         global _collected_predicates
         global _collected_parameters
@@ -729,52 +901,73 @@ class Property(object):
             for ph in valueObjectObject._parse_history:
                 _collected_predicates += ph["text_predicates"]
                 _collected_parameters.update(ph["parameters"])
-        
-    def init_unsafe(self, value):
+
+    def init_unsafe_internal(self, value):
         self._unset = True
         return self.set(value)
-        
+
     def set(self, value):
         global _problem_compilation
-        global _effect_compilation 
+        global _effect_compilation
         init_mode = False
-        if not self._unset and not _problem_compilation and not self._property_of_inst._new_fresh: 
+        if not self._unset and not _problem_compilation and not self._property_of_inst._new_fresh:
             try:
-                self.unset(_force=True)
+                self.unset_internal(_force=True)
             except AssertionError:
                 # assume init mode
                 init_mode = True
         assert type(value) == self._value, "Type mismatch: setting %s to %s.%s expecting %s" % (value, self._property_of_inst.__class__.__name__, self._property_name, self._value)
-        if not isinstance(self, Relation): self._property_value = value # protect from re-setting value as Relation did same above...
-        if _problem_compilation:
+        if not isinstance(self, Relation) and not self._property_of_inst._variable_mode:
+            self._property_value = value # protect from re-setting value as Relation did same above...
+        elif isinstance(self, Relation) and not self._property_of_inst._variable_mode:
+            self._property_value.append(value)
+        if _problem_compilation: # poodle3 ignore, as we collect sets from props
             global _collected_facts
             text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
-            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            if not isinstance(value, Imaginary) and not isinstance(self, Relation):
+                text_predicate_none = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, _none_objects[value.__class__.__name__].name, value.__class__.__name__)
+                text_predicate_beg_match = ' '.join(text_predicate_none.split()[:2])
+                rmlist = []
+                for fct in _collected_facts:
+                    if fct.startswith(text_predicate_beg_match):
+                        rmlist.append(fct)
+                for fct in rmlist:
+                    _collected_facts.remove(fct)
+                # while text_predicate_none in _collected_facts: _collected_facts.remove(text_predicate_none)
             _collected_facts.append(text_predicate)
+            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
             return
         self._prepare(value)
         global _collected_effects
         text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, value.class_variable(), value.__class__.__name__)
         # _collected_effects.append("("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+value.class_variable()+")")
         _collected_effects.append(text_predicate)
+        _collected_parameters.update({
+            self.find_class_variable(): self._property_of_inst.__class__.__name__,
+            value.class_variable(): value.__class__.__name__
+        })
         if init_mode:
             # if issubclass(type(value), Imaginary):
-                raise NotImplementedError("For objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
-            # log.warning("PREDICATE in INIT mode:", repr(self._property_of_inst), repr(self))
-            # if issubclass(self._value, Imaginary):
-            #     other_genvar = gen_var_imaginary(value.__class__.__name__)
-            #     text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
-            # else:
-            #     other_genvar = gen_var(value.__class__.__name__)
-            #     text_predicate = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
-            # _collected_predicates.append(text_predicate)
-            # _collected_parameters.update({other_genvar: value.__class__.__name__})
-        
-    def unset(self, what = None, _force = False):
+            #     raise NotImplementedError("For Imaginary objects that were not Select()'ed, please unset() first, or use `.init_unsafe()`")
+            log.warning("PREDICATE in INIT mode: %s %s" % (repr(self._property_of_inst), repr(self)))
+            if issubclass(self._value, Imaginary):
+                other_genvar = gen_var_imaginary(value.__class__.__name__)
+                text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+                text_predicate_effect = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+            else:
+                other_genvar = gen_var(value.__class__.__name__)
+                text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+                text_predicate_effect = "(not %s)" % gen_text_predicate_push_globals(self.gen_predicate_name(), "", self.find_class_variable(), self._property_of_inst.__class__.__name__, other_genvar, value.__class__.__name__)
+            _collected_predicates.append(text_predicate)
+            _collected_effects.append(text_predicate_effect)
+            _collected_parameters.update({other_genvar: value.__class__.__name__})
+        self._unset = False
+
+    def unset_internal(self, what = None, _force = False):
         # we need to unset the value that we selected for us
         self._prepare()
         global _collected_effects
-        if what is None: 
+        if what is None:
             log.warning("WARNING! Using experimental support for what=None")
             my_parameter_var = self.find_parameter_variable()
             if my_parameter_var is None:
@@ -787,14 +980,14 @@ class Property(object):
             # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+" "+what._class_variable+"))")
             _collected_effects.append("(not %s)" % text_predicate)
         self._unset = True
-        
+
     def value(self):
         return self._property_value
-   
+
     def __getattr__(self, attr):
         "get my value"
         # print("Property Getattr: request for", self, '.', attr, 'dict:', self.__dict__)
-        # the following is official way of checking if we have an attribute 
+        # the following is official way of checking if we have an attribute
         # https://docs.python.org/3.6/library/functions.html#hasattr
         me_has_attr = False
         try:
@@ -803,13 +996,11 @@ class Property(object):
         except AttributeError:
             pass
         me_has_value = False
-        
+
         # The above renders this obolete: (check!)
         if "_" == attr[0] or attr in [ "_property_of_inst", "_value", "_property_name" ]:
             # return super().__getattr__(self, attr)
             return super().__getattribute__(attr)
-        if hasattr(self, "_dot_from") and isinstance(self._dot_from, Object):
-            raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
         if hasattr(self, "_property_of_inst") and not me_has_attr:
             try:
                 super().__getattribute__("_value")
@@ -818,6 +1009,8 @@ class Property(object):
                 pass
             if me_has_value:
                 if hasattr(self._value, attr):
+                    if hasattr(self, "_dot_from") and isinstance(self._dot_from, Object):
+                        raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
                     ob = copy.copy(getattr(self._value, attr))
                     ob._orig_object = getattr(self._value, attr)
                     ob._property_of_inst = self._value # WARNING! property_of_inst is a PROPERTY!! i.e. TYPE of PROP
@@ -825,45 +1018,221 @@ class Property(object):
                     log.debug("%s is returning copy of val %s %s which is %s" % (self, attr, ob, self._value))
                     return ob
                 else:
-                    raise AttributeError("Property type `%s` does not have `%s`" % (self._value, attr)) 
+                    raise AttributeError("Property type `%s` does not have `%s`" % (self._value, attr))
             #print("returning val %s %s" % (attr, self._value)) # This is wrong
             raise NotImplementedError("`%s` is not implemented in %s and no _value is assigned to %s" % (attr, self.__class__.__name__, self)) # you can add a stopword if you need this property upstream
         else:
             raise AttributeError('%s object has no attribute %s' % (self.__value, attr))
-        
-        
-    
+
+    def __sub__(self, other):
+        raise NotImplementedError()
+
+    def __add__(self, other):
+        return self._i_operator(other)
+
+    def _i_operator(self, other, op="add"):
+        from poodle.arithmetic import IntegerType
+        other = resolve_poodle_special_object(other)
+        # TODO support for 'other' being IntegerType instead of Property
+        if isinstance(other, Property) and issubclass(other._value, IntegerType):
+            # The following in reality seems to check _variable_mode
+            # TODO: rewrite this to use ._variable_mode checks
+            if self._property_value is None and other._property_value is None:
+                # 1. instantiate both objects,
+                self_ob = self._value(_variable_mode=True)
+                other_ob = other._value(_variable_mode=True)
+                # 2. add them to :parameters - already works
+                #     query all history at set(), add parameters and preconditinos
+                # 3. select them from self
+                assert self == self_ob and other == other_ob
+                # 4. set self value to sum
+                # self.set(self_ob + other_ob)
+                if op=="add":
+                    return self_ob + other_ob
+                elif op=="sub":
+                    return self_ob - other_ob
+                elif op=="rsub":
+                    return other_ob - self_ob
+
+            elif not self._property_value is None and not other._property_value is None:
+                # raise NotImplementedError("Python type arithmetics is not currently supported")
+                if op=="add":
+                    return self._property_value + other._property_value
+                elif op=="sub":
+                    return self._property_value - other._property_value
+                elif op=="rsub":
+                    return  other._property_value - self._property_value
+            else:
+                raise TypeError("Unsupported combination of values")
+        elif isinstance(other, IntegerType) and not self._property_value is None and \
+                 isinstance(resolve_poodle_special_object(self._property_value), IntegerType):
+            self_ob = resolve_poodle_special_object(self._property_value)
+            if op=="add":
+                return self_ob + other
+            elif op=="sub":
+                return self_ob - other
+            elif op=="rsub":
+                return other - self_ob
+        elif isinstance(other, IntegerType):
+            assert self._property_value is None and \
+                self._property_of_inst._variable_mode
+            self_ob = self._value(_variable_mode=True)
+            assert self == self_ob
+            if op=="add":
+                return self_ob + other
+            elif op=="sub":
+                return self_ob - other
+            elif op=="rsub":
+                return other - self_ob
+        else:
+            raise TypeError("Operator '%s' for %s and %s is not supported" % (op, type(self), type(other)))
+        raise
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        return self._i_operator(other, op="sub")
+
+    def _ineq(self, other, op="gt"):
+        from poodle.arithmetic import IntegerType
+        # TODO support for 'other' being IntegerType instead of Property
+        # assert (isinstance(other, Property) and self._value == other._value) or \
+            # isinstance(other, Object) and self._value == type(other)
+        if isinstance(other, Property) and issubclass(other._value, IntegerType):
+            # The following in reality seems to check _variable_mode
+            # there may be more situations, like var<>obj, obj<>var
+            # TODO: rewrite this to use ._variable_mode checks
+            if self._property_value is None and other._property_value is None:
+                # 1. instantiate both objects,
+                self_ob = self._value(_variable_mode=True)
+                other_ob = other._value(_variable_mode=True)
+                # 2. add them to :parameters - DOES NOT work by default
+                # ...
+                assert self == self_ob and other == other_ob
+                if op=="gt":
+                    return self_ob > other_ob
+                elif op=="lt":
+                    return other_ob > self_ob
+                elif op=="ge":
+                    return self_ob >= other_ob
+                elif op=="le":
+                    return other_ob >= self_ob
+                else:
+                    raise AssertionError()
+            elif not self._property_value is None and not other._property_value is None:
+                if op=="gt":
+                    return self._property_value > other._property_value
+                elif op=="lt":
+                    return other._property_value > self._property_value
+                elif op=="ge":
+                    return self._property_value >= other._property_value
+                elif op=="le":
+                    return other._property_value >= self._property_value
+            else:
+                raise AssertionError("Objects have mixed/existing values")
+        else:
+            other = resolve_poodle_special_object(other)
+            if isinstance(self._property_value, Object) and isinstance(other, Object):
+                if op=="gt":
+                    return self._property_value > other
+                elif op=="lt":
+                    return other > self._property_value
+                elif op=="ge":
+                    return self._property_value >= other
+                elif op=="le":
+                    return other >= self._property_value
+
+            assert self._property_value is None, "My property value is %s and we're doing %s with %s" % (self._property_value, op, other)
+            self_ob = self._value(_variable_mode=True)
+            assert self == self_ob
+            if op=="gt":
+                return self_ob > other
+            elif op=="lt":
+                return other > self_ob
+            elif op=="ge":
+                return self_ob >= other
+            elif op=="le":
+                return other >= self_ob
+            else:
+                raise AssertionError()
+
+    def __gt__(self, other):
+        return self._ineq(other, "gt")
+    def __ge__(self, other):
+        return self._ineq(other, "ge")
+    def __lt__(self, other):
+        return self._ineq(other, "lt")
+    def __le__(self, other):
+        return self._ineq(other, "le")
+
+    # def __rsub__(self, other):
+        # return self._i_operator(other, op="rsub")
+
+
+class ProtectedProperty(Property):
+    def _check(self):
+        global _problem_compilation
+        global _compilation
+        assert _problem_compilation, "Property %s is protected!" % self
+        assert not _compilation, "Property %s is protected!" % self
+    def set(self, what):
+        self._check()
+        super().set(what)
+    def unset_internal(self, what):
+        self._check()
+        super().unset_internal(what)
+
+class ListLike(list): # Important not to cause any comparisons during compilation
+    def add(self, value):
+        self.append(value)
+
 class Relation(Property):
     "a property that can have multiple values"
     # https://stackoverflow.com/a/932580
     def __init__(self, *p, **kw):
         super().__init__(*p, **kw)
-        self._property_value = []
+        self._property_value = ListLike()
     def contains(self, other):
         return self.operator(other, "contains")
-        
+
     def __floordiv__(self, other):
         return self.contains(other)
-        
+
     def set(self, what):
         raise NotImplementedError("Usage error: Relation can not be set to one value. Use .add() instead")
-        
-    def unset(self, what=None, _force=False):
-        if _force: return super().unset(what)
-        raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
-    
+
+    # def unset(self, what=None, _force=False):
+    #     if _force: return super().unset(what)
+    #     raise NotImplementedError("Usage error: Relation can not be unset. Use .remove() instead")
+
     def add(self, what):
+        what = resolve_poodle_special_object(what)
         if isinstance(what, Object): self._property_value.append(what)
         self._unset = True
         super().set(what)
-        
+
     def remove(self, what):
         if isinstance(what, Object) and what in self._property_value: self._property_value.remove(what)
-        super().unset(what)
+        super().unset_internal(what)
 
     def __contains__(self, what):
         push_selector_object(self.contains(what))
         return True
+
+    def __add__(self, other):
+        raise NotImplementedError("Relations do not support math")
+
+    def __sub__(self, other):
+        raise NotImplementedError("Relations do not support math")
+
+    def __iadd__(self, other):
+        raise NotImplementedError("Relations do not support math")
+
+    def __isub__(self, other):
+        raise NotImplementedError("Relations do not support math")
+
+
 
 # class BidirectionalRelation(Relation):
 #     pass
@@ -878,99 +1247,127 @@ class StateProperty(Property):
     # nothing special for now...
     pass
 
-class StateFact(Property):
-    "state fact can only be set or unset and contains no relaitons"
+# class StateFact(Property): # TODO HERE Rename to Bool()
+#     "state fact can only be set or unset and contains no relaitons"
 
-    # TODO: remove this method as we have same one in base Property class!!
-    def _prepare(self):
-        global _compilation
-        if not _compilation:
-            raise BaseException("Parameter mutation outside of compilation")
-        # TODO: also detect that we are outside of effect block!
-        global _collected_predicates
-        global _collected_parameters
-        for ph in self._property_of_inst._parse_history:
-            _collected_predicates += ph["text_predicates"]
-            _collected_parameters.update(ph["parameters"])
-        
-    def set(self):
-        global _collected_effects
-        global _collected_facts
-        global _problem_compilation
-        # print("EFFECT-PDDL: TODO", self._property_of_inst.__class__.__name__)
-        # print("EFFECT-PDDL: TODO", self._property_of_inst._parse_history)
-        # now find in our instance's _parse_history our instance's class name variable
-        
-        if _problem_compilation:
-            text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
-            _collected_facts.append(text_predicate)
+#     # TODO: remove this method as we have same one in base Property class!!
+#     def _prepare(self):
+#         global _compilation
+#         if not _compilation:
+#             raise BaseException("Parameter mutation outside of compilation")
+#         # TODO: also detect that we are outside of effect block!
+#         global _collected_predicates
+#         global _collected_parameters
+#         for ph in self._property_of_inst._parse_history:
+#             _collected_predicates += ph["text_predicates"]
+#             _collected_parameters.update(ph["parameters"])
+
+#     def set(self):
+#         global _collected_effects
+#         global _collected_facts
+#         global _problem_compilation
+#         # print("EFFECT-PDDL: TODO", self._property_of_inst.__class__.__name__)
+#         # print("EFFECT-PDDL: TODO", self._property_of_inst._parse_history)
+#         # now find in our instance's _parse_history our instance's class name variable
+
+#         if _problem_compilation: # poodle3: ignore stateFact...
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
+#             _collected_facts.append(text_predicate)
+#         else:
+#             self._prepare()
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+#             _collected_effects.append(text_predicate)
+#         self._value = True
+#     def unset(self):
+#         self._prepare()
+#         global _collected_effects
+#         # TODO: do we need to generate this??
+#         text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+#         # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
+#         _collected_effects.append("(not %s)" % text_predicate)
+#         self._value = False
+
+#     def __eq__(self, other):
+#         push_selector_object(self.equals(other))
+#         return True
+
+#     def equals(self, other):
+#         "StateFact can only be compared to True or False"
+#         assert other == True or other == False, "Only True or False for StateFact"
+#         global _collected_effects
+#         global _collected_predicates
+#         global _collected_parameters
+#         if other == False:
+#             # TODO: could call self.unset() if run in effect compilation, not problem compilation!!
+#             # (add below...)
+#             raise NotImplementedError("Comparing StateFact to False is not supported")
+#         global _problem_compilation # poodle3: ignore stateface
+#         if _problem_compilation:
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
+#             # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
+#             # _collected_predicates.append(text_predicate)
+#             _collected_effects.append(text_predicate) # in problem compilation, we collect effects...
+#         else:
+#             self._prepare() # not sure if this is needed here???
+#             # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
+#             _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
+#             _collected_predicates.append(text_predicate)
+#             _collected_predicates.append(None) # WARNING! last None has secret meaning for Unselect checks
+
+#         ph = {
+#                 "operator": "check_bool",
+#                 "self": self,
+#                 "self-propname": self._property_name,
+#                 "other": None,
+#                 "other-propname": None,
+#                 "otherClass": None,
+#                 "self-prop": self._value,
+#                 #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
+#                 "variables": {}, # TODO: what if we have two same classes?
+#                 "class_variables": { },
+#                 "text_predicates": [ text_predicate, None ], # WARNING! last None has secret meaning for Unselect checks
+#                 "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
+#                 "frame": get_source_frame_dict()
+#             }
+#         if hasattr(self, "_property_of_inst") and self._property_of_inst:
+#             if self._property_of_inst._parse_history:
+#                 self._property_of_inst._parse_history.append(ph)
+#             else:
+#                 self._property_of_inst._parse_history=[ph]
+#         else:
+#             raise AssertionError("Selecting a variable by StateFact is not supported; please use selector() syntax")
+#         return self._property_of_inst
+#         #raise NotImplementedError("Equality of StateFact called outside of supported context")
+
+
+class Bool(Property):
+
+    def __init__(self, initialValue):
+        if type(initialValue) != type(True): raise ValueError("Bool must be initialized with True of False")
+        self._init_value = initialValue
+        super().__init__(BooleanObject)
+        # self.__init_value = _system_objects["object-%s" % str(initialValue)]
+
+    def set(self, value):
+        if value == True:
+            super().set(_system_objects["object-True"])
+        elif value == False:
+            super().set(_system_objects["object-False"])
         else:
-            self._prepare()
-            text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
-            _collected_effects.append(text_predicate)
-        self._value = True
-    def unset(self):
-        self._prepare()
-        global _collected_effects
-        # TODO: do we need to generate this??
-        text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
-        # _collected_effects.append("(not ("+self.gen_predicate_name()+" "+self.find_class_variable()+"))")
-        _collected_effects.append("(not %s)" % text_predicate)
-        self._value = False
+            raise ValueError("Bool can only be set to True or False but got %s (%s)" % (value, type(value)) )
 
-    def __eq__(self, other):
-        push_selector_object(self.equals(other))
-        return True
 
-    def equals(self, other):
-        "StateFact can only be compared to True or False"
-        assert other == True or other == False, "Only True or False for StateFact"
-        global _collected_effects
-        global _collected_predicates 
-        global _collected_parameters
-        if other == False:
-            # TODO: could call self.unset() if run in effect compilation, not problem compilation!!
-            # (add below...)
-            raise NotImplementedError("Comparing StateFact to False is not supported")
-        global _problem_compilation
-        if _problem_compilation:
-            text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
-            # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
-            # _collected_predicates.append(text_predicate)
-            _collected_effects.append(text_predicate) # in problem compilation, we collect effects...
+    def __eq__(self, value):
+        if value == True:
+            return super().__eq__(_system_objects["object-True"])
+        elif value == False:
+            return super().__eq__(_system_objects["object-False"])
         else:
-            self._prepare() # not sure if this is needed here???
-            # text_predicate = "("+self.gen_predicate_name()+" "+self.find_class_variable()+")"
-            text_predicate = gen_one_predicate(self.gen_predicate_name(), self.find_class_variable(), self._property_of_inst.__class__.__name__)
-            _collected_parameters.update({self.find_class_variable(): self._property_of_inst.__class__.__name__})
-            _collected_predicates.append(text_predicate)
-            _collected_predicates.append(None) # WARNING! last None has secret meaning for Unselect checks
-        
-        ph = {
-                "operator": "check_bool", 
-                "self": self, 
-                "self-propname": self._property_name, 
-                "other": None, 
-                "other-propname": None, 
-                "otherClass": None,
-                "self-prop": self._value, 
-                #"variables": { other_class_name: other_genvar , my_class_name: myclass_genvar }, # TODO: what if we have two same classes?
-                "variables": {}, # TODO: what if we have two same classes?
-                "class_variables": { },
-                "text_predicates": [ text_predicate, None ], # WARNING! last None has secret meaning for Unselect checks
-                "parameters": {self.find_class_variable(): self._property_of_inst.__class__.__name__},
-                "frame": get_source_frame_dict()
-            }
-        if hasattr(self, "_property_of_inst") and self._property_of_inst:
-            if self._property_of_inst._parse_history:
-                self._property_of_inst._parse_history.append(ph)
-            else:
-                self._property_of_inst._parse_history=[ph]
-        else:
-            raise AssertionError("Selecting a variable by StateFact is not supported; please use selector() syntax")
-        return self._property_of_inst
-        #raise NotImplementedError("Equality of StateFact called outside of supported context")
+            raise ValueError("Bool can only be compared to True or False")
 
+    def __bool__(self):
+        return self == True
 
 class ActionMeta(type):
     # def __new__(mcls, name, bases, attrs):
@@ -997,12 +1394,58 @@ class ActionMeta(type):
 class BaseObjectMeta(type):
     def __new__(mcls, name, bases, attrs):
         cls = super(BaseObjectMeta, mcls).__new__(mcls, name, bases, attrs)
-        global _poodle_object_classes 
-        _poodle_object_classes[name] = cls 
+        global _poodle_object_classes
+        _poodle_object_classes[name] = cls
         for attr, obj in attrs.items():
             if isinstance(obj, Property):
                 obj.__set_name__(cls, attr)
         return cls
+
+    def __init__(cls, name, bases, dct):
+        super(BaseObjectMeta, cls).__init__(name, bases, dct)
+        global _none_objects
+        if name == "Imaginary":
+            _none_objects[name] = cls()
+            _none_objects[name].name = "p-null-%s" % name
+            _none_objects[name]._class_variable = gen_var(name, prefix="null-")
+            cls._none_object = _none_objects[name]
+
+        if not name in ["Object", "Imaginary"]:
+            _none_objects[name] = cls()
+            if not issubclass(cls, Imaginary):
+                _none_objects[name].name = "p-null-%s" % name
+                _none_objects[name]._class_variable = gen_var(name, prefix="null-")
+            else:
+                _none_objects[name].name = ' '.join(["p-null-Imaginary"] * HASHNUM_DEPTH_DEFAULT) # HASHNUM_DEPTH_DEFAULT fix!
+                _none_objects[name]._class_variable = gen_var_imaginary(name, prefix="null-")
+            cls._none_object = _none_objects[name]
+        if hasattr(cls, "__annotations__"):
+            for ann, tname in cls.__annotations__.items():
+                if hasattr(tname, "_name") and tname._name == "Set":
+                    tname = tname.__args__[0]
+                    if hasattr(tname, "__forward_arg__"):
+                        tname = tname.__forward_arg__
+                    # TODO HERE: support for special BOOL and INT
+                    if not isinstance(tname, str): tname = resolve_poodle_type(tname)
+                    setattr(cls, ann, Relation(tname))
+                elif tname == int:
+                    from poodle.arithmetic import LogSparseInteger
+                    setattr(cls, ann, Property(LogSparseInteger))
+                elif tname == bool:
+                    setattr(cls, ann, Bool(False))
+                elif isinstance(tname, str):
+                    setattr(cls, ann, Property(tname))
+                elif inspect.isclass(tname) and issubclass(tname, Object):
+                    setattr(cls, ann, Property(tname))
+                else:
+                    raise ValueError("Unsupported attribute type: %s : %s" % (ann, tname))
+                # for :List["NewObject"]
+                # foo.__annotations__["l"].__args__[0].__forward_arg__
+                # get_type_hints(foo)["l"].__args__[0]
+                # get_type_hints(foo)["l"]._name == 'List'
+
+
+
     def __getattribute__(self, what):
         # print("WHAT IS", what)
         if what == "_type_of_property":
@@ -1019,10 +1462,10 @@ class BaseObjectMeta(type):
             log.debug("GOP returning {0} {1}".format(what, self._type_of_property))
             #return self._type_of_property
             # print(self._type_of_property.set, self._type_of_property.__dict__)
-            
+
         #if not what in ["__dict__", "__name__"]:
         #    print("BaseObjectMeta Getattr: self=", self, "getting what=", what, super().__getattribute__(what), type(super().__getattribute__(what)))
-        
+
         # We are an Object,
         # now check if what is being requested is a Property:
         if issubclass(type(super().__getattribute__(what)), Property):
@@ -1042,32 +1485,38 @@ class BaseObjectMeta(type):
             return other.__eq__(self)
         else:
             return super().__eq__(other)
-        
+
 
 class Object(metaclass=BaseObjectMeta):
-    def __init__(self, value=None): # WARNING! name is too dangerous to put here!
+    def __init__(self, value=None, _force_name=None, _variable_mode=False): # WARNING! name is too dangerous to put here!
         self._parse_history = [] # Experimentally setting to fix #78
         self._parse_history_self = [] # Self, non-merged parse history
+        self._parameter = False
         self._sealed = False
         self._new_fresh = False # will only become fresh and new if it is imaginary in effect compilation
         global _effect_compilation
+        global _compilation
         global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
-        if _effect_compilation and not self.__imaginary__:
+        if _effect_compilation and not self.__imaginary__ and not is_internall_call():
             raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
         self.__unlock_setter = True
         name = None
-        self._class_variable = gen_var(self.__class__.__name__, prefix="default-")
+        self._class_variable = gen_var(self.__class__.__name__, prefix="")
+        self._variable_mode = _variable_mode
         self.value = value
         self.name = ""
-        if _problem_compilation:
+        # if _problem_compilation:
+        if True:
             if name is None: # WARNING name must always be none
-                frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
+                frameinfo = getframeinfo(inspect.currentframe().f_back)
                 name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
             self.name = self.gen_name(name) # object name when instantiating..
+        if not _force_name is None:
+            self.name = _force_name
         global _collected_objects
         global _collected_object_classes
-        if _problem_compilation:
+        if not _compilation and not _effect_compilation and not _variable_mode:
             self._parse_history = []
             self._class_variable = self.name
             if not self.__imaginary__:
@@ -1076,22 +1525,42 @@ class Object(metaclass=BaseObjectMeta):
                     _collected_objects[self.__class__.__name__] = [ self.name ]
                 else:
                     _collected_objects[self.__class__.__name__].append(self.name)
+        # TODO HERE: in effect, do the same if we are imaginary!
         # when class is instantiated, make sure to "proxy" all properties
-        for key in type(self).__dict__:
+        for key in dir(self):
             # print(key)
             if isinstance(getattr(self, key), Property):
                 # print("copying propeorty", key)
-                setattr(self, key, copy.copy(getattr(self,key)))
-                # for the every property in my Object, 
+                # setattr(self, key, copy.copy(getattr(self,key)))
+                self.__setattr__(key, copy.copy(getattr(self,key)), _init_mode=True)
+                if isinstance(getattr(self, key), Relation):
+                    getattr(self, key)._property_value = ListLike()
+                # for the every property in my Object,
                 #    when instantiating the class
                 #    set _property_of_inst to:
                 #    - indicate that we are now a property of instantiated object
                 #    - have a reference to the mother instance of Object
                 getattr(self, key)._property_of_inst = self
+                # poodle3-ignore -->
+                if hasattr(getattr(self,key), "_init_value"):
+                    null_object = getattr(self,key)._init_value
+                    getattr(self,key).init_unsafe_internal(null_object)
+                if False and not self.__imaginary__ and \
+                        not getattr(self,key)._value is None and \
+                        not isinstance(getattr(self, key), Relation):
+                    if hasattr(getattr(self,key), "_init_value"):
+                        null_object = getattr(self,key)._init_value
+                    else:
+                        # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
+                        null_object = getattr(self,key)._value._none_object # ("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
+                    getattr(self,key).init_unsafe_internal(null_object)
         self.__unlock_setter = False
     def gen_name(self, name):
         return ''.join([x if x in (string.ascii_letters+string.digits) else '-' for x in name])
-    
+
+    def _is_variable(self):
+        return self._variable_mode
+
     def class_variable(self):
         "we assume to have a variable assigned"
         if self._class_variable == None:
@@ -1104,80 +1573,143 @@ class Object(metaclass=BaseObjectMeta):
         #        myclass_genvar = ph["variables"][my_class_name]
         #        break
         #return myclass_genvar
-    
-    @classmethod
-    def Select(cls, **kwargs):
-        "ret = Class.Select(prop1=inst1,prop2=inst2,...) is equivalent to \
-        v1=Select(Class.prop1 in/== inst1) and ret = Select(v1.prop2 in/== inst2)"
-        global _compilation
-        ret = cls
-        _compilation = True
-        for k,v in kwargs.items(): 
-            ret = getattr(ret,k).operator(v)
-        _compilation = False
-        return ret
-     
-    @classmethod
-    def RSelect(cls, **kwargs):
-        "ret = Class.RSelect(prop1=inst1,prop2=inst2,...) is equivalent to \
-        v1=Select(inst1 in/== Class.prop1) and ret = Select(inst2 in/== v1.prop2)"
-        global _compilation
-        # ret1 = list(kwargs.items())[0][1].operator(getattr(cls,list(kwargs.items())[0][0]))
-        # ret = ret1
-        ret = cls
-        _compilation = True
-        # for k,v in list(kwargs.items())[1:]: 
-        for k,v in kwargs.items(): 
-            ret = v.operator(getattr(ret,k),dir_hint="reverse")
-        _compilation = False
-        return ret
-    
+
+    # @classmethod
+    # def Select(cls, **kwargs):
+    #     "ret = Class.Select(prop1=inst1,prop2=inst2,...) is equivalent to \
+    #     v1=Select(Class.prop1 in/== inst1) and ret = Select(v1.prop2 in/== inst2)"
+    #     global _compilation
+    #     ret = cls
+    #     _compilation = True
+    #     for k,v in kwargs.items():
+    #         ret = getattr(ret,k).operator(v)
+    #     _compilation = False
+    #     return ret
+
+    # @classmethod
+    # def RSelect(cls, **kwargs):
+    #     "ret = Class.RSelect(prop1=inst1,prop2=inst2,...) is equivalent to \
+    #     v1=Select(inst1 in/== Class.prop1) and ret = Select(inst2 in/== v1.prop2)"
+    #     global _compilation
+    #     # ret1 = list(kwargs.items())[0][1].operator(getattr(cls,list(kwargs.items())[0][0]))
+    #     # ret = ret1
+    #     ret = cls
+    #     _compilation = True
+    #     # for k,v in list(kwargs.items())[1:]:
+    #     for k,v in kwargs.items():
+    #         ret = v.operator(getattr(ret,k),dir_hint="reverse")
+    #     _compilation = False
+    #     return ret
+
+    def _get_all_predicates(self):
+        all_preds = []
+        for k,v in [[n,getattr(self,n)] for n in dir(self)]:
+            if isinstance(v, Property):
+                v._property_of_inst = self # fixes stuff for Bool: bug!
+                all_preds.append(v._pddl_gen_predicates_entry())
+        return all_preds
+
+    def _get_all_facts(self):
+        all_facts = []
+        for k,v in [[n,getattr(self,n)] for n in dir(self)]:
+            if isinstance(v, Property):
+                all_facts += v._pddl_gen_fact()
+        return all_facts
+
+    def _get_all_none_objects(self):
+        none_objects = set()
+        for k,v in [[n,getattr(self,n)] for n in dir(self)]:
+            if isinstance(v, Property):
+                none_objects.add(v._get_none_object())
+        return none_objects
+
+
     def __eq__(self, other):
+        other = resolve_poodle_special_object(other)
         if isinstance(other, Property):
             return other.__eq__(self)
-        elif isinstance(other, Object):
+        elif isinstance(other, Object) and \
+                    (_compilation or _problem_compilation or _effect_compilation) and not is_internall_call():
+                        # i believe this is actually not deeded in problem compilation, so poodle3 ignore
             assert self._class_variable and other._class_variable, "Expected fully initialized objects"
             global _collected_predicates
             global _collected_parameters
             _collected_predicates.append("(= %s %s)" % (self._class_variable, other._class_variable))
             _collected_parameters.update({self._class_variable: self.__class__.__name__, other._class_variable: other.__class__.__name__}) # TODO: could be done easier if we added them on init...
-            # raise NotImplementedError("Object-Object selector is not supported")
             push_selector_object(self)
             return self
+        elif type(other) == type(True):
+            # never reached
+            raise NotImplementedError()
+            return True # WARNING! stub for asserts! TODO FIX
+        elif isinstance(other, int):
+            # never reached
+            raise NotImplementedError()
+            return True # WARNING! stub for asserts! TODO FIX
         else:
             return super().__eq__(other)
-    
-    def __setattr__(self, name, value):
+
+    def __setattr__(self, name, value, _init_mode=False):
         global _problem_compilation
         global _compilation
-       
+
         # if _problem_compilation and isinstance(value, Object):
         #     print("EXEC PC TRYING TO SET ---------------------------------------", name, value)
-            
+
         if (_compilation or _problem_compilation) and isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
             # print("EXEC SET ---------------------------------------", name, value)
             getattr(self, name).set(value)
+        elif not _init_mode and (_compilation or _problem_compilation) and isinstance(value, Property) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+            local_obj = value._value(_variable_mode=True)
+            assert local_obj == value
+            getattr(self, name).set(local_obj)
         elif (_effect_compilation or _problem_compilation) and isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
-            if value == True:
-                getattr(self, name).set()
+            if isinstance(getattr(self, name), Bool):
+                getattr(self, name).set(value)
             else:
-                raise NotImplementedError("Boolean False is not supported")
+                if value == True:
+                    getattr(self, name).set()
+                elif value == False:
+                    getattr(self, name).unset()
+                else:
+                    raise AssertionError("Something is wrong")
         else:
             # WARNING! please check the proper usage of __unlock_setter
             # setter must probably unlock only for non-existent class attributes or only for existing properties
-            if ( _problem_compilation or _compilation) and hasattr(self, name) and not self.__unlock_setter and isinstance(getattr(self, name), Property):
-                raise AssertionError("No support for setting of type %s to property %s (in compilation mode)" % (str(type(value)), name))
+            # if ( _problem_compilation or _compilation) and hasattr(self, name) and not self.__unlock_setter and isinstance(getattr(self, name), Property):
+                # raise AssertionError("No support for setting of type %s to property %s (in compilation mode)" % (str(type(value)), name))
             if _compilation and name[0] != "_" and not hasattr(self, name) and not "__unlock_setter" in name and not self.__unlock_setter: # all system properties must start with _
             #if _compilation and not hasattr(self, name) and not "__unlock_setter" in name:
                 raise AssertionError("New properties setting is not allowed in compilation mode, please define %s as Property of %s" % (name, self.__class__))
-            super().__setattr__(name, value)
+
+            if isinstance(value, Object) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                getattr(self, name).set(value)
+            elif isinstance(value, bool) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                if isinstance(getattr(self, name), Bool):
+                    getattr(self, name).set(value)
+                else:
+                    if value == True:
+                        getattr(self, name).set()
+                    elif value == False:
+                        getattr(self, name).unset()
+                    else:
+                        raise AssertionError("Something is wrong")
+            elif isinstance(value, int) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                from poodle.arithmetic import logSparseIntegerFactory
+                getattr(self, name).set(logSparseIntegerFactory.get(value))
+            elif not _init_mode and isinstance(value, Property) and not value._property_value is None and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                getattr(self, name)._property_value = value._property_value
+            else:
+                if not _init_mode and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                    raise AssertionError("Rewriting object for property %s with value %s" % (name, value))
+                super().__setattr__(name, value)
 
     # def __getattr__(self, attr):
     #     print("GA-", self, attr)
     #     return super().__getattribute__(attr)
 
     def __getattribute__(self, attr):
-        if "_" == attr[0]: return super().__getattribute__(attr)
+        if attr.startswith("_"): return super().__getattribute__(attr)
         # this does not work and is not needed:::: -->
         if hasattr(self, "_dot_from") and isinstance(self._dot_from, Property):
             raise NotImplementedError("Dot-dot dereferencing is not implemeted, please do dereferencing manually")
@@ -1186,31 +1718,29 @@ class Object(metaclass=BaseObjectMeta):
         # print(self,":",attr,":",v)
         if self._sealed and isinstance(v, Property):
             return v._property_value
-        if isinstance(v, Property): 
+        if isinstance(v, Property):
             v._dot_from = self
         return v
-    
+
     def __str__(self):
         try:
             return repr(self)+"(name=%s, value=%s)" % (self.name, self.value)
         except:
             return repr(self)+"(Additionally, there was an error during standard __str__)"
-            
 
-    
+    def __hash__(self):
+        return hash(self.name)
+
+
     # def __getattr__(self, attr):
     #     if attr == "_type_of_property": return super().__getattr__(self, attr)
     #     if hasattr(self, "_type_of_property"):
     #         print("has top", attr)
     #     return super().__getattr__(self, attr)
 
-# A static object initializes itself with instances static_values
-class StaticObject(Object):
-    # TODO
-    pass
 
 class Imaginary(Object):
-    
+
     def gen_name(self, name):
         global _problem_compilation
         if _problem_compilation:
@@ -1218,11 +1748,11 @@ class Imaginary(Object):
             return ' '.join([v.name for v in hns])
         else:
             return super().gen_name(name)
-    
-    def __init__(self):
+
+    def __init__(self, value=None, _force_name=None):
         self.__imaginary__ = True
-        super().__init__()
-        self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-default-")
+        super().__init__(value, _force_name)
+        self._class_variable = gen_var_imaginary(self.__class__.__name__, prefix="im-")
         global _effect_compilation
         global _collected_predicates
         global _collected_effects
@@ -1240,14 +1770,23 @@ class Imaginary(Object):
             _collected_effects.append(exists_predicate)
             _collected_parameters[self._class_variable] = HASHNUM_CLASS_NAME
 
-
-
-class Digit(Object):
+# A static object initializes itself with instances static_values
+class StaticObject(Object):
+    # TODO
     pass
 
 class PoodleHashnum(Object):
     "hashnum is used in imaginary object identification"
     pass # unsorted, unopimized
+
+class BooleanObject(Object):
+    pass
+
+_problem_compilation = True
+_system_objects["object-True"] = BooleanObject("TRUE")
+_system_objects["object-False"] = BooleanObject("FALSE")
+_collected_object_classes.add("BooleanObject") # TODO THIS DOES NOT WORK FIXME
+_problem_compilation = False
 
 #########################################################################
 ##
@@ -1272,24 +1811,24 @@ class PlannedAction(metaclass=ActionMeta):
             if isinstance(v, Object):
                 v._sealed = True
             setattr(self, k, v)
-            
-    
+
+
     def __str__(self):
         return self.render(self._planned_objects_dict)
-        
+
     def __repr__(self):
         return self._default_render(self._planned_objects_dict)
-        
+
     def render(self, obj_dict):
         return self._default_render(obj_dict)
-        
+
     def _default_render(self, obj_dict):
         return self.__class__.__name__+": "+", ".join('%s=%s' % (n, obj_dict.get(n)) for n in dir(self) if isinstance(getattr(self,n), Object))
         # return ", ".join(repr(getattr(self,n)) for n in dir(self))
         # return repr(dir(self))
         # return ', '.join("%s: %s" % item for item in attrs.items() if isinstance(item[1], Property))
         # return ', '.join("%s: %s" % item for item in attrs.items() )
-        
+
         # ret = "{0}".format(self.__class__.__name__)
         # for arg in self.argumentList:
         #     ret +=" {0}({1})".format(arg.name, arg.value)
@@ -1312,7 +1851,7 @@ class PlannedAction(metaclass=ActionMeta):
         cls.problem = problem
         sel_ret = cls.selector(cls)
         cls.selector_objects = []
-        if sel_ret != "DEFAULT": 
+        if sel_ret != "DEFAULT":
             assert type(sel_ret) != type(True) and not sel_ret is None, "selector() does not return supported value in %s (value was %s)" % (repr(cls), repr(sel_ret))
             if type(sel_ret) == type([]):
                 cls.selector_objects = sel_ret
@@ -1322,7 +1861,7 @@ class PlannedAction(metaclass=ActionMeta):
         log.info("{0}".format(cls.effect(cls)))
         _effect_compilation = False
         _compilation = False
-        
+
         # _collected_predicates = filter(None, list(set(_collected_predicates)))
         _collected_predicates = list(filter(None, list(OrderedDict.fromkeys(cls._class_collected_predicates + _collected_predicates))))
         for k in _replaced_predicates:
@@ -1347,8 +1886,9 @@ class PlannedAction(metaclass=ActionMeta):
                 collected_parameters += "%s - %s " % (ob.split()[1], HASHNUM_CLASS_NAME)
             else:
                 collected_parameters += "%s - %s " % (ob, cls.collected_parameters[ob])
-        
+
         assert len(collected_parameters) > 0
+        deduplicate_equals(_collected_predicates)
         return """
     (:action {action_name}
         :parameters ({parameters})
@@ -1360,13 +1900,13 @@ class PlannedAction(metaclass=ActionMeta):
             {cost}
         )
     )
-        """.format(action_name = cls.__name__, 
-            parameters=collected_parameters.strip(), 
+        """.format(action_name = cls.__name__,
+            parameters=collected_parameters.strip(),
             precondition='\n            '.join(_collected_predicates),
             effect='\n            '.join(_collected_effects),
             cost='(increase (total-cost) {0})'.format(cls.cost)
         )
-    
+
     @classmethod
     def get_clips_lhs_rhs(cls, problem):
         if cls._clips_rhs:
@@ -1379,7 +1919,7 @@ class PlannedAction(metaclass=ActionMeta):
             if p.startswith("(not"):
                 fname = "?f"+str(new_id())
                 retracting_predicate = p.replace("(not","")[:-1].strip()
-                assert retracting_predicate in lhs, "ProgrammingError: retracting predicate %s not found in precondition of %s" % (p, repr(cls)) 
+                assert retracting_predicate in lhs, "ProgrammingError: retracting predicate %s not found in precondition of %s" % (p, repr(cls))
                 lhs = [ fname+" <- "+r if r == retracting_predicate else r for r in lhs ]
                 cl = "(retract %s)" % fname
             else:
@@ -1388,7 +1928,7 @@ class PlannedAction(metaclass=ActionMeta):
         cls._clips_lhs = lhs
         cls._clips_rhs = rhs
         return lhs, rhs
-    
+
     @classmethod
     def compile_clips(cls, problem):
         lhs, rhs = cls.get_clips_lhs_rhs(problem)
@@ -1400,14 +1940,20 @@ class PlannedAction(metaclass=ActionMeta):
     )
         """.format(name=cls.__name__,lhs='\n        '.join(lhs),
                     rhs='\n        '.join(rhs))
-    
+
     def selector(self):
         return "DEFAULT"
         # raise NotImplementedError
-        
+
     def effect(self):
         raise NotImplementedError("effect() in %s not implemented" % repr(self))
-    
+
+    def __call__(self):
+        if hasattr(self.problem, self.methodName):
+            return getattr(self.problem, self.methodName)(**self.kwargs)
+        else:
+            return self.wrappedMethod[0].__call__(**self.kwargs)
+
 
 class PlannedActionJinja2(PlannedAction):
     template = "./template/default.j2"
@@ -1442,16 +1988,17 @@ class Problem:
         self._compiled_problem = ""
     def getFolderName(self):
         return self.folder_name
-    
+
     def addObject(self, obj):
         self.objectList.append(obj)
         return obj
-    
+
     def getObjectList(self):
         return self.objectList
 
     def actions(self):
-        raise NotImplementedError("Please implement .actions() method to return list of planned action classes")
+        return []
+        # raise NotImplementedError("Please implement .actions() method to return list of planned action classes")
 
     def getActionByName(self):
         strList = []
@@ -1460,44 +2007,139 @@ class Problem:
         return strList
 
     def goal(self):
-        raise NotImplementedError("Please implement .goal() method to return goal in XXX format") 
+        raise NotImplementedError("Please implement .goal() method to return goal in XXX format")
+
+    def wait_result(self, url, task_id):
+        url_solve = url.strip('/') + '/solve'
+        url_check = url.strip('/') + '/check'
+        url_result = url.strip('/') + '/result'
+        url_kill = url.strip('/') + '/kill'
+        proccessing_time_start = time.time()
+        errorCount = 0
+        while 1:
+            time.sleep(SOLVER_CHECK_TIME)
+            response = requests.post(url_check, data={'id': crypt(SOLVER_KEY, str(task_id))})
+            status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+            # print(status)
+            if status == SOLVER_PROCESSING_STATUS :
+                # print(time.time() - proccessing_time_start )
+                if proccessing_time_start == 0 :
+                    proccessing_time_start = time.time()
+                    continue
+                elif  time.time() - proccessing_time_start > self.solve_timeout:
+                    log.debug(str(self.solve_timeout) + ' sec break')
+                    response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})
+                    status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+                    return 1
+                continue
+            elif status ==  SOLVER_UNKNOWN_STATUS:
+                log.debug('UNKNOWN SOLVER_ID')
+                if errorCount > 5: return 1
+                else: errorCount += 1
+            elif status ==  SOLVER_DONE_STATUS:
+                response = requests.post(url_result, data={'id': crypt(SOLVER_KEY, str(task_id))})
+                response_plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+
+                actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
+                actionClassLoader.loadFromStr(response_plan)
+                self._plan = actionClassLoader._plan
+                for ob in self.objectList: ob._sealed = True
+                return 0
+            elif status ==  SOLVER_KILLED_STATUS:
+                log.debug('SOLVER_KILLED_STATUS')
+                return 1
+            elif status ==  SOLVER_ERROR_STATUS:
+                log.debug('SOLVER_ERROR_STATUS')
+                response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})
+                plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+                return 1
+            else:
+                log.debug('UNKNOWN_STATUS')
+                if errorCount > 5: return 1
+                else: errorCount += 1
 
     def run_cloud(self, url):
-         
-        problem_pddl_base64 = self.compile_problem()#base64.b64encode(bytes(self.compile_problem(), 'utf-8'))    
-        domain_pddl_base64 = self.compile_domain()#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))      
-        
-        data_pddl = {'domain': domain_pddl_base64, 'problem': problem_pddl_base64, 'pddl_name': self.__class__.__name__ }
-        
-        response = requests.post(url, data=data_pddl)   
-        print(response.content)
-        response_plan = response.content.decode("utf-8")
-        print(response_plan)
-        
-        actionClassLoader = ActionClassLoader(self.actions(), self)
-        actionClassLoader.loadFromStr(response_plan)
-        self._plan = actionClassLoader._plan
-        print(self._plan)
-        
-        return 0
-    
-    def run(self, url = 'http://127.0.0.1:8082/solve'):
-        return self.run_cloud(url)   
 
-        
+        url_solve = url.strip('/') + '/solve'
+
+
+        SOLVER_KEY = "list(filter(None, _collected_predicates + _collected_effects))"
+
+        problem_pddl_base64 = crypt(SOLVER_KEY, str(self.compile_problem())) #base64.b64encode(bytes(self.compile_problem(), 'utf-8'))
+        domain_pddl_base64 =  crypt(SOLVER_KEY, str(self.compile_domain()))#base64.b64encode(bytes(self.compile_domain(), 'utf-8'))
+
+        data_pddl = {'d': domain_pddl_base64, 'p': problem_pddl_base64, 'n': crypt(SOLVER_KEY, self.__class__.__name__) }
+
+        response = requests.post(url_solve, data=data_pddl)
+        task_id = crypt(SOLVER_KEY, response.content.decode("utf-8"))
+
+        log.debug("Submitted task with ID: "+task_id)
+
+        return self.wait_result(url, task_id)
+        #actionClassLoader = ActionClassLoader(self.actions(), self)
+
+    def run_local(self):
+        global _collected_parameters
+        # print(_collected_parameters)
+        counter = 0
+        try:
+            with open("./.counter", "r") as fd:
+                counter = int(fd.read())
+        except:
+            counter = 0
+
+        counter += 1
+        with open("./.counter", "w") as fd:
+            fd.write(str(counter))
+
+
+        rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
+        self.folder_name = "./out/{0:05d}_{1}_{2}".format(counter, self.__class__.__name__, str(datetime.date.today()),rnd)
+        os.makedirs(self.folder_name, exist_ok=True)
+        with open("{0}/problem.pddl".format(self.folder_name), "w+") as fd:
+            fd.write(self.compile_problem())
+        with open("{0}/domain.pddl".format(self.folder_name), "w+") as fd:
+            fd.write(self.compile_domain())
+        max_time = 10000
+        # TODO: create "debug" mode to run in os command and show output in real time
+        runscript = 'pypy ../downward/fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=cg(transform=no_transform())" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=self.folder_name, maxtime=max_time)
+        log.debug("run line is {0}".format(runscript))
+        std = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True).stdout
+        retcode = "-1"
+        for line in std:
+            if line.find('search exit code:') != -1:
+                retcode = line.rstrip("\n").split()[3]
+            log.info(line.rstrip("\n"))
+        if retcode == "0" :
+            if self.getFolderName() != None:
+                actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
+                actionClassLoader.loadFromFile("{0}/out.plan".format(self.getFolderName()))
+                self._plan = actionClassLoader._plan
+        return retcode
+
+    def run(self, url = SOLVER_URL, timeout=SOLVER_MAX_TIME):
+        self.solve_timeout=timeout
+        for ob in self.objectList: ob._sealed = False # seal all objects
+        if os.environ.get("POODLE_LOCAL_PLANNER"):
+            r = self.run_local()
+        else:
+            r = self.run_cloud(url)
+        for ob in self.objectList: ob._sealed = True # seal all objects
+        return r
+
     @property
     def plan(self):
         return self._plan
 
-        
+
     def compile_actions(self):
         # TODO: collect all predicates while generating
         self.actions_text = ""
-        for act in self.actions():
+        for act in self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")]:
             act.problem = self
             self.actions_text += act.compile(self)
         return self.actions_text
-    
+
     def get_predicates(self):
         global _collected_predicate_templates
         self.predicates_text = "\n        ".join(list(set(_collected_predicate_templates)))
@@ -1510,7 +2152,9 @@ class Problem:
     def get_types(self):
         # collect all types used in both actions and problem objects
         global _collected_object_classes
-        return ' '.join(list(filter(None, list(_collected_object_classes))))
+        all_types = set(self.collected_objects.keys())
+        # return ' '.join(list(filter(None, list(_collected_object_classes))))
+        return ' '.join(list(filter(None, list(OrderedDict.fromkeys(_collected_object_classes | all_types)))))
 
     def compile_domain(self):
         actions = self.get_actions()
@@ -1541,7 +2185,7 @@ class Problem:
         # one option
 
     def gen_hashnums(self, amount=0):
-        if amount == 0: amount = self.HASHNUM_COUNT 
+        if amount == 0: amount = self.HASHNUM_COUNT
         for hn in gen_hashnums(amount):  self.addObject(hn)
 
 
@@ -1556,12 +2200,30 @@ class Problem:
         global _collected_predicates
         _problem_compilation = True
         _collected_object_classes = set()
+        _collected_object_classes.add("BooleanObject")
         _collected_objects = {}
         _collected_facts = []
         self.problem()
         if self.has_imaginary(): self.gen_hashnums()
-        self.collected_objects = _collected_objects
         self.collected_object_classes = _collected_object_classes
+        self.collected_objects = _collected_objects
+        for k in _none_objects:
+            on = _none_objects[k].name.split()[0]
+            if not k in self.collected_object_classes: continue
+            if on == "p-null-Imaginary": continue
+            noClassName = _none_objects[k].__class__.__name__ # we're not using k as class
+            if k in self.collected_objects:
+                self.collected_objects[noClassName].append(on)
+            else:
+                self.collected_objects[noClassName] = [ on ]
+        for k in _system_objects:
+            on = _system_objects[k].name.split()[0]
+            noClassName = _system_objects[k].__class__.__name__ # we're not using k as class
+            if k in self.collected_objects:
+                self.collected_objects[noClassName].append(on)
+            else:
+                self.collected_objects[noClassName] = [ on ]
+        self.collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
         self.collected_facts = _collected_facts
         _compilation = True # required to compile the goal
         _collected_effects = []
@@ -1571,16 +2233,19 @@ class Problem:
         # print("+++++++++++++++++", _collected_effects, _collected_predicates)
         global _selector_out
         _selector_out = None # cleaner goal
-        self.collected_goal = list(filter(None, _collected_predicates + _collected_effects)) # filtering is not required...
+        self.collected_goal = list(filter(None, list(OrderedDict.fromkeys(_collected_predicates + _collected_effects))))
         assert len(self.collected_goal), "No goal was generated"
         _collected_predicates = []
         _collected_effects = []
-        
+
         _compilation = False
         _problem_compilation = False
+        return self.format_problem()
+
+    def format_problem(self):
         txt_objects = ""
         for cls in self.collected_objects:
-            txt_objects += " ".join(list(set(self.collected_objects[cls]))) + " - " + cls + " "
+            txt_objects += "\n        ".join(list(set(self.collected_objects[cls]))) + " - " + cls + "\n        "
         self._compiled_problem =  """
 (define (problem poodle-generated)
     (:domain poodle-generated)
@@ -1601,14 +2266,18 @@ class Problem:
     def facts(self):
         self.compile_problem()
         return self.collected_facts
-        
-    def check_solution(self):
+
+    def check_solution(self, attempts=3):
         "run debugging session over the solution"
         step_completed = False
-        for tryCount in range(3):
+        for tryCount in range(attempts):
             i=0
             work_facts = self.facts()
-            for act in self.solution():
+            for fun_act in self.solution():
+                if hasattr(fun_act, "plan_class"):
+                    act = fun_act.plan_class
+                else:
+                    act = fun_act
                 step_completed = False
                 lhs, rhs = act.get_clips_lhs_rhs(self)
                 c = CLIPSExecutor()
@@ -1634,7 +2303,7 @@ class CLIPSRule:
         self.name = name
         self.lhs = copy.copy(lhs)
         self.rhs = copy.copy(rhs)
-        
+
     def compile(self):
         return """
     (defrule {name}
@@ -1644,7 +2313,7 @@ class CLIPSRule:
     )
         """.format(name=self.name,lhs='\n        '.join(self.lhs),
                     rhs='\n        '.join(self.rhs))
-    
+
     def __str__(self):
         return self.compile()
 
@@ -1658,18 +2327,18 @@ class CLIPSExecutor:
     CLIPS_BINARY = "clips"
     def __init__(self):
         self.rules = []
-    
+
     def load_rule(self, name, lhs, rhs):
         self.rules.append(CLIPSRule(name, lhs, rhs))
-        
+
     def load_facts(self, facts):
         # print("loading facts", facts)
         self.facts = facts
 
     def render_assert_facts(self):
         return '\n'.join("(assert %s)" % f for f in self.facts)
-        
-    def gen_run_problem(self):
+
+    def gen_run_problem(self, factFileName):
         defrules = str(self.rules[0])
         facts = self.render_assert_facts()
         return """
@@ -1677,12 +2346,14 @@ class CLIPSExecutor:
         (seed {seed})
         (set-strategy random)
         (watch facts)
-        {facts}
+        (watch rules)
+        (load-facts "{ffn}")
+        ;{facts}
         (printout t "--- RUN ---" crlf)
         (run 1)
         (exit)
-        """.format(defrules=defrules, facts=facts, seed=str(int(time.time())))
-        
+        """.format(defrules=defrules, facts=facts, seed=str(int(time.time())), ffn=factFileName)
+
     def gen_match_problem(self, factFileName):
         defrules = str(self.rules[0])
         rname = self.rules[0].name
@@ -1695,8 +2366,8 @@ class CLIPSExecutor:
         (matches {rname})
         (exit)
         """.format(defrules=defrules, rname=rname, ffn=factFileName)
-    
-    
+
+
     def get_facts(self):
         run_result = self.run_result.split("--- RUN ---")[-1]
         # print("RUN RES", run_result)
@@ -1713,11 +2384,11 @@ class CLIPSExecutor:
                 new_facts.append(fact)
         # print("NEW facts", new_facts)
         return list(set(self.facts)-set(del_facts))+new_facts
-            
+
     def run_clips_file(self, fn):
         p = subprocess.run([self.CLIPS_BINARY, "-f2", fn], stdout=subprocess.PIPE)
         return p.stdout.decode("utf-8")
-        
+
     def run_get_result(self, prg):
         # open("./CPLTEST.clp","w+").write(prg)
         with tempfile.NamedTemporaryFile() as fp:
@@ -1727,12 +2398,16 @@ class CLIPSExecutor:
             self.run_result = self.run_clips_file(fn)
             fp.close()
         # open("./CPLTEST_RES.clp","w+").write(self.run_result)
-            
+
     def run(self):
-        self.run_get_result(self.gen_run_problem())
+        # self.run_get_result(self.gen_run_problem())
+        with tempfile.NamedTemporaryFile() as fp:
+            fp.write('\n'.join(self.facts).encode("ascii"))
+            fp.flush()
+            self.run_get_result(self.gen_run_problem(fp.name))
         if len(self.run_result.split("--- RUN ---")[-1]) < 10:
             raise MatchError("Rule %s does not match its selector")
-    
+
     def check_match(self, actClass):
         with tempfile.NamedTemporaryFile() as fp:
             fp.write('\n'.join(self.facts).encode("ascii"))
@@ -1756,13 +2431,18 @@ class CLIPSExecutor:
                     indexed_ces.append("{code}, {op1}<>{op2} in {file}:{line}".format(op1=ph["self-propname"],op2=ph["other-propname"],code=ph["frame"]["code"],file=os.path.basename(ph["frame"]["file"]),line=ph["frame"]["line"]))
                     break
             if not found:
-                indexed_ces.append("unknown "+ce) # 
+                indexed_ces.append("unknown "+ce) #
             # assert found
         allmatch=["     *"]
         acc = []
         other_out = "Partial".join(m.split("Partial")[1:])+"\nPartial"
+        first_partial = True
         for l in other_out.split("\n"):
-            if "Partial" in l:
+            if "Partial" in l or "Activations" in l:
+                if first_partial:
+                    acc = []
+                    first_partial = False
+                    continue
                 if acc and 'None' in acc[0]:
                     allmatch.append("!!   0")
                 elif acc:
@@ -1791,10 +2471,10 @@ class CLIPSExecutor:
                 else:
                     col_fs.append(l)
         return '\n'.join(ret)
-        
+
 
 class ActionClassLoader:
-    
+
     # put as argument for constructor list of the ActionPlanned type which got from Problem.actions()
     def __init__(self, actionList, problem):
         self.actionList = [] #list of the ActionPlanned type
@@ -1819,10 +2499,13 @@ class ActionClassLoader:
                     argumentList.append(obj_found)
                 parameter_names = []
                 for k in action.collected_parameters.keys(): parameter_names+=k.split()
+                parameter_names = [ x for x in parameter_names if x.startswith("?") ] # see https://trello.com/c/STwRxQ9e/213-bug-objvariable-contains-both-variables-and-symbol
                 pos_args_dict = dict(zip(parameter_names,argumentList))
                 action_py_vars_dict = {n:getattr(action,n)._class_variable for n in dir(action) if isinstance(getattr(action,n), Object)}
                 action_py_vars_matched_values = {pyvar:pos_args_dict.get(ppar) for pyvar,ppar in action_py_vars_dict.items()}
                 plannedAction = action(**action_py_vars_matched_values)
+                plannedAction.kwargs = action_py_vars_matched_values
+                plannedAction.methodName = action.__name__
                 self._plan.append(plannedAction)
                 # log.info(plannedAction)
 
@@ -1838,3 +2521,51 @@ class ActionClassLoader:
         for planLine in outPlanStr.splitlines():
             if ";" in planLine: continue
             self.load(planLine.replace("(", "").replace(")", ""))
+
+def planned(fun=None, *, cost=None):
+    if fun is None:
+        return functools.partial(planned, cost=cost)
+    cost = cost if cost else 1
+    if not getattr(fun, "__annotations__", None):
+        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter: %s" % fun)
+    fun._cost = cost
+    fun._planned = True
+    return fun
+
+def _planned_internal(fun=None, *, cost=None):
+    if fun is None:
+        return functools.partial(planned, cost=cost)
+    cost = cost if cost else 1
+    if not getattr(fun, "__annotations__", None):
+        raise ValueError("For planning to work function parameters must be type annotated with at least one parameter: %s" % fun)
+    kwargs = {}
+    for k, v in fun.__annotations__.items():
+        if isinstance(v, str):
+            raise ValueError("Forward references are not suported in methods yet")
+        else:
+            kwargs[k] = resolve_poodle_type(v)(_variable_mode=True)
+    class NewPlannedAction(PlannedAction):
+        def effect(self):
+            global _selector_out
+            fun(**kwargs)
+            _selector_out = None
+    for k, v in kwargs.items(): setattr(NewPlannedAction, k, v)
+    NewPlannedAction.__name__ = fun.__name__
+    NewPlannedAction.cost = cost
+    NewPlannedAction.wrappedMethod = [fun]
+    def wrapped(**kwargs):
+        return fun(**kwargs)
+    wrapped.plan_class = NewPlannedAction
+    wrapped.__name__ = fun.__name__
+    wrapped.wrappedMethod = [fun]
+    return wrapped
+
+def Any(what, space=[]):
+    # TODO: implement "Any" selection
+    global _compilation
+    l_compilation = _compilation
+    _compilation = False
+    ob = what(_variable_mode=True)
+    _compilation = l_compilation
+    return ob
+

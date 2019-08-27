@@ -1,43 +1,42 @@
-from poodle.poodle import *
+from poodle import *
 from object.networkObject import *
 
-class ConsumePacket(PlannedActionJinja2):
-    cost = 1
+# class ConsumePacket(PlannedAction):
+#     cost = 1
 
-    interface1 = Interface()
-    # current_host = Host.has_interface.contains(interface1)
-    # current_host = Host.has_interface // interface1
-    current_host = interface1 |IN| Host.has_interface
+#     interface1 = Interface()
+#     # current_host = Host.has_interface.contains(interface1)
+#     # current_host = Host.has_interface // interface1
+#     current_host = interface1 |IN| Host.has_interface
     
-    # packet = current_host.has_interface |EQ| Packet.at_interface_input \
-    packet = Packet.at_interface_input |EQ| current_host.has_interface \
-            #   or current_host.has_interface |IN| Packet.at_interface_output
-    # (Packet-at_interface_input ?Packet-6 ?Interface-3)
-    # (Host-has_interface ?Host-4 ?Interface-3)
-    interface_any = Interface |IN| current_host.has_interface
-    packet_next = packet.next |EQ| Packet 
+#     # packet = current_host.has_interface |EQ| Packet.at_interface_input \
+#     packet = Packet.at_interface_input |EQ| current_host.has_interface \
+#             #   or current_host.has_interface |IN| Packet.at_interface_output
+#     # (Packet-at_interface_input ?Packet-6 ?Interface-3)
+#     # (Host-has_interface ?Host-4 ?Interface-3)
+#     interface_any = Interface |IN| current_host.has_interface
+#     packet_next = packet.next |EQ| Packet 
     
-    # packet_next = Packet |EQ| packet.next # TODO: implement other-way-around???
-    # packet_next = packet.next |EQ| Packet 
-    # TODO: implement reverse order EQ!!
-    # host_more = Host.has_interface |EQ| packet_next.at_interface_input
-    # host_more =  packet_next.at_interface_input |EQ| Host.has_interface
-    # (Host-has_interface ?host-1 ?interface-1)
-    # (Packet-at_interface_input ?packet-1 ?interface-1)
-    # packet2 = packet.related_to |IN| Host.has_interface
+#     # packet_next = Packet |EQ| packet.next # TODO: implement other-way-around???
+#     # packet_next = packet.next |EQ| Packet 
+#     # TODO: implement reverse order EQ!!
+#     # host_more = Host.has_interface |EQ| packet_next.at_interface_input
+#     # host_more =  packet_next.at_interface_input |EQ| Host.has_interface
+#     # (Host-has_interface ?host-1 ?interface-1)
+#     # (Packet-at_interface_input ?packet-1 ?interface-1)
+#     # packet2 = packet.related_to |IN| Host.has_interface
     
-    def selector(self):
-        return self.packet.dst_ipaddr |EQ| self.interface_any.has_ipaddr \
-                and self.interface1.has_ipaddr |EQ| self.packet.dst_ipaddr
+#     def selector(self):
+#         return self.packet.dst_ipaddr |EQ| self.interface_any.has_ipaddr \
+#                 and self.interface1.has_ipaddr |EQ| self.packet.dst_ipaddr
     
-    def effect(self):
-        self.packet_next.current_packet.set() # = True
-        # self.packet.next.current_packet.set() # = True # TODO: support for dot-dot
-        # (Packet-current_packet )
-        self.packet.is_consumed.set() # = False
-        self.packet.current_packet.unset()
+#     def effect(self):
+#         self.packet_next.current_packet = True # = True
+#         # (Packet-current_packet )
+#         self.packet.is_consumed = True # = False
+#         self.packet.current_packet = False
 
-#print('"'+ConsumePacket.compile(None).strip()+'"')
+# #print('"'+ConsumePacket.compile(None).strip()+'"')
 
 class ConsumePacketSelectInv(PlannedAction):
     cost = 1
@@ -59,15 +58,14 @@ class ConsumePacketSelectInv(PlannedAction):
                 and self.interface1.has_ipaddr == self.packet.dst_ipaddr)
     
     def effect(self):
-        self.packet_next.current_packet.set() # = True
-        # self.packet.next.current_packet.set() # = True # TODO: support for dot-dot
+        self.packet_next.current_packet = True # = True
         # (Packet-current_packet )
-        self.packet.is_consumed.set() # = False
-        self.packet.current_packet.unset()
+        self.packet.is_consumed = True # = False
+        self.packet.current_packet = False
 
 #print('"'+ConsumePacketSelectInv.compile(None).strip()+'"')
 
-class ConsumePacketSelect(PlannedActionJinja2):
+class ConsumePacketSelect(PlannedAction):
     cost = 2
     
     interface1 = Interface()
@@ -88,13 +86,40 @@ class ConsumePacketSelect(PlannedActionJinja2):
                 # and self.interface1.has_ipaddr == self.packet.dst_ipaddr) # incorrect, add to unit test
     
     def effect(self):
-        self.packet_next.current_packet.set() # = True
-        # self.packet.next.current_packet.set() # = True # TODO: support for dot-dot
+        self.packet_next.current_packet = True
         # (Packet-current_packet )
-        self.packet.is_consumed.set() # = False
-        self.packet.current_packet.unset()
+        self.packet.is_consumed = True
+        self.packet.current_packet = False
 
 #print('"'+ConsumePacketSelect.compile().strip()+'"')
+
+
+
+class PacketActionModel:
+    
+    @planned # also @chained
+    def ConsumePacket(self, 
+            interface1: Interface, 
+            current_host: Host, 
+            packet: Packet, 
+            interface_any: Interface, 
+            packet_next: Packet):
+
+        assert interface1 in current_host.has_interface
+        assert packet.at_interface_input == current_host.has_interface
+        assert interface_any in current_host.has_interface
+        assert packet.current_packet == True
+        assert packet.dst_ipaddr == interface_any.has_ipaddr and \
+               packet_next == packet.next
+        
+        packet.current_packet = False
+        packet_next.current_packet = True
+        packet.is_consumed = True
+
+
+
+pp = PacketActionModel()
+print(pp.ConsumePacket.plan_class.compile(pp))
 
 class ForwardPacketToInterface(PlannedAction):
 
@@ -109,18 +134,18 @@ class ForwardPacketToInterface(PlannedAction):
         # TODO: we can auto-detect what to unset in property
         #       as property can only have one variable
         #       just select the variable first of the class that has the variable
-        self.packet.at_interface_output.unset(self.interface1)
+        self.packet.at_interface_output = self.problem.null_interface
         # this also works but experimentally:
         # self.packet.at_interface_output.unset()
         # TODO: set() could automatically issue an unset()
         print("MY CHECK 11111")
-        self.packet.at_interface_input.init_unsafe(self.interface2)
+        self.packet.at_interface_input = self.interface2
 
-print(ForwardPacketToInterface.compile_clips(None))
 class ForwardingProblem(Problem):
     def actions(self):
         return [ ForwardPacketToInterface]
     def problem(self):
+        self.null_interface = Interface("NULL")
         self.testif1 = self.addObject(Interface("test0"))
         self.testif2 = self.addObject(Interface("test0"))
         self.testif1.adjacent_interface.add(self.testif2)
@@ -131,27 +156,28 @@ class ForwardingProblem(Problem):
         return self.packet.at_interface_input == self.testif2
 
 p = ForwardingProblem()
+# print(ForwardPacketToInterface.compile_clips(p))
 p.run()
 for i in p.plan: print(i)
   
-class ForwardPacketInSwitch(PlannedAction):
+# class ForwardPacketInSwitch(PlannedAction):
 
-    switch = Host()
+#     switch = Host()
     
-    #switch = Host |IN| Host.isSwitch
-    interface_from = Interface |IN| switch.has_interface
-    interface_to = Interface |IN| switch.has_interface
+#     #switch = Host |IN| Host.isSwitch
+#     interface_from = Interface |IN| switch.has_interface
+#     interface_to = Interface |IN| switch.has_interface
 
-    packet = Packet()
+#     packet = Packet()
 
-    state = RequestState |IN| packet.protocol_state
+#     state = RequestState |IN| packet.protocol_state
 
-    def selector(self):
-        Select(self.interface_from == self.packet.at_interface_input \
-        and self.interface_from != self.interface_to)
+#     def selector(self):
+#         Select(self.interface_from == self.packet.at_interface_input \
+#         and self.interface_from != self.interface_to)
 
-    def effect(self):
-        self.packet.at_interface_input.unset(self.interface_from)
+#     def effect(self):
+#         self.packet.at_interface_input.unset(self.interface_from)
 
 # print(ForwardPacketInSwitch.compile())
 
@@ -205,12 +231,12 @@ class ForwardPacketToRouteInTable(PlannedAction):
 
     def effect(self):
         # self.packet.at_table = None # TODO not supported yet
-        self.packet.at_table.unset(self.table)
+        self.packet.at_table = self.problem.null_table
         # self.packet.at_interface_output = self.route.interface # TODO support this
-        self.packet.at_interface_output.init_unsafe(self.interface) # TODO remove when above is supported
-        self.packet.dst_macaddr.init_unsafe(self.interface_dest)
+        self.packet.at_interface_output = self.interface # TODO remove when above is supported
+        self.packet.dst_macaddr = self.interface_dest
 
-print(ForwardPacketToRouteInTable.compile(Problem()))
+# print(ForwardPacketToRouteInTable.compile(Problem()))
 
 class TestABCSelect(PlannedAction):
     host = Host()
@@ -221,7 +247,7 @@ class TestABCSelect(PlannedAction):
         return self.packet
         
     def effect(self):
-        self.packet.src_ipaddr.init_unsafe(self.ipaddr)
+        self.packet.src_ipaddr = self.ipaddr
 print(TestABCSelect.compile(Problem()))
 print(TestABCSelect.compile_clips(Problem()))
 
@@ -236,7 +262,7 @@ class TestABCRSelect(PlannedAction):
         return Select(self.packet.at_interface_output in self.host.has_interface)
         
     def effect(self):
-        self.packet.src_ipaddr.init_unsafe(self.ipaddr)
+        self.packet.src_ipaddr = self.ipaddr
 print(TestABCRSelect.compile(Problem()))
 
 class TestImaginaryCreate(PlannedAction):
@@ -284,19 +310,47 @@ class TestStaticObject(PlannedAction):
             and Unselect(self.host.has_interface == self.interface)
 
     def effect(self):
-        self.packet.at_interface_input.init_unsafe(self.problem.testif)
+        self.packet.at_interface_input = self.problem.testif
+        
+class TestObj(Object):
+    pass
+
+class ObjHolder(Object):
+    obj = Property(TestObj)
+    done = Bool(False)
 
 class StaticObjectProblem(Problem):
+    @planned
+    def testObjEq(self, ob1: TestObj, ob2: TestObj, oh: ObjHolder, oh2: ObjHolder):
+        assert ob1 == oh.obj
+        assert ob2 == oh2.obj
+        assert ob1 == ob2
+        oh.done = True
+        return "DONE"
+    
+    # @planned
+    # def noConditions(self, a:TestObj):
+    #     self.oh2.obj = a
+    #     return True
+    
     def actions(self):
         return [ TestStaticObject ]
     def problem(self):
         self.testif = self.addObject(Interface("test0"))
         self.ipaddr = IPAddr("192.168.1.1")
+        self.o1 = self.addObject(TestObj())
+        self.o2 = self.addObject(TestObj())
+        self.oh = self.addObject(ObjHolder())
+        self.oh2 = self.addObject(ObjHolder())
+        self.oh.obj = self.o1
+        self.oh2.obj = self.o1
     def goal(self):
-        return self.testif.has_ipaddr == self.ipaddr
+        # return self.testif.has_ipaddr == self.ipaddr
+        return self.oh.done == True
 
 p = StaticObjectProblem()
 p.run()
+for a in p.plan: print(a())
 print(p.compile_domain())
 #p.compile_problem()
 #p.compile_domain()
@@ -316,13 +370,32 @@ class HopToRoute(PlannedAction):
     route_dot_interface = Select(Interface == route.interface)
 
     def selector(self):
-        return self.route
+        # return self.route
+        return Select(self.route_dot_interface == self.problem.interface)
 
     def effect(self):
-        self.packet.at_interface_input.unset()
-        self.packet.at_interface_output.init_unsafe(self.route_dot_interface)
+        self.packet.at_interface_input = self.problem.null_interface
+        self.packet.at_interface_output = self.route_dot_interface
         
-print(HopToRoute.compile(Problem()))
+class HopToRouteAction:
+    def HopToRoute(self,
+            host: Host,
+            packet: Packet,
+            route_dot_interface: Interface,
+            table: Table,
+            route: Route
+        ):
+        "Relay the packet to route in the host"
+        
+        assert table in host.has_table and route in table.has_route
+        assert packet.at_interface_input in host.has_interface
+        assert route_dot_interface == self.interface
+
+        packet.at_interface_input = self.null_interface
+        packet.at_interface_output = route_dot_interface
+        
+
+# print(HopToRoute.compile(Problem()))
 # raise AssertionError("TEST")
 
 class CreateRouteInsupported(PlannedAction):
@@ -347,7 +420,7 @@ class CreateRoute(PlannedAction):
     interface = Select(Interface in host.has_interface)
 
     def selector(self):
-        return Select(self.packet.at_interface_input in self.host.has_interface)
+        return Select(self.packet.at_interface_input in self.host.has_interface and self.interface == self.problem.interface)
 
     def effect(self):
         r = Route()

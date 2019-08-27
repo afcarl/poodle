@@ -1,2 +1,10 @@
 out/
 __pycache__
+poodle-release/
+dist/
+.counter
+*.pyc
+.tox
+build/
+.vscode
+poodle.egg-info

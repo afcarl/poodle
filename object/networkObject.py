@@ -1,26 +1,26 @@
-from poodle.poodle import *
+from poodle import *
 from object.commonObject import *
 
-class RequestState(StaticObject):
+class RequestState(Object):
     static_values = ["request", "reply"]
 
 class IPAddr(Object): # -> ipaddr - object; ip-192.179.4.34 - ipaddr
     
     def gen_name(self, name):
-        return super(IPAddr, self).gen_name("IP-"+name)
+        return super().gen_name("IP-"+name)
 
 class Network(Object):
-    is_default = StateFact()
+    is_default: bool
     match_ip = Relation(IPAddr) # all ipaddresses that match this network
     def gen_name(self, name):
-        return super(Network, self).gen_name("NET-"+name)
+        return super().gen_name("NET-"+name)
 Network.is_narrower_than = Relation(Network)
 # TODO: define default behaviour with "default" net narrower-than
 
 
 
 class Port(Object):
-    is_any_port = StateFact()
+    is_any_port: bool
     
 class Socket(Object):
     has_port = Property(Port)
@@ -30,7 +30,7 @@ class Interface(Object):
     has_ipaddr = Property(IPAddr)
     has_net = Property(Network)
     
-    internet_connected = StateFact()
+    internet_connected: bool
 
 #    def __str__(self):
 #        return str(self.value)
@@ -65,7 +65,7 @@ class Host(Host_P):
     has_table = Relation(Table) # -> (has-table [self] ?table - table) [x many] (table in Host.has_table) 
     has_interface = Relation(Interface)
     socket = Relation(Socket)
-    isSwitch = StateFact()
+    isSwitch: bool
 
     # heuristic relations!!
     # TODO: unique property constraint? -->>>
@@ -102,30 +102,17 @@ class RuleTo(Imaginary):
 # class SPortDPortRule(RuleTo):
 #     rule_to = Property(ipaddr=IPAddr, src_port=Port, dst_port=Port)
 
-class ProtectedProperty(Property):
-    def _check(self):
-        global _problem_compilation
-        global _compilation
-        assert _problem_compilation, "Property %s is protected!" % self
-        assert not _compilation, "Property %s is protected!" % self
-    def set(self, what):
-        self._check()
-        super().set(what)
-    def unset(self, what):
-        self._check()
-        super().unset(what)
-
 class Packet(Object):
     
-    is_consumed = StateFact()
+    is_consumed: bool
     protocol_state = Relation(RequestState)
     
-    current_packet = StateFact()
+    current_packet: bool
     next = Property("Packet")
 
     
-    packet_has_dst_ip = StateFact() # Do not know why we need this
-    packet_has_src_ip = StateFact()
+    packet_has_dst_ip: bool
+    packet_has_src_ip: bool
     
     dst_ipaddr = Property(IPAddr)
     dst_macaddr = Property(Interface)
@@ -133,25 +120,25 @@ class Packet(Object):
     has_src_port = Property(Port)
     has_dst_port = Property(Port)
     
-    socket_from = ProtectedProperty(Socket)
-    socket_to = ProtectedProperty(Socket)
+    socket_from = Property(Socket)
+    socket_to = Property(Socket)
     
     # validation_packet_recv = RelationRecv(Packet) # checking relation receipt
     
     # seen_at = Relation(host=Host, state=RequestState)
     # seen_at_eth = Relation(iface=Interface, state=RequestState)
     
-    origin = ProtectedProperty(Host)
+    origin = Property(Host)
     
     at_table = Property(Table)
-    at_host = StateRelation(Host) # TODO: this should be derived predicate!
-    at_interface_input = StateProperty(Interface)
-    at_interface_output = StateProperty(Interface)
+    at_host = Relation(Host) # TODO: this should be derived predicate!
+    at_interface_input = Property(Interface)
+    at_interface_output = Property(Interface)
     # can also be manually derived (as it is now manually written in PDDL)
     related_to = Relation(Interface) # TODO: REMOVE!!
     
     def __str__(self):
-        return "I AM PACKET: "+self.value
+        return "I AM PACKET: " + repr(self.value)
 # Packet.next = Property(Packet) # next packet in chain
 Packet.validation_packet = Property(Packet)
 

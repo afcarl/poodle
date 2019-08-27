@@ -1,4 +1,4 @@
-from poodle.poodle import * 
+from poodle import * 
 
 class ToLoadbalancer(PlannedAction):
     cost = 1
