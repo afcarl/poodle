@@ -3,8 +3,6 @@ import pytest
 
 from poodle import *
 
-from object.networkObject import *
-from object.commonObject import *
 from poodle.problem import Problem
 
 # class ConsumePacketSelect(PlannedAction):
