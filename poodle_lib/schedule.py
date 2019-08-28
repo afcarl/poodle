@@ -198,3 +198,12 @@ def xschedule(methods, space, exit=None, goal=None, sessionName=None, timeout=30
     this function returns a composable method that has the resulting algorithm built in"""
     return [x() for x in schedule(methods, space, exit, goal, sessionName, timeout)][-1]
     
+def xchain(methods, space):
+    "Use forward chaining to simultaneously execute all methods that pass asserts"
+    return [x() for x in schedule(methods, space, exit, goal, sessionName, timeout)][-1]
+
+def chan(methods, space):
+    "Return a plan to chain every method that can be executed without failing asserts"
+    space = _space_to_list(space)
+    
+    
