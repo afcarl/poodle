@@ -68,6 +68,7 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     #    - create a full :predicates description of the object 
     #    - create init objects
     # 2. for every method, add them to planning problem
+    if not methods: raise ValueError("At least one method is required to start scheduling")
     assert isinstance(space, list)
     global _selector_out
     _selector_out = None
@@ -162,7 +163,7 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
         # setattr(p, m.__name__, methodWrapper)
         mcount+=1
     p.actions = lambda: actions
-    if not mcount: raise ValueError("No methods can be scheduled")
+    if not mcount: raise ValueError("No plannable methods supplied")
     
     p.format_problem()
     return p
