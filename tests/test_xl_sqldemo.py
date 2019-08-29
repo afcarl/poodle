@@ -5,7 +5,7 @@ from typing import Set
 
 class StrObject(Object):
     def __str__(self):
-        return str(self.value)
+        return str(self._get_value())
 
 class Table(StrObject):
     columns: Set["Column"]
