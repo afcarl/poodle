@@ -170,7 +170,7 @@ class MulResult(poodle.Object):
 
 logSparseIntegerFactory = LogSparseIntegerFactory(lincount=17, logcount=15)
 
-_system_objects.update({ob.name:ob for ob in logSparseIntegerFactory.get_objects()})
+_system_objects.update({ob.poodle_internal__sym_name:ob for ob in logSparseIntegerFactory.get_objects()})
 # TODO HERE: generate all SumResult
 # ... add SumResult to _system_facts
 

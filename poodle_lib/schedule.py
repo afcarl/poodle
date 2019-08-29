@@ -106,11 +106,11 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     for ob in p.objectList + list(_system_objects.values()):
         ob._parse_history = []
         l_collected_predicates |= set(ob._get_all_predicates())
-        l_collected_objects[ob.__class__.__name__].append(ob.name.split()[0])
+        l_collected_objects[ob.__class__.__name__].append(ob.poodle_internal__sym_name.split()[0])
         for no in ob._get_all_none_objects():
-            l_collected_objects[no.__class__.__name__].append(no.name.split()[0])
+            l_collected_objects[no.__class__.__name__].append(no.poodle_internal__sym_name.split()[0])
         if not ob.__class__._none_object in l_collected_objects[ob.__class__.__name__]:
-            l_collected_objects[ob.__class__.__name__].append(ob.__class__._none_object.name.split()[0])
+            l_collected_objects[ob.__class__.__name__].append(ob.__class__._none_object.poodle_internal__sym_name.split()[0])
         l_collected_classes.add(ob.__class__.__name__)
         l_collected_facts |= set(ob._get_all_facts())
 

@@ -285,7 +285,7 @@ def gen_hashnums(amount):
     for i in range(amount):
         hashnum = PoodleHashnum()
         hashnums_generated.append(hashnum)
-        _collected_facts.append("({pred} {hname})".format(pred=HASHNUM_ID_PREDICATE, hname=hashnum.name))
+        _collected_facts.append("({pred} {hname})".format(pred=HASHNUM_ID_PREDICATE, hname=hashnum.poodle_internal__sym_name))
     return hashnums_generated
 
 
@@ -499,8 +499,8 @@ class Property(object):
     def _pddl_gen_one_fact(self, obj):
             return "({pred_name} {parent_name} {prop_name})".format(\
                 pred_name=self.gen_predicate_name(),
-                parent_name=self._property_of_inst.name,
-                prop_name=obj.name)
+                parent_name=self._property_of_inst.poodle_internal__sym_name,
+                prop_name=obj.poodle_internal__sym_name)
     def _get_none_object(self):
         return self._value._none_object
     def _pddl_gen_fact(self):
@@ -923,9 +923,9 @@ class Property(object):
             self._property_value.append(value)
         if _problem_compilation: # poodle3 ignore, as we collect sets from props
             global _collected_facts
-            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, value.name, value.__class__.__name__)
+            text_predicate = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.poodle_internal__sym_name, self._property_of_inst.__class__.__name__, value.poodle_internal__sym_name, value.__class__.__name__)
             if not isinstance(value, Imaginary) and not isinstance(self, Relation):
-                text_predicate_none = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.name, self._property_of_inst.__class__.__name__, _none_objects[value.__class__.__name__].name, value.__class__.__name__)
+                text_predicate_none = gen_text_predicate_push_globals(self.gen_predicate_name(), "", self._property_of_inst.poodle_internal__sym_name, self._property_of_inst.__class__.__name__, _none_objects[value.__class__.__name__].poodle_internal__sym_name, value.__class__.__name__)
                 text_predicate_beg_match = ' '.join(text_predicate_none.split()[:2])
                 rmlist = []
                 for fct in _collected_facts:
@@ -935,7 +935,7 @@ class Property(object):
                     _collected_facts.remove(fct)
                 # while text_predicate_none in _collected_facts: _collected_facts.remove(text_predicate_none)
             _collected_facts.append(text_predicate)
-            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name + " " + value.name+ ")")
+            # _collected_facts.append("("+self.gen_predicate_name()+" "+self._property_of_inst.poodle_internal__sym_name + " " + value.poodle_internal__sym_name+ ")")
             return
         self._prepare(value)
         global _collected_effects
@@ -1271,7 +1271,7 @@ class StateProperty(Property):
 #         # now find in our instance's _parse_history our instance's class name variable
 
 #         if _problem_compilation: # poodle3: ignore stateFact...
-#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.poodle_internal__sym_name, self._property_of_inst.__class__.__name__)
 #             _collected_facts.append(text_predicate)
 #         else:
 #             self._prepare()
@@ -1303,8 +1303,8 @@ class StateProperty(Property):
 #             raise NotImplementedError("Comparing StateFact to False is not supported")
 #         global _problem_compilation # poodle3: ignore stateface
 #         if _problem_compilation:
-#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.name, self._property_of_inst.__class__.__name__)
-#             # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.name+")")
+#             text_predicate = gen_one_predicate(self.gen_predicate_name(), self._property_of_inst.poodle_internal__sym_name, self._property_of_inst.__class__.__name__)
+#             # _collected_effects.append("("+self.gen_predicate_name()+" "+self._property_of_inst.poodle_internal__sym_name+")")
 #             # _collected_predicates.append(text_predicate)
 #             _collected_effects.append(text_predicate) # in problem compilation, we collect effects...
 #         else:
@@ -1406,17 +1406,17 @@ class BaseObjectMeta(type):
         global _none_objects
         if name == "Imaginary":
             _none_objects[name] = cls()
-            _none_objects[name].name = "p-null-%s" % name
+            _none_objects[name].poodle_internal__sym_name = "p-null-%s" % name
             _none_objects[name]._class_variable = gen_var(name, prefix="null-")
             cls._none_object = _none_objects[name]
 
         if not name in ["Object", "Imaginary"]:
             _none_objects[name] = cls()
             if not issubclass(cls, Imaginary):
-                _none_objects[name].name = "p-null-%s" % name
+                _none_objects[name].poodle_internal__sym_name = "p-null-%s" % name
                 _none_objects[name]._class_variable = gen_var(name, prefix="null-")
             else:
-                _none_objects[name].name = ' '.join(["p-null-Imaginary"] * HASHNUM_DEPTH_DEFAULT) # HASHNUM_DEPTH_DEFAULT fix!
+                _none_objects[name].poodle_internal__sym_name = ' '.join(["p-null-Imaginary"] * HASHNUM_DEPTH_DEFAULT) # HASHNUM_DEPTH_DEFAULT fix!
                 _none_objects[name]._class_variable = gen_var_imaginary(name, prefix="null-")
             cls._none_object = _none_objects[name]
         if hasattr(cls, "__annotations__"):
@@ -1505,26 +1505,26 @@ class Object(metaclass=BaseObjectMeta):
         self._class_variable = gen_var(self.__class__.__name__, prefix="")
         self._variable_mode = _variable_mode
         self.poodle_internal__value = value
-        self.name = ""
+        self.poodle_internal__sym_name = ""
         # if _problem_compilation:
         if True:
             if name is None: # WARNING name must always be none
                 frameinfo = getframeinfo(inspect.currentframe().f_back)
                 name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
-            self.name = self.gen_name(name) # object name when instantiating..
+            self.poodle_internal__sym_name = self.gen_name(name) # object name when instantiating..
         if not _force_name is None:
-            self.name = _force_name
+            self.poodle_internal__sym_name = _force_name
         global _collected_objects
         global _collected_object_classes
         if not _compilation and not _effect_compilation and not _variable_mode:
             self._parse_history = []
-            self._class_variable = self.name
+            self._class_variable = self.poodle_internal__sym_name
             if not self.__imaginary__:
                 _collected_object_classes.add(self.__class__.__name__)
                 if not self.__class__.__name__ in _collected_objects:
-                    _collected_objects[self.__class__.__name__] = [ self.name ]
+                    _collected_objects[self.__class__.__name__] = [ self.poodle_internal__sym_name ]
                 else:
-                    _collected_objects[self.__class__.__name__].append(self.name)
+                    _collected_objects[self.__class__.__name__].append(self.poodle_internal__sym_name)
         # TODO HERE: in effect, do the same if we are imaginary!
         # when class is instantiated, make sure to "proxy" all properties
         for key in dir(self):
@@ -1552,7 +1552,7 @@ class Object(metaclass=BaseObjectMeta):
                         null_object = getattr(self,key)._init_value
                     else:
                         # getattr(self,key).init_unsafe(_none_objects[getattr(self,key)._value.__name__])
-                        null_object = getattr(self,key)._value._none_object # ("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.name, key))
+                        null_object = getattr(self,key)._value._none_object # ("POODLE-NULL", _force_name="p-nullobj-%s-%s" % (self.poodle_internal__sym_name, key))
                     getattr(self,key).init_unsafe_internal(null_object)
         self.__unlock_setter = False
     def gen_name(self, name):
@@ -1726,12 +1726,12 @@ class Object(metaclass=BaseObjectMeta):
 
     def __str__(self):
         try:
-            return repr(self)+"(name=%s, value=%s)" % (self.name, self.poodle_internal__value)
+            return repr(self)+"(name=%s, value=%s)" % (self.poodle_internal__sym_name, self.poodle_internal__value)
         except:
             return repr(self)+"(Additionally, there was an error during standard __str__)"
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self.poodle_internal__sym_name)
 
 
     # def __getattr__(self, attr):
@@ -1747,7 +1747,7 @@ class Imaginary(Object):
         global _problem_compilation
         if _problem_compilation:
             hns = gen_hashnums(HASHNUM_DEPTH_DEFAULT)
-            return ' '.join([v.name for v in hns])
+            return ' '.join([v.poodle_internal__sym_name for v in hns])
         else:
             return super().gen_name(name)
 
@@ -1833,7 +1833,7 @@ class PlannedAction(metaclass=ActionMeta):
 
         # ret = "{0}".format(self.__class__.__name__)
         # for arg in self.argumentList:
-        #     ret +=" {0}({1})".format(arg.name, arg.poodle_internal__value)
+        #     ret +=" {0}({1})".format(arg.poodle_internal__sym_name, arg.poodle_internal__value)
         # return ret
 
     @classmethod
@@ -1968,7 +1968,7 @@ class PlannedActionJinja2(PlannedAction):
     #     param = []
     #     for arg in self.argumentList:
     #         args = []
-    #         args.append(arg.name)
+    #         args.append(arg.poodle_internal__sym_name)
     #         args.append(arg.poodle_internal__value)
     #         param.append(args)
     #     return template.render(action=self.__class__.__name__, parameters=param)
@@ -2210,7 +2210,7 @@ class Problem:
         self.collected_object_classes = _collected_object_classes
         self.collected_objects = _collected_objects
         for k in _none_objects:
-            on = _none_objects[k].name.split()[0]
+            on = _none_objects[k].poodle_internal__sym_name.split()[0]
             if not k in self.collected_object_classes: continue
             if on == "p-null-Imaginary": continue
             noClassName = _none_objects[k].__class__.__name__ # we're not using k as class
@@ -2219,7 +2219,7 @@ class Problem:
             else:
                 self.collected_objects[noClassName] = [ on ]
         for k in _system_objects:
-            on = _system_objects[k].name.split()[0]
+            on = _system_objects[k].poodle_internal__sym_name.split()[0]
             noClassName = _system_objects[k].__class__.__name__ # we're not using k as class
             if k in self.collected_objects:
                 self.collected_objects[noClassName].append(on)
@@ -2302,7 +2302,7 @@ class Problem:
 
 class CLIPSRule:
     def __init__(self, name, lhs, rhs):
-        self.name = name
+        self.poodle_internal__sym_name = name
         self.lhs = copy.copy(lhs)
         self.rhs = copy.copy(rhs)
 
@@ -2313,7 +2313,7 @@ class CLIPSRule:
         =>
         {rhs}
     )
-        """.format(name=self.name,lhs='\n        '.join(self.lhs),
+        """.format(name=self.poodle_internal__sym_name,lhs='\n        '.join(self.lhs),
                     rhs='\n        '.join(self.rhs))
 
     def __str__(self):
@@ -2358,7 +2358,7 @@ class CLIPSExecutor:
 
     def gen_match_problem(self, factFileName):
         defrules = str(self.rules[0])
-        rname = self.rules[0].name
+        rname = self.rules[0].poodle_internal__sym_name
         # facts = self.render_assert_facts()
         return """
         {defrules}
@@ -2496,7 +2496,7 @@ class ActionClassLoader:
                     obj_found = None
                     for obj in self.problem.getObjectList():
                         if isinstance(obj, Object):
-                            if argStr.lower() == obj.name.lower():
+                            if argStr.lower() == obj.poodle_internal__sym_name.lower():
                                 obj_found = obj
                     argumentList.append(obj_found)
                 parameter_names = []
