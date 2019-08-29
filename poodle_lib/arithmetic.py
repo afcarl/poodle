@@ -13,7 +13,7 @@ class LogSparseInteger(IntegerType):
         assert sumRes.operator1 == self
         assert sumRes.operator2 == num
         assert sumRes.result == resultVar
-        if not self._variable_mode: resultVar.value = self.value + num.value
+        if not self._variable_mode: resultVar.poodle_internal__value = self.poodle_internal__value + num.poodle_internal__value
 
         return resultVar
 
@@ -28,7 +28,7 @@ class LogSparseInteger(IntegerType):
         return self.__add__(self, other)
         
     def gen_name(self, name):
-        return super().gen_name(name+"-num-"+str(self.value))
+        return super().gen_name(name+"-num-"+str(self.poodle_internal__value))
 
     # TODO: for every method here, support 'other' to be a 'int' value
     def sub(self, other: "LogSparseInteger"):
@@ -38,7 +38,7 @@ class LogSparseInteger(IntegerType):
         assert sumRes.operator1 == resultVar
         assert sumRes.operator2 == other
         assert sumRes.result == self
-        if not self._variable_mode: resultVar.value = self.value - other.value
+        if not self._variable_mode: resultVar.poodle_internal__value = self.poodle_internal__value - other.poodle_internal__value
 
         return resultVar
 
@@ -55,28 +55,28 @@ class LogSparseInteger(IntegerType):
         gt = poodle.Any(GreaterThan, space=_system_objects)
         assert gt.val1 == self and gt.val2 == other
         if self._variable_mode: return True
-        else: return self.value > other.value
+        else: return self.poodle_internal__value > other.poodle_internal__value
 
     def __lt__(self, other):
         other = resolve_poodle_special_object(other)
         gt = poodle.Any(GreaterThan, space=_system_objects)
         assert gt.val2 == self and gt.val1 == other
         if self._variable_mode: return True
-        else: return self.value < other.value
+        else: return self.poodle_internal__value < other.poodle_internal__value
 
     def __ge__(self, other):
         other = resolve_poodle_special_object(other)
         ge = poodle.Any(GreaterEqual, space=_system_objects)
         assert ge.val1 == self and ge.val2 == other
         if self._variable_mode: return True
-        else: return self.value >= other.value
+        else: return self.poodle_internal__value >= other.poodle_internal__value
     
     def __le__(self, other):
         other = resolve_poodle_special_object(other)
         ge = poodle.Any(GreaterEqual, space=_system_objects)
         assert ge.val2 == self and ge.val1 == other
         if self._variable_mode: return True
-        else: return self.value <= other.value
+        else: return self.poodle_internal__value <= other.poodle_internal__value
 
 
 

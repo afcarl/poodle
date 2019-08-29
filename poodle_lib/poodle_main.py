@@ -1504,7 +1504,7 @@ class Object(metaclass=BaseObjectMeta):
         name = None
         self._class_variable = gen_var(self.__class__.__name__, prefix="")
         self._variable_mode = _variable_mode
-        self.value = value
+        self.poodle_internal__value = value
         self.name = ""
         # if _problem_compilation:
         if True:
@@ -1622,7 +1622,9 @@ class Object(metaclass=BaseObjectMeta):
             if isinstance(v, Property):
                 none_objects.add(v._get_none_object())
         return none_objects
-
+    
+    def _get_value(self):
+        return self.poodle_internal__value
 
     def __eq__(self, other):
         other = resolve_poodle_special_object(other)
@@ -1724,7 +1726,7 @@ class Object(metaclass=BaseObjectMeta):
 
     def __str__(self):
         try:
-            return repr(self)+"(name=%s, value=%s)" % (self.name, self.value)
+            return repr(self)+"(name=%s, value=%s)" % (self.name, self.poodle_internal__value)
         except:
             return repr(self)+"(Additionally, there was an error during standard __str__)"
 
@@ -1831,7 +1833,7 @@ class PlannedAction(metaclass=ActionMeta):
 
         # ret = "{0}".format(self.__class__.__name__)
         # for arg in self.argumentList:
-        #     ret +=" {0}({1})".format(arg.name, arg.value)
+        #     ret +=" {0}({1})".format(arg.name, arg.poodle_internal__value)
         # return ret
 
     @classmethod
@@ -1967,7 +1969,7 @@ class PlannedActionJinja2(PlannedAction):
     #     for arg in self.argumentList:
     #         args = []
     #         args.append(arg.name)
-    #         args.append(arg.value)
+    #         args.append(arg.poodle_internal__value)
     #         param.append(args)
     #     return template.render(action=self.__class__.__name__, parameters=param)
 
