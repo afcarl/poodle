@@ -2561,8 +2561,10 @@ def _planned_internal(fun=None, *, cost=None):
         else:
             try:
                 kwargs[k] = resolve_poodle_type(v)(_variable_mode=True)
-            except:
-                raise TypeError("Dereferencing of type annotation failed")
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                raise TypeError("Dereferencing of type annotation failed") from e
     class NewPlannedAction(PlannedAction):
         def effect(self):
             global _selector_out

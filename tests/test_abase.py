@@ -64,6 +64,24 @@ def test_integer_set_obj():
     for p in schedule([check_int_in_set], space=[s], goal=lambda:(s.r==1),
                 sessionName="test_integer_set_obj"): p
 
+def test_integer_bool():
+    class S(Object):
+        b: bool
+        r: int
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.b = True
+    
+    @planned
+    def check_int_in_set(o: S, i: int):
+        assert o.b == True
+        o.r = i
+
+    s=S()
+
+    for p in schedule([check_int_in_set], space=[s], goal=lambda:(s.r==1),
+                sessionName="test_integer_set_obj"): p
+
 def test_integer_set_obj_forward_ref_method():
     class S(Object):
         i: Set[int]
