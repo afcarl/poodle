@@ -426,10 +426,11 @@ class Property(object):
     def _value(self):
         if type(self.__value) == type(str()):
             global _poodle_object_classes
-            if not self.__value in _poodle_object_classes:
-                raise AssertionError("Dereferencing Object '%s' failed: undefined class %s" % (self.__value, self.__value))
-            assert issubclass(_poodle_object_classes[self.__value], Object)
-            self.__value = _poodle_object_classes[self.__value]
+            class_value = self.__value.split(".")[-1]
+            if not class_value in _poodle_object_classes:
+                raise AssertionError("Dereferencing Object '%s' failed: undefined class %s" % (class_value, class_value))
+            assert issubclass(_poodle_object_classes[class_value], Object)
+            self.__value = _poodle_object_classes[class_value]
         return self.__value
 
     @_value.setter
