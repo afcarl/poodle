@@ -5,7 +5,7 @@ sys.path.append("./tests")
 import cyclic2
 
 class CTest1(Object):
-    o: Set["cyclic2.CTest2"]
+    o: Set["CTest2"]
 
 class DCTest1(Object):
     o: Set["cyclic2.DCTest2"]
