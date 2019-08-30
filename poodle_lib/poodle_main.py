@@ -883,6 +883,10 @@ class Property(object):
             push_selector_object(other.equals(self))
         else:
             push_selector_object(self.equals(other))
+        if issubclass(self._value, IntegerType) and isinstance(other, IntegerType) \
+            and isinstance(self._property_value, IntegerType):
+            other = resolve_poodle_special_object(other)
+            return self._property_value == other
         return True
 
     # TODO: write a setter operator to call this
@@ -2563,7 +2567,6 @@ def _planned_internal(fun=None, *, cost=None):
     return wrapped
 
 def Any(what, space=[]):
-    # TODO: implement "Any" selection
     global _compilation
     l_compilation = _compilation
     _compilation = False

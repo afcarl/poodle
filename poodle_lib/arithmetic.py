@@ -1,6 +1,6 @@
 import poodle
 import itertools
-from .poodle_main import _system_objects, resolve_poodle_special_object
+from .poodle_main import _system_objects, resolve_poodle_special_object, Object
 
 class IntegerType(poodle.Object):
     pass
@@ -8,13 +8,14 @@ class IntegerType(poodle.Object):
 class LogSparseInteger(IntegerType):
     def add(self, num: "LogSparseInteger"):
         num = resolve_poodle_special_object(num)
-        resultVar = poodle.Any(LogSparseInteger, space=_system_objects)  # TODO: implicit search in current context?
+        if not self._variable_mode and not num._variable_mode:
+            resultVar = logSparseIntegerFactory.get(self.poodle_internal__value + num.poodle_internal__value)
+        else:
+            resultVar = poodle.Any(LogSparseInteger, space=_system_objects)
         sumRes = poodle.Any(SumResult, space=_system_objects)
         assert sumRes.operator1 == self
         assert sumRes.operator2 == num
         assert sumRes.result == resultVar
-        if not self._variable_mode: resultVar.poodle_internal__value = self.poodle_internal__value + num.poodle_internal__value
-
         return resultVar
 
     def __add__(self, other):
@@ -26,57 +27,71 @@ class LogSparseInteger(IntegerType):
 
     def __radd__(self, other):
         return self.__add__(self, other)
-        
+
     def gen_name(self, name):
         return super().gen_name(name+"-num-"+str(self.poodle_internal__value))
 
     # TODO: for every method here, support 'other' to be a 'int' value
     def sub(self, other: "LogSparseInteger"):
         other = resolve_poodle_special_object(other)
-        resultVar = poodle.Any(LogSparseInteger, space=_system_objects)
+        if not self._variable_mode and not other._variable_mode:
+            resultVar = logSparseIntegerFactory.get(self.poodle_internal__value - other.poodle_internal__value)
+        else:
+            resultVar = poodle.Any(LogSparseInteger, space=_system_objects)
         sumRes = poodle.Any(SumResult, space=_system_objects)
         assert sumRes.operator1 == resultVar
         assert sumRes.operator2 == other
         assert sumRes.result == self
-        if not self._variable_mode: resultVar.poodle_internal__value = self.poodle_internal__value - other.poodle_internal__value
 
         return resultVar
 
     def __sub__(self, other):
-        other = resolve_poodle_special_object(other)
         if isinstance(other, int):
             return self.sub(logSparseIntegerFactory.get(other))
         elif type(other) == LogSparseInteger:
             return self.sub(other)
         raise ValueError("Unsupported type for arithmetic operator")
-    
+
     def __gt__(self, other):
         other = resolve_poodle_special_object(other)
         gt = poodle.Any(GreaterThan, space=_system_objects)
         assert gt.val1 == self and gt.val2 == other
-        if self._variable_mode: return True
+        if self._variable_mode or other._variable_mode: return True
         else: return self.poodle_internal__value > other.poodle_internal__value
 
     def __lt__(self, other):
         other = resolve_poodle_special_object(other)
         gt = poodle.Any(GreaterThan, space=_system_objects)
         assert gt.val2 == self and gt.val1 == other
-        if self._variable_mode: return True
+        if self._variable_mode or other._variable_mode: return True
         else: return self.poodle_internal__value < other.poodle_internal__value
 
     def __ge__(self, other):
         other = resolve_poodle_special_object(other)
         ge = poodle.Any(GreaterEqual, space=_system_objects)
         assert ge.val1 == self and ge.val2 == other
-        if self._variable_mode: return True
+        if self._variable_mode or other._variable_mode: return True
         else: return self.poodle_internal__value >= other.poodle_internal__value
-    
+
     def __le__(self, other):
         other = resolve_poodle_special_object(other)
         ge = poodle.Any(GreaterEqual, space=_system_objects)
         assert ge.val2 == self and ge.val1 == other
-        if self._variable_mode: return True
+        if self._variable_mode or other._variable_mode: return True
         else: return self.poodle_internal__value <= other.poodle_internal__value
+
+    def __eq__(self, other):
+        other = resolve_poodle_special_object(other)
+        if isinstance(other, Object) and isinstance(self.poodle_internal__value, int) \
+                        and isinstance(other.poodle_internal__value, int) \
+                        and not self._variable_mode \
+                        and not other._variable_mode:
+            return self.poodle_internal__value == other.poodle_internal__value
+        return super().__eq__(other)
+
+    def __hash__(self):
+        return hash(self.poodle_internal__value)
+
 
 
 
@@ -130,7 +145,7 @@ class LogSparseIntegerFactory:
                 self.sums.append(s)
             except:
                 pass
-    
+
     def generate_gt_ge(self):
         self.gts = []
         self.ges = []
@@ -146,7 +161,7 @@ class LogSparseIntegerFactory:
                 ge.val2 = b[1]
                 self.ges.append(ge)
 
-        
+
     # TODO: spase_mults
 
 
@@ -174,7 +189,7 @@ _system_objects.update({ob.poodle_internal__sym_name:ob for ob in logSparseInteg
 # TODO HERE: generate all SumResult
 # ... add SumResult to _system_facts
 
-# TODO HERE: generate all MulResult 
+# TODO HERE: generate all MulResult
 
 # TODO HERE: add generated lists to planning problem to _collected_facts
 #                   or use other poodle3 methods
