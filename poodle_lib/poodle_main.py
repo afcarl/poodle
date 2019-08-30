@@ -1205,7 +1205,7 @@ class Relation(Property):
         return self.contains(other)
 
     def set(self, what):
-        raise NotImplementedError("Usage error: Relation can not be set to one value. Use .add() instead")
+        raise TypeError("Relation can not be set to one value. Use .add() instead")
 
     # def unset(self, what=None, _force=False):
     #     if _force: return super().unset(what)
