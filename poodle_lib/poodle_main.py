@@ -433,6 +433,11 @@ class Property(object):
             self.__value = _poodle_object_classes[class_value]
         return self.__value
 
+    def _get_value(self):
+        if isinstance(self._property_value, Object):
+            return self._property_value._get_value()
+        return self._property_value
+
     @_value.setter
     def _value(self, v):
         self.__value = v
