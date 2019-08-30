@@ -2553,9 +2553,16 @@ def _planned_internal(fun=None, *, cost=None):
     kwargs = {}
     for k, v in fun.__annotations__.items():
         if isinstance(v, str):
-            raise ValueError("Forward references are not suported in methods yet")
+            global _poodle_object_classes
+            class_value = v.split(".")[-1]
+            if not class_value in _poodle_object_classes:
+                raise AssertionError("Dereferencing Object '%s' failed: undefined class %s" % (class_value, class_value))
+            kwargs[k] = _poodle_object_classes[class_value](_variable_mode=True)
         else:
-            kwargs[k] = resolve_poodle_type(v)(_variable_mode=True)
+            try:
+                kwargs[k] = resolve_poodle_type(v)(_variable_mode=True)
+            except:
+                raise TypeError("Dereferencing of type annotation failed")
     class NewPlannedAction(PlannedAction):
         def effect(self):
             global _selector_out
