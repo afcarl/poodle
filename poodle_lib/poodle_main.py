@@ -1073,7 +1073,7 @@ class Property(object):
                 elif op=="rsub":
                     return  other._property_value - self._property_value
             else:
-                raise TypeError("Unsupported combination of values %s and %s" % (repr(self._property_value), repr(other._property_value)))
+                raise TypeError("Unsupported combination of values %s(M:%s) and %s(M:%s)" % (repr(self._property_value), self._property_of_inst._variable_mode, repr(other._property_value), other._property_of_inst._variable_mode))
         elif isinstance(other, IntegerType) and not self._property_value is None and \
                  isinstance(resolve_poodle_special_object(self._property_value), IntegerType):
             self_ob = resolve_poodle_special_object(self._property_value)
