@@ -91,6 +91,9 @@ class LogSparseInteger(IntegerType):
 
     def __hash__(self):
         return hash(self.poodle_internal__value)
+    
+    def __repr__(self):
+        return "<%s: value=%s>" % (self.__class__.__name__, self.poodle_internal__value)
 
 
 
