@@ -153,13 +153,14 @@ def resolve_poodle_type(obj):
     elif obj == bool:
         return BooleanObject
     elif obj == str:
-        raise NotImplementedError("String primitives are not currently implemented")
+        from poodle.string import String
+        return String
     elif inspect.isclass(obj) and issubclass(obj, Object):
         return obj
     else:
         raise ValueError("Type %s is not supported" % obj)
 
-def resolve_poodle_special_object(obj):
+def resolve_poodle_special_object(obj, convert_string=True):
     if isinstance(obj, int):
         from poodle.arithmetic import logSparseIntegerFactory
         return logSparseIntegerFactory.get(obj)
@@ -176,7 +177,9 @@ def resolve_poodle_special_object(obj):
         # used to pass internal asserts
         return obj
     elif isinstance(obj, str):
+        if not convert_string: return obj
         # needed to support internal "in" comparison operations
+        raise
         return obj
     else:
         raise NotImplementedError("Objects of type %s are not supported for %s" % (type(obj), obj))
@@ -882,16 +885,21 @@ class Property(object):
 
     def __eq__(self, other):
         from poodle.arithmetic import IntegerType, logSparseIntegerFactory
+        import poodle.string
         if isinstance(other, int) and issubclass(self._value, IntegerType):
             other = logSparseIntegerFactory.get(other)
+        if isinstance(other, str) and issubclass(self._value, poodle.string.String):
+            other = poodle.string.String(other)
         if hasattr(self, "_property_of_inst") and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
             log.warning("!!!!!! ALT BEH 1 - me is {0} {1} other is {2} ".format(self, self._property_of_inst, other))
             push_selector_object(other.equals(self))
         else:
             push_selector_object(self.equals(other))
         if issubclass(self._value, IntegerType) and isinstance(other, IntegerType) \
-            and isinstance(self._property_value, IntegerType):
+            and isinstance(self._property_value, IntegerType): # no need
             other = resolve_poodle_special_object(other)
+            return self._property_value == other
+        if issubclass(self._value, poodle.string.String) and isinstance(other, poodle.string.String):
             return self._property_value == other
         return True
 
@@ -1176,6 +1184,12 @@ class Property(object):
     def __le__(self, other):
         return self._ineq(other, "le")
 
+    def __str__(self):
+        import poodle.string
+        if isinstance(self._property_value, poodle.string.String):
+            return self._property_value._get_value()
+        return super().__str__()
+
     # def __rsub__(self, other):
         # return self._i_operator(other, op="rsub")
 
@@ -1441,6 +1455,9 @@ class BaseObjectMeta(type):
                 elif tname == int:
                     from poodle.arithmetic import LogSparseInteger
                     setattr(cls, ann, Property(LogSparseInteger))
+                elif tname == str:
+                    import poodle.string
+                    setattr(cls, ann, Property(poodle.string.String))
                 elif tname == bool:
                     setattr(cls, ann, Bool(False))
                 elif isinstance(tname, str):
@@ -1637,11 +1654,12 @@ class Object(metaclass=BaseObjectMeta):
         return self.poodle_internal__value
 
     def __eq__(self, other):
-        other = resolve_poodle_special_object(other)
+        other = resolve_poodle_special_object(other, convert_string=False)
+        import poodle.string
         if isinstance(other, Property):
             return other.__eq__(self)
         elif isinstance(other, Object) and \
-                    (_compilation or _problem_compilation or _effect_compilation) and not is_internall_call():
+                    (_compilation or _problem_compilation or _effect_compilation) and not is_internall_call() and self._variable_mode:
                         # i believe this is actually not deeded in problem compilation, so poodle3 ignore
             assert self._class_variable and other._class_variable, "Expected fully initialized objects"
             global _collected_predicates
@@ -1654,6 +1672,8 @@ class Object(metaclass=BaseObjectMeta):
             # never reached
             raise NotImplementedError()
             return True # WARNING! stub for asserts! TODO FIX
+        elif isinstance(other, str) and isinstance(self, poodle.string.String) and not self._variable_mode:
+            return self._get_value() == other
         elif isinstance(other, int):
             # never reached
             raise NotImplementedError()
@@ -1706,6 +1726,9 @@ class Object(metaclass=BaseObjectMeta):
                         getattr(self, name).unset()
                     else:
                         raise AssertionError("Something is wrong")
+            elif isinstance(value, str) and hasattr(self, name) and isinstance(getattr(self, name), Property):
+                import poodle.string
+                getattr(self, name).set(poodle.string.String(value))
             elif isinstance(value, int) and hasattr(self, name) and isinstance(getattr(self, name), Property):
                 from poodle.arithmetic import logSparseIntegerFactory
                 getattr(self, name).set(logSparseIntegerFactory.get(value))
