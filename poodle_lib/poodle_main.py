@@ -161,25 +161,13 @@ def resolve_poodle_type(obj):
         raise ValueError("Type %s is not supported" % obj)
 
 def resolve_poodle_special_object(obj):
-    if isinstance(obj, int):
-        from poodle.arithmetic import logSparseIntegerFactory
-        o = logSparseIntegerFactory.get(obj)
-        o._class_variable = o.poodle_internal__sym_name
-        return o
-    elif isinstance(obj, str):
-        # if not convert_string: return obj
-        # needed to support internal "in" comparison operations
-        # raise
-        import poodle.string
-        # return obj
-        o = poodle.string.stringFactory.get(obj)
-        o._class_variable = o.poodle_internal__sym_name
-        return o
-    elif isinstance(obj, bool):
-        if obj:
-            return _system_objects["object-True"]
-        else:
-            return _system_objects["object-False"]
+    if isinstance(obj, str):
+        return obj
+        # This slows down everything: ...
+        # import poodle.string
+        # o = poodle.string.stringFactory.get(obj)
+        # o._class_variable = o.poodle_internal__sym_name
+        # return o
     elif isinstance(obj, Object):
         return obj
     elif isinstance(obj, Property): # this is needed to pass props
@@ -187,6 +175,16 @@ def resolve_poodle_special_object(obj):
     elif inspect.isclass(obj) and issubclass(obj, Object):
         # used to pass internal asserts
         return obj
+    elif isinstance(obj, int):
+        from poodle.arithmetic import logSparseIntegerFactory
+        o = logSparseIntegerFactory.get(obj)
+        o._class_variable = o.poodle_internal__sym_name
+        return o
+    elif isinstance(obj, bool):
+        if obj:
+            return _system_objects["object-True"]
+        else:
+            return _system_objects["object-False"]
     else:
         raise NotImplementedError("Objects of type %s are not supported for %s" % (type(obj), obj))
 
