@@ -1,5 +1,6 @@
 from poodle import *
 import pytest
+from poodle.string import stringFactory
 
 class StringCompareTest(Object):
     s: str
@@ -126,7 +127,7 @@ def test_solve_deref_equality():
     assert s.ok == "OK"
 
 
-@pytest.mark.skip(reason="no way of currently testing this")
+@pytest.mark.skip(reason="this does not work as we need a factory")
 def test_solve_partial_deref1():
     "test partial deref = a"
     ss = String("test")
@@ -142,10 +143,24 @@ def test_solve_partial_deref1():
     assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
     assert s.ok == "OK"
 
-@pytest.mark.skip(reason="no way of currently testing this")
+def test_solve_partial_deref1():
+    "test partial deref = a"
+    ss = stringFactory.get("test")
+    @planned
+    def check_if_equal(s1: StringCompareTest):
+        assert s1.s == ss
+        s1.ok = "OK"
+        return "OK"
+    s = StringCompareTest()
+    s.s = "test"
+    s.ok = "test"
+
+    assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
+    assert s.ok == "OK"
+
 def test_solve_partial_deref_reverse():
     "test partial deref same but reverse"
-    ss = String("test")
+    ss = stringFactory.get("test")
     @planned
     def check_if_equal(s1: StringCompareTest):
         assert ss == s1.s
@@ -157,10 +172,9 @@ def test_solve_partial_deref_reverse():
 
     assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
 
-@pytest.mark.skip(reason="no way of currently testing this")
 def test_solve_with_object():
     "test with string object in state space"
-    ss2 = String("test")
+    ss2 = stringFactory.get("test")
     @planned
     def check_if_equal(s1: StringCompareTest, ss: String):
         assert ss == s1.s
@@ -170,4 +184,4 @@ def test_solve_with_object():
     s.s = "test"
     s.ok = "test"
 
-    assert xschedule([check_if_equal], space=[s, ss], goal=lambda: s.ok=="OK") == "OK"
+    assert xschedule([check_if_equal], space=[s, ss2], goal=lambda: s.ok=="OK") == "OK"
