@@ -254,6 +254,9 @@ def getframeinfo(frame, context=1):
 
     return Traceback(filename, lineno, frame.f_code.co_name, lines, index)
 
+def new_internal(cls, value=None):
+    return cls(value)
+
 def get_source_frame_dict():
     frame = getouterframes(inspect.currentframe())[4]
     for f in getouterframes(inspect.currentframe()):

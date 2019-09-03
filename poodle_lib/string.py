@@ -1,5 +1,5 @@
 import poodle
-from .poodle_main import resolve_poodle_special_object, Property
+from .poodle_main import resolve_poodle_special_object, Property, new_internal
 
 class String(poodle.Object):
     def __str__(self):
@@ -25,7 +25,7 @@ class _StringFactory:
         self.reset()
     def get(self, value):
         if not value in self.values:
-            self.values[value] = String(value)
+            self.values[value] = new_internal(String, value) # needed to indicate internal call
         return self.values[value]
     def get_objects(self):
         return list(self.values.values())
