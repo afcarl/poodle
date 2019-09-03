@@ -81,7 +81,7 @@ class LogSparseInteger(IntegerType):
         else: return self.poodle_internal__value <= other.poodle_internal__value
 
     def __eq__(self, other):
-        other = resolve_poodle_special_object(other, convert_string=False)
+        other = resolve_poodle_special_object(other)
         if isinstance(other, Object) and isinstance(self.poodle_internal__value, int) \
                         and isinstance(other.poodle_internal__value, int) \
                         and not self._variable_mode \

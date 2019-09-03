@@ -30,6 +30,7 @@ def test_String_to_prop_compare_reverse():
     s1 = String("test")
     o = StringCompareTest()
     o.s = "test"
+    # print(repr(s1), repr(o.s))
     assert s1 == o.s
 
 def test_String_to_prop_compare_fail():
@@ -56,6 +57,11 @@ def test_string_compare():
     o = StringCompareTest()
     o.s = "test"
     assert o.s == "test"
+
+def test_string_compare():
+    o = StringCompareTest()
+    o.s = "test"
+    assert "test" == o.s
 
 def test_string_notcompare():
     o = StringCompareTest()
@@ -95,8 +101,9 @@ def test_solve_equality():
     def check_if_equal(s1: StringCompareTest):
         assert s1.s == "test"
         s1.ok = "OK"
-        return OK
+        return "OK"
     s = StringCompareTest()
+    s.s = "test"
     s.ok = "FAIL"
 
     assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
@@ -105,7 +112,17 @@ def test_solve_equality():
 
 def test_solve_deref_equality():
     "test dereferencing eq"
-    pass
+    @planned
+    def check_if_equal(s1: StringCompareTest):
+        assert s1.s == s1.ok
+        s1.ok = "OK"
+        return "OK"
+    s = StringCompareTest()
+    s.s = "test"
+    s.ok = "test"
+
+    assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
+    assert s.ok == "OK"
 
 def test_solve_partial_deref1():
     "test partial deref = a"

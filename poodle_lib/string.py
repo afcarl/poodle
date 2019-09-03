@@ -9,13 +9,27 @@ class String(poodle.Object):
     def __hash__(self):
         return hash(self.poodle_internal__value)
     def __eq__(self, other):
-        if isinstance(other, Property):
-            other._property_of_inst == self
         other = resolve_poodle_special_object(other)
-        if self._variable_mode or other._variable_mode: 
-            assert self == other
-            return True
-        if isinstance(other, String):
-            return self._get_value() == other._get_value()
+        # if isinstance(other, str): other = stringFactory.get(other)
+        # if isinstance(other, Property):
+        #     return other._property_value == self
+        if isinstance(other, poodle.Object) and isinstance(self.poodle_internal__value, str) \
+                        and isinstance(other.poodle_internal__value, str) \
+                        and not self._variable_mode \
+                        and not other._variable_mode:
+            return self.poodle_internal__value == other.poodle_internal__value
+        return super().__eq__(other)
 
+class _StringFactory:
+    def __init__(self):
+        self.reset()
+    def get(self, value):
+        if not value in self.values:
+            self.values[value] = String(value)
+        return self.values[value]
+    def get_objects(self):
+        return list(self.values.values())
+    def reset(self):
+        self.values = {}
 
+stringFactory = _StringFactory()

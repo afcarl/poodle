@@ -4,6 +4,7 @@ import collections.abc
 from .poodle_main import ListLike, Select, Problem, _collected_predicates, \
     _collected_effects, _none_objects, _system_objects, _compilation_enable, \
         HASHNUM_CLASS_NAME, _selector_out, _reset_state, _planned_internal
+from .string import stringFactory
 
 class SchedulingError(Exception):
     pass
@@ -72,6 +73,7 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     assert isinstance(space, list)
     global _selector_out
     _selector_out = None
+    # stringFactory.reset() # TODO: need to implement GC for string factory!!!
 
     class XSProblem(Problem):
         pass
@@ -103,7 +105,7 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
         _compilation_enable(False)
     # TODO: scan objects recursively: expand space with recursive scan
     l_collected_objects[HASHNUM_CLASS_NAME].append("p-null-Imaginary")
-    for ob in p.objectList + list(_system_objects.values()):
+    for ob in set(p.objectList + list(_system_objects.values()) + stringFactory.get_objects()):
         ob._parse_history = []
         l_collected_predicates |= set(ob._get_all_predicates())
         l_collected_objects[ob.__class__.__name__].append(ob.poodle_internal__sym_name.split()[0])
