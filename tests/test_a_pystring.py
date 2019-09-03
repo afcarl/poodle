@@ -1,4 +1,5 @@
 from poodle import *
+import pytest
 
 class StringCompareTest(Object):
     s: str
@@ -124,14 +125,49 @@ def test_solve_deref_equality():
     assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
     assert s.ok == "OK"
 
+
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_solve_partial_deref1():
     "test partial deref = a"
-    pass
+    ss = String("test")
+    @planned
+    def check_if_equal(s1: StringCompareTest):
+        assert s1.s == ss
+        s1.ok = "OK"
+        return "OK"
+    s = StringCompareTest()
+    s.s = "test"
+    s.ok = "test"
 
+    assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
+    assert s.ok == "OK"
+
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_solve_partial_deref_reverse():
     "test partial deref same but reverse"
-    pass
+    ss = String("test")
+    @planned
+    def check_if_equal(s1: StringCompareTest):
+        assert ss == s1.s
+        s1.ok = "OK"
+        return "OK"
+    s = StringCompareTest()
+    s.s = "test"
+    s.ok = "test"
 
+    assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
+
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_solve_with_object():
     "test with string object in state space"
-    pass
+    ss2 = String("test")
+    @planned
+    def check_if_equal(s1: StringCompareTest, ss: String):
+        assert ss == s1.s
+        s1.ok = "OK"
+        return "OK"
+    s = StringCompareTest()
+    s.s = "test"
+    s.ok = "test"
+
+    assert xschedule([check_if_equal], space=[s, ss], goal=lambda: s.ok=="OK") == "OK"
