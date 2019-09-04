@@ -27,7 +27,7 @@ def _objwalk(obj, path=(), memo=None, recursion=0):
         memo = set()
     if isinstance(obj, Object):
         if id(obj) not in memo and recursion < 4:
-            memo.add(id(obj)) 
+            memo.add(id(obj))
             for k in dir(obj):
                 val = getattr(obj, k)
                 if isinstance(val, Property):
@@ -41,7 +41,7 @@ def _objwalk(obj, path=(), memo=None, recursion=0):
                         pass
     elif isinstance(obj, ListLike):
         if id(obj) not in memo and recursion < 4:
-            memo.add(id(obj)) 
+            memo.add(id(obj))
             for index, value in enumerate(obj):
                 for child in _objwalk(value, path + (index,), memo, recursion+1):
                     yield child
@@ -65,8 +65,8 @@ def _get_recursive_objects(obj, leveldeep=0):
 
 def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     """schedule methods within variables space space with exit method exit or goal goal"""
-    # 1. for every variable in space, 
-    #    - create a full :predicates description of the object 
+    # 1. for every variable in space,
+    #    - create a full :predicates description of the object
     #    - create init objects
     # 2. for every method, add them to planning problem
     if not methods: raise ValueError("At least one method is required to start scheduling")
@@ -77,11 +77,11 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
 
     class XSProblem(Problem):
         pass
-    
+
     if sessionName: XSProblem.__name__ = sessionName
     p = XSProblem()
     p.objectList = [x for x in space if isinstance(x, Object)]
-    
+
     l_collected_predicates = set()
     l_collected_objects = collections.defaultdict(list)
     l_collected_classes = set()
@@ -136,7 +136,7 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     _collected_effects = []
     _selector_out = None
 
-    
+
     # TODO: collected_classes should derive from collected_ojbects
     l_collected_classes |= set(l_collected_objects.keys())
     p.collected_objects = l_collected_objects
@@ -145,17 +145,20 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
     p.collected_goal = list(filter(None, l_collected_goal))
     p.get_types = lambda: ' '.join(list(filter(None, list(l_collected_classes))))
     p.get_predicates = lambda: "\n        ".join(list(set(l_collected_predicates)))
-    
+
     assert p.collected_goal
-    
+
     mcount = 0
-    actions = [] 
-    
+    actions = []
+
     for m in methods:
         if not callable(m): continue
         # if not hasattr(m, "plan_class"): continue
-        if not hasattr(m, "_planned"): continue
-        pm = _planned_internal(m, cost=m._cost)
+        # if not hasattr(m, "_planned"): continue
+        if hasattr(m, "_cost"):
+            pm = _planned_internal(m, cost=m._cost)
+        else:
+            pm = _planned_internal(m, cost=1)
         actions.append(pm.plan_class)
         # actions.append(m.plan_class)
         # def methodWrapper(self, *args, **kwargs):
@@ -166,7 +169,7 @@ def _create_problem(methods, space, exit=None, goal=None, sessionName=None):
         mcount+=1
     p.actions = lambda: actions
     if not mcount: raise ValueError("No plannable methods supplied")
-    
+
     p.format_problem()
     return p
 
@@ -181,23 +184,23 @@ def debug_plan(methods, space, exit=None, goal=None, plan=[], iterations=10):
     # clean up after debugging
     _reset_state()
     return r
-    
+
 
 def schedule(methods, space, exit=None, goal=None, sessionName=None, timeout=30):
     space = _space_to_list(space)
     p = _create_problem(methods, space, exit, goal, sessionName)
     p.run(timeout=timeout)
     _reset_state()
-    for v in space: 
+    for v in space:
         if isinstance(v, Object): v._sealed = False
     if p.plan is None: raise SchedulingError("Unable to solve")
     if not p.plan: raise EmptyPlanError("Empty plan")
     return p.plan
-    
-    
+
+
 
 def xschedule(methods, space, exit=None, goal=None, sessionName=None, timeout=30):
     """schedule methods within variables space space with exit method exit or goal goal
     this function returns a composable method that has the resulting algorithm built in"""
     return [x() for x in schedule(methods, space, exit, goal, sessionName, timeout)][-1]
-    
+

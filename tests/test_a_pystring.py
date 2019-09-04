@@ -101,7 +101,6 @@ def test_string_multideref_compare():
 
 def test_solve_equality():
     "direct equality"
-    @planned
     def check_if_equal(s1: StringCompareTest):
         assert s1.s == "test"
         s1.ok = "OK"
@@ -112,11 +111,10 @@ def test_solve_equality():
 
     assert xschedule([check_if_equal], space=[s], goal=lambda: s.ok=="OK") == "OK"
     assert s.ok == "OK"
-    
+
 
 def test_solve_deref_equality():
     "test dereferencing eq"
-    @planned
     def check_if_equal(s1: StringCompareTest):
         assert s1.s == s1.ok
         s1.ok = "OK"
@@ -133,7 +131,6 @@ def test_solve_deref_equality():
 def test_solve_partial_deref1():
     "test partial deref = a"
     ss = String("test")
-    @planned
     def check_if_equal(s1: StringCompareTest):
         assert s1.s == ss
         s1.ok = "OK"
@@ -148,7 +145,6 @@ def test_solve_partial_deref1():
 def test_solve_partial_deref1():
     "test partial deref = a"
     ss = stringFactory.get("test")
-    @planned
     def check_if_equal(s1: StringCompareTest):
         assert s1.s == ss
         s1.ok = "OK"
@@ -163,7 +159,6 @@ def test_solve_partial_deref1():
 def test_solve_partial_deref_reverse():
     "test partial deref same but reverse"
     ss = stringFactory.get("test")
-    @planned
     def check_if_equal(s1: StringCompareTest):
         assert ss == s1.s
         s1.ok = "OK"
@@ -177,7 +172,6 @@ def test_solve_partial_deref_reverse():
 def test_solve_with_object():
     "test with string object in state space"
     ss2 = stringFactory.get("test")
-    @planned
     def check_if_equal(s1: StringCompareTest, ss: String):
         assert ss == s1.s
         s1.ok = "OK"
