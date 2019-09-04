@@ -1738,7 +1738,10 @@ class Object(metaclass=BaseObjectMeta):
                     else:
                         raise AssertionError("Something is wrong")
             elif isinstance(value, str) and hasattr(self, name) and isinstance(getattr(self, name), Property):
-                getattr(self, name).set(stringFactory.get(value))
+                str_obj = stringFactory.get(value)
+                str_obj._class_variable = str_obj.poodle_internal__sym_name
+                getattr(self, name).set(str_obj)
+
             elif isinstance(value, int) and hasattr(self, name) and isinstance(getattr(self, name), Property):
                 from poodle.arithmetic import logSparseIntegerFactory
                 getattr(self, name).set(logSparseIntegerFactory.get(value))
