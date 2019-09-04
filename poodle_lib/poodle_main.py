@@ -1833,7 +1833,7 @@ stringFactory = _StringFactory()
 class String(Object):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.poodle_internal__value in stringFactory.values:
+        if self.poodle_internal__value in stringFactory.values and not self._variable_mode:
             self.poodle_internal__sym_name = stringFactory.values[self.poodle_internal__value].poodle_internal__sym_name
     def __setattr__(self, name, value):
         if not name.startswith("_") and not name.startswith("poodle_internal"): 
