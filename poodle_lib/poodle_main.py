@@ -153,7 +153,6 @@ def resolve_poodle_type(obj):
     elif obj == bool:
         return BooleanObject
     elif obj == str:
-        from poodle.string import String
         return String
     elif inspect.isclass(obj) and issubclass(obj, Object):
         return obj
@@ -164,7 +163,6 @@ def resolve_poodle_special_object(obj):
     if isinstance(obj, str):
         return obj
         # This slows down everything: ...
-        # import poodle.string
         # o = poodle.string.stringFactory.get(obj)
         # o._class_variable = o.poodle_internal__sym_name
         # return o
@@ -397,6 +395,8 @@ def deduplicate_equals(l_preconditions):
 def is_internall_call():
     return getouterframes(inspect.currentframe())[2].filename ==\
                                                 os.path.abspath(__file__)
+
+
 
 class Property(object):
     def __init__(self, *initial_data, **kwargs):
@@ -892,13 +892,12 @@ class Property(object):
 
     def __eq__(self, other):
         from poodle.arithmetic import IntegerType, logSparseIntegerFactory
-        import poodle.string
 
         if isinstance(other, int) and issubclass(self._value, IntegerType):
             other = logSparseIntegerFactory.get(other)
             other._class_variable = other.poodle_internal__sym_name
-        if isinstance(other, str) and issubclass(self._value, poodle.string.String):
-            other = poodle.string.stringFactory.get(other)
+        if isinstance(other, str) and issubclass(self._value, String):
+            other = stringFactory.get(other)
             other._class_variable = other.poodle_internal__sym_name
 
         if hasattr(self, "_property_of_inst") and isinstance(other, Property) and not hasattr(other, "_property_of_inst"):
@@ -911,8 +910,7 @@ class Property(object):
             and isinstance(self._property_value, IntegerType): # no need
             other = resolve_poodle_special_object(other)
             return self._property_value == other
-        # if issubclass(self._value, poodle.string.String) and isinstance(other, poodle.string.String) and self._property_value:
-        if issubclass(self._value, poodle.string.String) and isinstance(other, poodle.string.String) and isinstance(self._property_value, poodle.string.String):
+        if issubclass(self._value, String) and isinstance(other, String) and isinstance(self._property_value, String):
             return self._property_value == other
         return True
 
@@ -1198,8 +1196,7 @@ class Property(object):
         return self._ineq(other, "le")
 
     def __str__(self):
-        import poodle.string
-        if isinstance(self._property_value, poodle.string.String):
+        if isinstance(self._property_value, String):
             return self._property_value._get_value()
         return super().__str__()
 
@@ -1469,8 +1466,7 @@ class BaseObjectMeta(type):
                     from poodle.arithmetic import LogSparseInteger
                     setattr(cls, ann, Property(LogSparseInteger))
                 elif tname == str:
-                    import poodle.string
-                    setattr(cls, ann, Property(poodle.string.String))
+                    setattr(cls, ann, Property(String))
                 elif tname == bool:
                     setattr(cls, ann, Bool(False))
                 elif isinstance(tname, str):
@@ -1668,7 +1664,6 @@ class Object(metaclass=BaseObjectMeta):
 
     def __eq__(self, other):
         other = resolve_poodle_special_object(other)
-        import poodle.string
         # if _variable_mode and _compilation and isinstance(other, str):
         # if isinstance(other, str):
             # other = poodle.string.stringFactory.get(other)
@@ -1743,8 +1738,7 @@ class Object(metaclass=BaseObjectMeta):
                     else:
                         raise AssertionError("Something is wrong")
             elif isinstance(value, str) and hasattr(self, name) and isinstance(getattr(self, name), Property):
-                import poodle.string
-                getattr(self, name).set(poodle.string.stringFactory.get(value))
+                getattr(self, name).set(stringFactory.get(value))
             elif isinstance(value, int) and hasattr(self, name) and isinstance(getattr(self, name), Property):
                 from poodle.arithmetic import logSparseIntegerFactory
                 getattr(self, name).set(logSparseIntegerFactory.get(value))
@@ -1789,7 +1783,6 @@ class Object(metaclass=BaseObjectMeta):
     #         print("has top", attr)
     #     return super().__getattr__(self, attr)
 
-
 class Imaginary(Object):
 
     def gen_name(self, name):
@@ -1820,6 +1813,54 @@ class Imaginary(Object):
             _collected_predicate_templates.append("({pred} ?var - {cls})".format(pred=HASHNUM_ID_PREDICATE, cls=HASHNUM_CLASS_NAME))
             _collected_effects.append(exists_predicate)
             _collected_parameters[self._class_variable] = HASHNUM_CLASS_NAME
+
+
+class _StringFactory:
+    def __init__(self):
+        self.reset()
+    def get(self, value):
+        if not value in self.values:
+            self.values[value] = String(value) # needed to indicate internal call
+        return self.values[value]
+    def get_objects(self):
+        return list(self.values.values())
+    def reset(self):
+        self.values = {}
+
+
+stringFactory = _StringFactory()
+
+class String(Object):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.poodle_internal__value in stringFactory.values:
+            self.poodle_internal__sym_name = stringFactory.values[self.poodle_internal__value].poodle_internal__sym_name
+    def __setattr__(self, name, value):
+        if not name.startswith("_") and not name.startswith("poodle_internal"): 
+            raise TypeError("Strings are immutable")
+        return super().__setattr__(name, value)
+    def __getattr__(self, name):
+        if not name.startswith("_") and not name.startswith("poodle_internal"): 
+            raise TypeError("Strings are immutable")
+        return super().__getattr__(name, value)
+    def __str__(self):
+        return str(self._get_value())
+    def __repr__(self):
+        return repr(str(self))
+    def __hash__(self):
+        return hash(self.poodle_internal__value)
+    def __eq__(self, other):
+        other = resolve_poodle_special_object(other)
+        # if isinstance(other, str): other = stringFactory.get(other)
+        # if isinstance(other, Property):
+        #     return other._property_value == self
+        if isinstance(other, Object) and isinstance(self.poodle_internal__value, str) \
+                        and isinstance(other.poodle_internal__value, str) \
+                        and not self._variable_mode \
+                        and not other._variable_mode:
+            return self.poodle_internal__value == other.poodle_internal__value
+        return super().__eq__(other)
+
 
 # A static object initializes itself with instances static_values
 class StaticObject(Object):

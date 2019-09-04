@@ -1,6 +1,6 @@
 from poodle import *
 import pytest
-from poodle.string import stringFactory
+from poodle.poodle_main import String, stringFactory
 
 class StringCompareTest(Object):
     s: str
@@ -13,6 +13,7 @@ def test_two_string_equality():
     assert s1 == s2
 
 def test_two_string_equality_fail():
+    from poodle.poodle_main import String
     s1 = String("test")
     s2 = String("test2")
 
@@ -23,6 +24,7 @@ def test_two_string_equality_fail():
     raise
 
 def test_String_to_prop_compare():
+    from poodle.poodle_main import String
     s1 = String("test")
     o = StringCompareTest()
     o.s = "test"

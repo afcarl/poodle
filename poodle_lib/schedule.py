@@ -3,8 +3,8 @@ from poodle import *
 import collections.abc
 from .poodle_main import ListLike, Select, Problem, _collected_predicates, \
     _collected_effects, _none_objects, _system_objects, _compilation_enable, \
-        HASHNUM_CLASS_NAME, _selector_out, _reset_state, _planned_internal
-from .string import stringFactory
+        HASHNUM_CLASS_NAME, _selector_out, _reset_state, _planned_internal, \
+            stringFactory
 
 class SchedulingError(Exception):
     pass
