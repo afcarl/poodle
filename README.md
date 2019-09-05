@@ -43,9 +43,7 @@ w.said = False
 xschedule(methods=[hello], space=[w], goal=lambda:w.said==True)
 ```
 
-This program would immediately print "Hello, World!" to the console, which looks obvious at the beginning. What actually happened is that Poodle compiled your Python method into planning problem and found that the final state is achievable by simply executing the only method.
-
-It essentially searches for such a set of inputs that satisfies `assert` expressions present in the python function, and combines as many such functions as needed to reach a goal state.
+This program would immediately print "Hello, World!" to the console, which looks obvious at the beginning. What actually happened is that Poodle compiled your Python method into planning problem and found that the final state is achievable by simply executing the only method, and all `assert`s are satisfied with object `w`.
 
 It is important to note that the more precise you describe your task the easier it is for the AI planner to figure out the algorithm. That is why Poodle enforces fully statically typed interface for all objects and methods in search space as a minimum selectivity requirement. This also saves from a lot of bugs in bigger projects.
 
