@@ -2,6 +2,7 @@
 from setuptools import find_packages, setup
 
 setup(
+    python_requires='>=3.7',
     name='poodle',
     version="0.1",
     url='https://github.com/criticalhop/poodle',
