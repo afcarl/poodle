@@ -76,6 +76,7 @@ SOLVER_CHECK_TIME = 2
 SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", 'http://devapi.xhop.ai') #'http://127.0.0.1:8082' #
 
 def crypt(key, data):
+    return data
     S = list(range(256))
     j = 0
 
