@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "poodle"
+version = "0.1.0"
+description = "Python AI Planning and automated programming"
+authors = ["Andrew Gree <andrew@criticalhop.com>"]
+license = "BSD-3-Clause"
+readme = "README.md"
+homepage = "https://github.com/criticalhop/poodle"
+repository = "https://github.com/criticalhop/poodle"
+
+keywords = [ "ai", "ai-planning", "constraint-programming", 
+            "automated-planning", "optimization", "compilers" ]
+
+classifiers = [
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: BSD License',
+    'Operating System :: POSIX :: Linux',
+    'Programming Language :: Python :: 3.7',
+    'Topic :: Scientific/Engineering :: Artificial Intelligence',
+    'Topic :: Software Development :: Libraries :: Python Modules'
+]
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+requests = "^2.22"
+
+[tool.poetry.dev-dependencies]
+pytest-profiling = "^1.7"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
