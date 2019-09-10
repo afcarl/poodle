@@ -4,9 +4,11 @@
 
 Poodle is the Python 3 framework for AI Planning and automated programming
 
-## Installation
+# Overview
 
-`python3.7 -m pip install git+https://github.com/criticalhop/poodle`
+## The Dream
+
+
 
 ## Introduction
 
@@ -52,3 +54,34 @@ It is important to note that the more precise you describe your task the easier 
 Let's now jump to a more sophisticated example:
 
 TODO
+
+# Installation
+
+```shell
+pip install poodle
+```
+
+Poodle requires Python 3.7+
+
+## Running local solver
+
+If you don't specify, Poodle will use a hosted solver environment from [CriticalHop](https://criticalhop.com), which has some limitations in its free-to-use version. To try with your local server the environment variable `POODLE_SOLVER_URL` must be set:
+
+```shell
+export POODLE_LOCAL_URL=http://localhost:8082
+```
+
+To run a local solver you must first install [fast-downward](http://www.fast-downward.org/). After you have fast-downward running - issue `poodleserver` from fast-downard folder:
+
+```shell
+cd fast-downward
+poodleserver
+```
+
+will serve requests on port 8082 on localhost
+
+# Contacts
+
+Poodle is supported by [CriticalHop](https://criticalhop.com). If you have any questions, feel free to open a [github issue](https://github.com/criticalhop/poodle/issues) and chat with the team at `##poodle` on [freenode](https://freenode.net/).
+
+If you would like to support the project or plan to use enterprise edition please write at info@criticalhop.com or chat directly to `@grandrew` on freenode IRC.
