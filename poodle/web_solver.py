@@ -2,6 +2,7 @@
 # from flask import Flask, render_template
 from flask import Flask, request, redirect, url_for, Response, make_response
 import os, signal
+import os.path
 import subprocess
 import time
 import re
@@ -241,6 +242,10 @@ def result():
     return SOLVER_UNKNOWN_STATUS
 
 def serve():
+    assert os.path.isfile("./fast-downward.py"), \
+        """Fast-downward installation not found in current 
+    directory. Please `cd` into fast-downward installation folder
+    and make sure fast-downward.py is present"""
     debug = True
     app.debug = debug
     app.run(host='127.0.0.1', port=16009, debug=True, use_reloader=False)
