@@ -1,6 +1,7 @@
 from poodle import *
 import pytest
 from poodle.poodle_main import String, stringFactory
+from poodle.schedule import SchedulingError
 
 class StringCompareTest(Object):
     s: str
@@ -181,3 +182,29 @@ def test_solve_with_object():
     s.ok = "test"
 
     assert xschedule([check_if_equal], space=[s, ss2], goal=lambda: s.ok=="OK") == "OK"
+
+@pytest.mark.skip(reason="not supported yet - see #44")
+def test_assert_static_precondition():
+    ss2 = stringFactory.get("test")
+    s = StringCompareTest()
+    s.s = "test"
+    s.ok = "test"
+    s2 = StringCompareTest()
+    s.s = "test2"
+    objs = [s, s2]
+    STEST = "TEST"
+
+    def check_if_equal(s1: StringCompareTest, ss: String):
+        for o in objs:
+            assert o.s == STEST
+        s1.ok = "OK"
+        return "OK"
+    try:
+        assert xschedule([check_if_equal], space=[s, ss2], goal=lambda: s.ok=="OK") == "OK"
+    except SchedulingError:
+        pass
+    try:
+        assert xschedule([check_if_equal], space=[s, ss2], goal=lambda: s.ok=="OK") == "OK"
+    except SchedulingError:
+        pass
+
