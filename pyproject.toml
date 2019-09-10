@@ -24,10 +24,15 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.7"
 requests = "^2.22"
+flask = "^1.1"
 
 [tool.poetry.dev-dependencies]
 pytest-profiling = "^1.7"
 
+[tool.poetry.scripts]
+poodleserver = "poodle.web_solver:serve"
+
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
+

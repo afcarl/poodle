@@ -2218,6 +2218,13 @@ class Problem:
         return retcode
 
     def run(self, url = SOLVER_URL, timeout=SOLVER_MAX_TIME):
+        if url == SOLVER_URL:
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(('127.0.0.1',16009))
+            if result == 0:
+                url = "http://localhost:16009"
+            sock.close()
         self.solve_timeout=timeout
         for ob in self.objectList: ob._sealed = False # seal all objects
         if os.environ.get("POODLE_LOCAL_PLANNER"):
