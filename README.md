@@ -65,20 +65,22 @@ Poodle requires Python 3.7+
 
 ## Running local solver
 
-If you don't specify, Poodle will use a hosted solver environment from [CriticalHop](https://criticalhop.com), which has some limitations in its free-to-use version. To try with your local server the environment variable `POODLE_SOLVER_URL` must be set:
+By default Poodle will check if local port `16009` is open and use solver running on localhost. If it can not find local solver it will use a hosted solver environment from [CriticalHop](https://criticalhop.com), which has some limitations in its free-to-use version. 
 
-```shell
-export POODLE_LOCAL_URL=http://localhost:8082
-```
-
-To run a local solver you must first install [fast-downward](http://www.fast-downward.org/). After you have fast-downward running - issue `poodleserver` from fast-downard folder:
+To run a local solver you must first install [fast-downward](http://www.fast-downward.org/). After you have fast-downward running - run `poodleserver` from fast-downard folder:
 
 ```shell
 cd fast-downward
 poodleserver
 ```
 
-will serve requests on port 8082 on localhost
+`poodleserver` comes with poodle installation and will serve requests on port `16009` on localhost.
+
+You can also specify the solver URL by environment variable `POODLE_SOLVER_URL`, e.g.:
+
+```shell
+export POODLE_SOLVER_URL=http://localhost:8082
+```
 
 # Contacts
 
