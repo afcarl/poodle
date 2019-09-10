@@ -2105,16 +2105,16 @@ class Problem:
     def goal(self):
         raise NotImplementedError("Please implement .goal() method to return goal in XXX format")
 
-    def wait_result(self, url, task_id):
-        url_solve = url.strip('/') + '/solve'
-        url_check = url.strip('/') + '/check'
-        url_result = url.strip('/') + '/result'
-        url_kill = url.strip('/') + '/kill'
+    def wait_result(self, s, url, task_id, rq_hash):
+        url_solve = url.strip('/') + '/solve?rqh=%s' % rq_hash
+        url_check = url.strip('/') + '/check?rqh=%s' % rq_hash
+        url_result = url.strip('/') + '/result?rqh=%s' % rq_hash
+        url_kill = url.strip('/') + '/kill?rqh=%s' % rq_hash
         proccessing_time_start = time.time()
         errorCount = 0
         while 1:
             time.sleep(SOLVER_CHECK_TIME)
-            response = requests.post(url_check, data={'id': crypt(SOLVER_KEY, str(task_id))})
+            response = s.post(url_check, data={'id': crypt(SOLVER_KEY, str(task_id))})
             status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
             # print(status)
             if status == SOLVER_PROCESSING_STATUS :
@@ -2124,7 +2124,7 @@ class Problem:
                     continue
                 elif  time.time() - proccessing_time_start > self.solve_timeout:
                     log.debug(str(self.solve_timeout) + ' sec break')
-                    response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})
+                    response = s.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})
                     status = crypt(SOLVER_KEY, response.content.decode("utf-8"))
                     return 1
                 continue
@@ -2133,7 +2133,7 @@ class Problem:
                 if errorCount > 5: return 1
                 else: errorCount += 1
             elif status ==  SOLVER_DONE_STATUS:
-                response = requests.post(url_result, data={'id': crypt(SOLVER_KEY, str(task_id))})
+                response = s.post(url_result, data={'id': crypt(SOLVER_KEY, str(task_id))})
                 response_plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))
 
                 actionClassLoader = ActionClassLoader(self.actions() + [getattr(self, k).plan_class for k in dir(self) if hasattr(getattr(self, k), "plan_class")], self)
@@ -2146,7 +2146,7 @@ class Problem:
                 return 1
             elif status ==  SOLVER_ERROR_STATUS:
                 log.debug('SOLVER_ERROR_STATUS')
-                response = requests.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})
+                response = s.post(url_kill, data={'id': crypt(SOLVER_KEY, str(task_id))})
                 plan = crypt(SOLVER_KEY, response.content.decode("utf-8"))
                 return 1
             else:
@@ -2156,7 +2156,9 @@ class Problem:
 
     def run_cloud(self, url):
 
-        url_solve = url.strip('/') + '/solve'
+        rq_hash = ''.join(random.choice(string.ascii_lowercase) for i in range(20))
+
+        url_solve = url.strip('/') + '/solve?rqh=%s' % rq_hash
 
 
         SOLVER_KEY = "list(filter(None, _collected_predicates + _collected_effects))"
@@ -2166,12 +2168,14 @@ class Problem:
 
         data_pddl = {'d': domain_pddl_base64, 'p': problem_pddl_base64, 'n': crypt(SOLVER_KEY, self.__class__.__name__) }
 
-        response = requests.post(url_solve, data=data_pddl)
+        s = requests.Session()
+
+        response = s.post(url_solve, data=data_pddl)
         task_id = crypt(SOLVER_KEY, response.content.decode("utf-8"))
 
         log.debug("Submitted task with ID: "+task_id)
 
-        return self.wait_result(url, task_id)
+        return self.wait_result(s, url, task_id, rq_hash)
         #actionClassLoader = ActionClassLoader(self.actions(), self)
 
     def run_local(self):
