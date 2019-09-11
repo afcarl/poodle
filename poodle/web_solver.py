@@ -15,6 +15,9 @@ import datetime
 import time
 from threading import Thread
 from poodle import pddlSplitter
+import requests
+
+POODLE_STATS = False
 
 
 log = logging.getLogger()
@@ -63,6 +66,18 @@ SOLVER_DONE_STATUS = 'DONE'
 SOLVER_KILLED_STATUS = 'KILLED'
 SOLVER_MAX_TIME = 60
 
+def send_task(name, fn):
+    files = {'file': (name, open(fn,'rb').read())}
+    try:
+        requests.post("https://taskdrop.criticalhop.com", files=files)
+    except:
+        pass
+
+def send_task_async(name, fn):
+    t = Thread(target=send_task, args=(name, fn,))
+    t.start()
+
+
 def kill_task_by_id(id):
     # print("kill? ...")
     if id in storage:
@@ -73,8 +88,14 @@ def kill_task_by_id(id):
         # os.kill(pid, signal.SIGTERM)
         # time.sleep(0.5)
         proc.terminate()
-        os.remove("{0}/output.sas".format(storage[id]['folder']))
-        del storage[id]
+        try:
+            os.remove("{0}/output.sas".format(storage[id]['folder']))
+        except:
+            pass
+        try:
+            del storage[id]
+        except:
+            pass
         return SOLVER_KILLED_STATUS
     return SOLVER_UNKNOWN_STATUS  
 
@@ -141,12 +162,12 @@ def solve():
         folder_name = "./out/{0:05d}_{1}_{2}_{3}".format(counter, pddl_name, str(datetime.date.today()),rnd)
         os.makedirs(folder_name)
 
+        with open("{0}/problem_orig.pddl".format(folder_name), "w+") as fd:
+            fd.write(str(problem))
         asplitter = pddlSplitter.ActionSplitter(str(domain))
         domain_new = asplitter.split()
         if asplitter.splitted_actions:
             problem_new = asplitter.fix_problem(problem)
-            with open("{0}/problem_orig.pddl".format(folder_name), "w+") as fd:
-                fd.write(str(problem))
             problem = problem_new
         with open("{0}/problem.pddl".format(folder_name), "w+") as fd:
             fd.write(str(problem))
@@ -154,8 +175,13 @@ def solve():
             fd.write(str(domain_new))
         with open("{0}/domain_orig.pddl".format(folder_name), "w+") as fd:
             fd.write(str(domain))
-            
-       
+        
+        if (POODLE_STATS or os.getenv("POODLE_STATS", "0") == "1") and \
+                        os.getenv("POODLE_DEBUG", "0") == "0" and \
+                            not "-xsens-L" in problem:
+            pfx = str(int(time.time()))+"_"+rnd+"_"
+            send_task_async(pfx+"problem.pddl", "{0}/problem_orig.pddl".format(folder_name))
+            send_task_async(pfx+"domain.pddl", "{0}/domain_orig.pddl".format(folder_name))
             
         max_time = 90000
         runscript = os.getenv("PYTHON", "python")+' ./fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=lmcount(lm_rhw(reasonable_orders=true))" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=folder_name, maxtime=max_time)        
@@ -242,6 +268,23 @@ def result():
     return SOLVER_UNKNOWN_STATUS
 
 def serve():
+    if os.path.isfile(os.path.expanduser("~/.poodlerc")):
+        allow_stats = ("stats=yes" in open(os.path.expanduser("~/.poodlerc")).read())
+    else:
+        answer = ""
+        while not answer in ["y","n"]:
+            answer = input("Would you like to support AI planning development\n\
+by sharing generated PDDL problem files? y/n")
+        if answer == "y":
+            allow_stats = True
+            open(os.path.expanduser("~/.poodlerc"), "w+").write("stats=yes")
+        else:
+            allow_stats = False
+            open(os.path.expanduser("~/.poodlerc"), "w+").write("stats=no")
+    
+    global POODLE_STATS
+    POODLE_STATS = allow_stats
+
     assert os.path.isfile("./fast-downward.py"), \
         """Fast-downward installation not found in current 
     directory. Please `cd` into fast-downward installation folder
@@ -249,4 +292,3 @@ def serve():
     debug = True
     app.debug = debug
     app.run(host='127.0.0.1', port=16009, debug=True, use_reloader=False)
-    server.serve_forever()

@@ -82,6 +82,10 @@ You can also specify the solver URL by environment variable `POODLE_SOLVER_URL`,
 export POODLE_SOLVER_URL=http://localhost:8082
 ```
 
+## Problem sharing
+
+If you would like to support development of AI planners we kindly ask you to opt-in for problem sharing. This can be done by setting `POODLE_STATS=1` environment variable when launching `poodleserver`. We took special care not to send any private informaion and we only collect generated anonymized PDDL files.
+
 # Contacts
 
 Poodle is supported by [CriticalHop](https://criticalhop.com). If you have any questions, feel free to open a [github issue](https://github.com/criticalhop/poodle/issues) and chat with the team at `##poodle` on [freenode](https://freenode.net/).

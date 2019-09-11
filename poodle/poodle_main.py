@@ -1546,8 +1546,11 @@ class Object(metaclass=BaseObjectMeta):
         # if _problem_compilation:
         if True:
             if name is None: # WARNING name must always be none
-                frameinfo = getframeinfo(inspect.currentframe().f_back)
-                name = "%s-%s-%s-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
+                if os.getenv("POODLE_DEBUG", "0") == "1":
+                    frameinfo = getframeinfo(inspect.currentframe().f_back)
+                    name = "%s-%s-%s-xsens-L%s" % (self.__class__.__name__, str(new_id()), os.path.basename(frameinfo.filename), frameinfo.lineno)
+                else:
+                    name = "%s-%s-obj" % (self.__class__.__name__, str(new_id()))
             self.poodle_internal__sym_name = self.gen_name(name) # object name when instantiating..
         if not _force_name is None:
             self.poodle_internal__sym_name = _force_name
