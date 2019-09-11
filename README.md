@@ -8,13 +8,13 @@ Poodle is the Python - to - AI Planning compiler and automated programming frame
 
 ## The Dream
 
-*Imagine if you could tell the computer how the result should look like, 
+*Imagine if you could tell the computer how the result should look like, <br/>
 and computer automatically figures out the algorithm for you.*
 
-*Imagine that if the algorithm is obvious you could still write it in imperative way 
+*Imagine that if the algorithm is obvious you could still write it in imperative way <br/>
 and computer understands it and makes use of it to reach the result faster.*
 
-*Imagine if you have the algorithm defined by data 
+*Imagine if you have the algorithm defined by data<br/> 
 and you and your computer can both use it efficiently in problem solving.*
 
 ## The Idea
