@@ -84,7 +84,7 @@ export POODLE_SOLVER_URL=http://localhost:8082
 
 ## Problem sharing
 
-If you would like to support development of AI planners we kindly ask you to opt-in for problem sharing. This can be done by setting `POODLE_STATS=1` environment variable when launching `poodleserver`. We took special care not to send any private informaion and we only collect generated anonymized PDDL files.
+If you would like to support development of AI planners we kindly ask you to opt-in for sharing anonimized PDDL problem data sets. This will help us reduce the app load time for everyone in the community. To enable this, please setup `POODLE_STATS=1` environment variable when launching `poodleserver`. Your privacy is our highest priority, therefore we only collect generated anonymized PDDL data-sets to make the processor loading more efficient.
 
 # Contacts
 
