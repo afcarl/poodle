@@ -27,7 +27,7 @@ I believe that the future of programming is in the fusion of human and AI. In th
 
 ## Introduction
 
-Poodle is a python module that enables construction of complex planning and constraint satisfaction problems using familiar pythonic paradigms in production environments. It is still in early stage of development but is already powering [<nobr>`kubectl-val`</nobr>, our tool to prevent Kubernetes configuration errors](https://github.com/criticalhop/kubectl-val).
+Poodle is a python module that enables construction of complex planning and constraint satisfaction problems using familiar pythonic paradigms in production environments. It is still in early stage of development but is already powering [*kubectl&#x2011;val*, our tool to prevent Kubernetes configuration errors](https://github.com/criticalhop/kubectl-val).
 
 Poodle introduces a new python method called `xschedule` and a new base object `Object`:
 
