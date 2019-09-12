@@ -220,11 +220,11 @@ export POODLE_SOLVER_URL=http://localhost:8082
 
 ## Problem sharing
 
-If you would like to support development of AI planners we kindly ask you to opt-in for problem sharing. This can be done by setting `POODLE_STATS=1` environment variable when launching `poodleserver`. We took special care not to send any private information and we only collect generated anonymized PDDL files.
+If you would like to support development of AI planners we kindly ask you to opt-in for sharing of anonymized PDDL problem data sets. This will help us to continuously improve result waiting times for everyone in the community. To enable this, please set `POODLE_STATS=1` environment variable when launching `poodleserver`. Your privacy is our highest priority, therefore we only collect generated anonymized PDDL data-sets.
 
 # Contacts
 
-Poodle is developed by [CriticalHop](https://criticalhop.com), a team of dedicated AI planning engineers. If you have any questions, feel free to open a [github issue](https://github.com/criticalhop/poodle/issues) and chat with the team at `##poodle` on [freenode](https://freenode.net/).
+Poodle is developed by [CriticalHop](https://criticalhop.com), a team of dedicated AI planning engineers. If you have any questions, feel free to open a [github issue](https://github.com/criticalhop/poodle/issues) and chat with @grandrew and the team at `##poodle` on [freenode](https://freenode.net/).
 
 If you are interested in joining the project or wish to use enterprise edition please write us at info@criticalhop.com or reach out directly to me at andrew@criticalhop.com or [@Andrew_Gree](https://twitter.com/Andrew_Gree) on twitter.
 
