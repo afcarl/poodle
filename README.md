@@ -69,13 +69,16 @@ It is important to note that the more precise you describe your task the easier 
 
 Let's now jump to a more sophisticated example:
 
+## Monkey and Banana problem
+
 <p align="center"> <img src="doc/img/monkey-banana-problem.png" width="640"/> </p>
+
+We need to plan monkey actions to get the hanging banana: move the box, climb the box and grasp the bananas. We also need to take into account some basic laws of nature: like if the banana in on the tree, it's location is where the tree is.
 
 ```python
 from poodle import Object, schedule
 from typing import Set
 
-class CanOwnBananas(Object): pass
 class Position(Object):
     def __str__(self):
         if not hasattr(self, "locname"): return "unknown"
@@ -84,8 +87,8 @@ class HasHeight(Object):
     height: int
 class HasPosition(Object):
     at: Position
-class Monkey(HasHeight, HasPosition, CanOwnBananas): pass
-class PalmTree(CanOwnBananas, HasHeight, HasPosition): 
+class Monkey(HasHeight, HasPosition): pass
+class PalmTree(HasHeight, HasPosition): 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.height = 2
@@ -177,7 +180,13 @@ Monkey climbs the box
 Monkey takes the banana
 ```
 
-For a complete program example, feel free to check out [`kubectl-val` source code](https://github.com/criticalhop/kubectl-val).
+## Kubernetes Configuration Problem
+
+<p align="center"> <img src="doc/img/kubernetes-evict-problem.png" width="640"/> </p>
+
+In this example we are checking what are the consequences of configuration changes in Kubernetes cluster. For example, Kubernetes current state may be that once you load a new DaemonSet, important services will get evicted from the cluster in order to place your new microservice.
+
+For a complete program feel free to check out [`kubectl-val` source code](https://github.com/criticalhop/kubectl-val).
 
 # Principles and Architecture
 
