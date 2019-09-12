@@ -69,6 +69,8 @@ It is important to note that the more precise you describe your task the easier 
 
 Let's now jump to a more sophisticated example:
 
+<p align="center"> <img src="doc/img/monkey-banana-problem.png" width="640"/> </p>
+
 ```python
 from poodle import Object, schedule
 from typing import Set
