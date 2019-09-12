@@ -21,9 +21,9 @@ and you and your computer can both use it efficiently in problem solving.*
 
 <p align="center"> <img src="doc/img/science-and-magic.png" width="640"/> </p>
 
-Recently I have discovered that Python code can be translated into AI planning task in a consistent and composable way, and that the planner can then figure out the solution from imperatively-incomplete program using accelerated state space exploration, with the result as usable as an ordinary Python program.
+> Recently we have discovered that Python code can be translated into AI planning task in a consistent and composable way, and that the planner can then figure out the solution from imperatively-incomplete program using accelerated state space exploration, with the result as usable as an ordinary Python program.
 
-I believe that the future of programming is in the fusion of human and AI. In the future, developer's job will only be to optimize the program so that it fits into computer's capacity, by adding heuristics as needed. Everything else will be done by the computer itself: figuring out glue code for APIs and SDKs, adding error handling, creating abstraction plumbing from user intent to implemetation specifics, also deloyment, operation, etc.
+> We believe that the future of programming is in the fusion of human and AI. In the future, developer's job will only be to optimize the program so that it fits into computer's capacity, by adding heuristics as needed. Everything else will be done by the computer itself: figuring out glue code for APIs and SDKs, adding error handling, creating abstraction plumbing from user intent to implemetation specifics, also deloyment, operation, etc.
 
 ## Introduction
 
