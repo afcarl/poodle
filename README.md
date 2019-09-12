@@ -21,13 +21,13 @@ and you and your computer can both use it efficiently in problem solving.*
 
 <p align="center"> <img src="doc/img/science-and-magic.png" width="640"/> </p>
 
-> Recently we have discovered that Python code can be translated into AI planning task in a consistent and composable way, and that the planner can then figure out the solution from imperatively-incomplete program using accelerated state space exploration, with the result as usable as an ordinary Python program.
+> Recently we have discovered that Python code can be translated into AI planning task in a consistent and composable way, and that the planner can then figure out the solution from an imperatively-incomplete program using accelerated state space exploration, with the result as usable as an ordinary Python program.
 
-> We believe that the future of programming is in the fusion of human and AI. In the future, developer's job will only be to optimize the program so that it fits into computer's capacity, by adding heuristics as needed. Everything else will be done by the computer itself: figuring out glue code for APIs and SDKs, adding error handling, creating abstraction plumbing from user intent to implemetation specifics, also deloyment, operation, etc.
+> We believe that the future of programming is in the fusion of human and AI. In the future, the developer's job will only be to optimize the program so that it fits into computer's capacity, by adding heuristics as needed. Everything else will be done by the computer itself: figuring out glue code for APIs and SDKs, adding error handling, creating abstraction plumbing from user intent to implemetation specifics, and also deployment, operation, etc.
 
 ## Introduction
 
-Poodle is a python module that enables construction of complex planning and constraint satisfaction problems using familiar pythonic paradigms in production environments. It is still in early stage of development but is already powering [*kubectl&#x2011;val*, our tool to prevent Kubernetes configuration errors](https://github.com/criticalhop/kubectl-val).
+Poodle is a python module that enables construction of complex planning and constraint satisfaction problems using familiar pythonic paradigms in production environments. It is still in the early stage of development, but is already powering [*kubectl&#x2011;val*, our tool to prevent Kubernetes configuration errors](https://github.com/criticalhop/kubectl-val).
 
 Poodle introduces a pair of python functions called `xschedule` and `schedule` that implement automated planning mechanism, and a new base object `Object`:
 
@@ -175,7 +175,7 @@ Monkey climbs the box
 Monkey takes the banana
 ```
 
-For a complete program example feel free to check out [`kubectl-val` source code](https://github.com/criticalhop/kubectl-val).
+For a complete program example, feel free to check out [`kubectl-val` source code](https://github.com/criticalhop/kubectl-val).
 
 # Principles and Architecture
 
@@ -191,7 +191,7 @@ Bad readability and debuggability have always plagued logic languages and Poodle
 
 # Documentation
 
-There is no documentation at this point but we promise to provide it as `poodle` evolves. If you would like to experiment with Poodle general recommendation is to start from reading the examles, unit tests and the `kubectl-val` project source.
+There is no documentation at this point but we promise to provide it as `poodle` evolves. If you would like to experiment with Poodle, the general recommendation is to start from reading the examples, unit tests and the `kubectl-val` project source.
 
 # Installation
 
@@ -203,9 +203,9 @@ Poodle requires Python 3.7+ and will drop support for Python 3.7 as soon as 3.8 
 
 # Running local solver
 
-By default Poodle will check if local port `16009` is open and use solver running on localhost. If it can not find local solver it will use a hosted solver environment from [CriticalHop](https://criticalhop.com), which has some limitations in its free-to-use version. 
+By default, Poodle will check if local port `16009` is open and use a solver running on localhost. If it can not find a local solver it will use a hosted solver environment from [CriticalHop](https://criticalhop.com), which has some limitations in its free-to-use version. 
 
-To run a local solver you must first install [fast-downward](http://www.fast-downward.org/). After you have fast-downward running - run `poodleserver` (included with `poodle`) from fast-downard folder:
+To run a local solver, you must first install [fast-downward](http://www.fast-downward.org/). After you have fast-downward running - run `poodleserver` (included with `poodle`) from the fast-downward folder:
 
 ```shell
 cd fast-downward
@@ -220,13 +220,13 @@ export POODLE_SOLVER_URL=http://localhost:8082
 
 ## Problem sharing
 
-If you would like to support development of AI planners we kindly ask you to opt-in for sharing of anonymized PDDL problem data sets. This will help us to continuously improve result waiting times for everyone in the community. To enable this, please set `POODLE_STATS=1` environment variable when launching `poodleserver`. Your privacy is our highest priority, therefore we only collect generated anonymized PDDL data-sets.
+If you would like to support development of AI planners, we kindly ask you to opt-in for sharing of anonymized PDDL problem data sets. This will help us to continuously improve result waiting times for everyone in the community. To enable this, please set `POODLE_STATS=1` environment variable when launching `poodleserver`. Your privacy is our highest priority, therefore we only collect generated anonymized PDDL data-sets.
 
 # Contacts
 
 Poodle is developed by [CriticalHop](https://criticalhop.com), a team of dedicated AI planning engineers. If you have any questions, feel free to open a [github issue](https://github.com/criticalhop/poodle/issues) and chat with @grandrew and the team at `##poodle` on [freenode](https://freenode.net/).
 
-If you are interested in joining the project or wish to use enterprise edition please write us at info@criticalhop.com or reach out directly to me at andrew@criticalhop.com or [@Andrew_Gree](https://twitter.com/Andrew_Gree) on twitter.
+If you are interested in joining the project, or wish to use the enterprise edition please write us at info@criticalhop.com or reach out directly to me at andrew@criticalhop.com or [@Andrew_Gree](https://twitter.com/Andrew_Gree) on twitter.
 
 -- 
 Andrew Gree and the team
