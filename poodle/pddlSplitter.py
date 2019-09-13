@@ -1,3 +1,7 @@
+import pyparsing
+
+from pyparsing import OneOrMore, nestedExpr
+
 import itertools, json, string, re
 
 POODLE_SPLIT_MATH_LOCK_PREDICATE_NAME = "poodle-split-math-not-in-progress"
@@ -29,7 +33,7 @@ lisp_to_list = lisp_to_list_fast
 def containVar(someList, var):
     # print("check list ", someList, " some var ", var, "type ", type(someList))
     ret = False
-    if isinstance(someList, list):
+    if isinstance(someList, list) or isinstance(someList, pyparsing.ParseResults):
         # print("is list")
         for v in someList:
             if containVar(v, var):
@@ -41,7 +45,7 @@ def containVar(someList, var):
 
 def getVars(someList):
     ret = []
-    if isinstance(someList, list):
+    if isinstance(someList, list) or isinstance(someList, pyparsing.ParseResults):
         for v in someList:
             ret.extend(getVars(v))
     else:
@@ -197,11 +201,14 @@ class ActionSplitter():
             counter -= 1
         #    print("slice\n", "{0}-{1}".format(a, counter), ": ", sliceOfAction)
             splittedAction[a]["{0}-{1}".format(a, counter)].precondition.extend(sliceOfAction.precondition)
-            cost = int(tmpAction.cost) / len(splittedAction[a])
+            cost = int(tmpAction.cost) - (len(splittedAction[a]) - 1)
             if cost < 1:
                 cost = 1
             for s in splittedAction[a]:
                 splittedAction[a][s].cost = str(int(cost))
+                # Only first action has calculated cost another just 1
+                if cost != 1:
+                    cost = 1
 
         #generate snakable useful for next step variables
         for a in splittedAction:
@@ -228,6 +235,34 @@ class ActionSplitter():
                             # print("effect ", eff , "add to ", slice.name)
                             consumedEffects.append(eff)
                             slice.effect.append(eff)
+            loopCondition = True
+            while loopCondition:
+                loopCondition = False
+                for idx, slice in enumerate(arr):
+                    maxEffectAmount = 2
+                    # if slice.name != 'StartPod-5': continue
+                    if len(slice.effect) > maxEffectAmount:
+                        loopCondition = True
+                        lenght = len(slice.effect)
+                        sAmount = lenght / maxEffectAmount if lenght % maxEffectAmount == 0 else (lenght / maxEffectAmount) + 1
+                        sumResultArg = None
+                        for precond100 in slice.precondition:
+                            if precond100[0] == 'SumResult-result':
+                                sumResultArg = precond100[2]
+                                break
+                        for count in range(1, int(sAmount)):
+                            ac = ActionStruct("{0}-{1}-{2}".format(a, idx, count))
+                            startFrom = 0
+                            for subCounter in range(maxEffectAmount):
+                                if len(slice.effect) == startFrom : break
+                                if containVar(slice.effect[startFrom], sumResultArg) : 
+                                    startFrom += 1
+                                ac.effect.append(slice.effect[startFrom])
+                                del(slice.effect[startFrom])
+                            arr.insert(idx+count, ac)
+                            splittedAction[a][ac.name] = ac
+                        if loopCondition: break
+
 
             #fill correct parameters
             for idx, slice in enumerate(arr):
