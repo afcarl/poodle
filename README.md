@@ -4,9 +4,7 @@
 
 Poodle is the Python - to - AI Planning compiler and automated programming framework.
 
-# Overview
-
-## The Dream
+# The Dream
 
 *Imagine if you could tell the computer how the result should look like, <br/>
 and computer automatically figures out the algorithm for you.*
@@ -14,9 +12,53 @@ and computer automatically figures out the algorithm for you.*
 *Imagine that if the algorithm is obvious you could still write it in imperative way <br/>
 and computer understands it and makes use of it to reach the result faster.*
 
-*Imagine if you have the algorithm defined by data<br/> 
-and you and your computer can both use it efficiently in problem solving.*
+# Quickstart
 
+```shell
+$ pip install poodle # need Python 3.7+
+```
+
+Let's say you have:
+
+```python
+from poodle import Object, xschedule
+
+class World(Object): 
+    prepared: int
+    said: bool 
+
+def hello(world: World):
+    assert world.said == False
+    world.prepared += 1
+
+def world(world: World):
+    assert world.prepared > 0
+    world.said = True
+    return "Hello, world!"
+
+w = World()
+w.prepared = 0
+w.said = False
+```
+
+Now you have two options:
+
+1. (obvious) execute natively, if you know the algorithm
+
+```python
+hello(w)
+print(world(w)) 
+# -> "Hello, World!"
+```
+
+2. if you don't know the parameters and/or sequence of execution - ask AI to figure out
+
+```python
+print(xschedule(methods=[world, hello], space=[w], goal=lambda:w.said==True))
+# -> "Hello, World!"
+```
+
+# Overview
 ## The Idea
 
 <p align="center"> <img src="doc/img/science-and-magic.png" width="640"/> </p>
