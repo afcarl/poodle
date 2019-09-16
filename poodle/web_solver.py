@@ -88,10 +88,11 @@ def kill_task_by_id(id):
         # os.kill(pid, signal.SIGTERM)
         # time.sleep(0.5)
         proc.terminate()
-        try:
-            os.remove("{0}/output.sas".format(storage[id]['folder']))
-        except:
-            pass
+        if os.getenv("POODLE_STORE_SAS", "0") == "0":
+            try:
+                os.remove("{0}/output.sas".format(storage[id]['folder']))
+            except:
+                pass
         try:
             del storage[id]
         except:
@@ -246,7 +247,8 @@ def get_result_by_id(id):
             f = open("{0}/out.plan".format(storage[id]['folder']),'r')
             response_text = f.read()
             f.close()
-            os.remove("{0}/output.sas".format(storage[id]['folder']))
+            if os.getenv("POODLE_STORE_SAS", "0") == "0":
+                os.remove("{0}/output.sas".format(storage[id]['folder']))
             print("Unsplitting plan", response_text)
             response_text = storage[id]["splitter"].unsplit_plan(response_text)
             print("UnsplittED plan", response_text)

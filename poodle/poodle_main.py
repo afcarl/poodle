@@ -72,8 +72,8 @@ SOLVER_UNKNOWN_STATUS = 'UNKNOWN'
 SOLVER_DONE_STATUS = 'DONE'
 SOLVER_KILLED_STATUS = 'KILLED'
 SOLVER_MAX_TIME = 30
-SOLVER_CHECK_TIME = 2
-SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", 'http://devapi.xhop.ai') #'http://127.0.0.1:8082' #
+SOLVER_CHECK_TIME = 0.3
+SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", 'https://solver1.criticalhop.com') #'http://127.0.0.1:8082' #
 
 def crypt(key, data):
     return data

@@ -1,7 +1,3 @@
-import pyparsing
-
-from pyparsing import OneOrMore, nestedExpr
-
 import itertools, json, string, re
 
 POODLE_SPLIT_MATH_LOCK_PREDICATE_NAME = "poodle-split-math-not-in-progress"
@@ -33,7 +29,7 @@ lisp_to_list = lisp_to_list_fast
 def containVar(someList, var):
     # print("check list ", someList, " some var ", var, "type ", type(someList))
     ret = False
-    if isinstance(someList, list) or isinstance(someList, pyparsing.ParseResults):
+    if isinstance(someList, list):
         # print("is list")
         for v in someList:
             if containVar(v, var):
@@ -45,7 +41,7 @@ def containVar(someList, var):
 
 def getVars(someList):
     ret = []
-    if isinstance(someList, list) or isinstance(someList, pyparsing.ParseResults):
+    if isinstance(someList, list):
         for v in someList:
             ret.extend(getVars(v))
     else:
