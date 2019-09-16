@@ -251,7 +251,7 @@ class ActionSplitter():
                                 sumResultArg = precond100[2]
                                 break
                         for count in range(1, int(sAmount)):
-                            ac = ActionStruct("{0}-{1}-{2}".format(a, idx, count))
+                            ac = ActionStruct("{0}-{1}".format(a, idx + count))
                             startFrom = 0
                             for subCounter in range(maxEffectAmount):
                                 if len(slice.effect) == startFrom : break
