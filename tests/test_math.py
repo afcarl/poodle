@@ -130,7 +130,7 @@ def test_greater_than():
     cobj2.value2 = 2
     cobj2.count = 3
     # debug_plan([addIfGreater], space=globals(), goal=lambda:(cobj1.count==2), plan=[addIfGreater])
-    assert xschedule([addIfGreater], space=globals(), goal=lambda:(cobj2.count==2)) == "DONE"
+    assert xschedule([addIfGreater], space=globals(), goal=lambda:(cobj2.count==2), timeout=100, sessionName="test_greater_than") == "DONE"
 
 @pytest.mark.skip(reason="clips currently not installed to travis so skipping")
 def test_debugging_formally_executes():

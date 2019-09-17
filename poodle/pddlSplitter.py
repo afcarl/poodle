@@ -58,7 +58,7 @@ class ActionStruct():
         self.effect = []
         self.preconditionPrepend = []
         self.effectAppend = []
-    
+
     def hasPreconditionVariable(self, var):
         if var in repr(self.precondition):
             return True
@@ -71,10 +71,10 @@ class ActionStruct():
         if containVar(self.effect, var):
             return True
         return False
-   
+
     def __str__(self):
         precondition = [list_to_lisp(pc) for pc in self.preconditionPrepend]
-        precondition.extend([list_to_lisp(pc) for pc in self.precondition]) 
+        precondition.extend([list_to_lisp(pc) for pc in self.precondition])
         effects = [list_to_lisp(pc) for pc in self.effect]
         effects.extend([list_to_lisp(pc) for pc in self.effectAppend])
         parameters = [list_to_lisp(pc) for pc in self.parameters]
@@ -108,7 +108,7 @@ class ActionSplitter():
         self.pddl_text = pddl_text
         self.cutBy = cutBy
         self.splitted_actions = []
-    
+
     def fix_problem(self, problem_file):
         l_problem = lisp_to_list(problem_file)
         for b in l_problem[0]:
@@ -119,9 +119,9 @@ class ActionSplitter():
         initSection.append([POODLE_SPLIT_MATH_LOCK_PREDICATE_NAME])
         goalSection.append([POODLE_SPLIT_MATH_LOCK_PREDICATE_NAME])
         return list_to_lisp(l_problem[0])
-        
 
-    
+
+
     def split(self):
         data = lisp_to_list(self.pddl_text)  #OneOrMore(nestedExpr()).parseString(self.pddl_text)
         #print(data[0])
@@ -161,7 +161,7 @@ class ActionSplitter():
             # print(a, ": ", action[a].precondition,'\n')
             splitMe = 0
             for p in action[a].precondition:
-                if p[0] == self.cutBy: 
+                if p[0] == self.cutBy:
                     splitMe += 1 #split if 2 or more SumResult-result in precondition
             if splitMe > 1:
                 splittableAction[a] = action[a]
@@ -197,11 +197,14 @@ class ActionSplitter():
             counter -= 1
         #    print("slice\n", "{0}-{1}".format(a, counter), ": ", sliceOfAction)
             splittedAction[a]["{0}-{1}".format(a, counter)].precondition.extend(sliceOfAction.precondition)
-            cost = int(tmpAction.cost) / len(splittedAction[a])
+            cost = int(tmpAction.cost) - (len(splittedAction[a]) - 1)
             if cost < 1:
                 cost = 1
             for s in splittedAction[a]:
                 splittedAction[a][s].cost = str(int(cost))
+                # Only first action has calculated cost another just 1
+                if cost != 1:
+                    cost = 1
 
         #generate snakable useful for next step variables
         for a in splittedAction:
@@ -228,6 +231,34 @@ class ActionSplitter():
                             # print("effect ", eff , "add to ", slice.name)
                             consumedEffects.append(eff)
                             slice.effect.append(eff)
+            loopCondition = True
+            while loopCondition:
+                loopCondition = False
+                for idx, slice in enumerate(arr):
+                    maxEffectAmount = 2
+                    # if slice.name != 'StartPod-5': continue
+                    if len(slice.effect) > maxEffectAmount:
+                        loopCondition = True
+                        lenght = len(slice.effect)
+                        sAmount = lenght / maxEffectAmount if lenght % maxEffectAmount == 0 else (lenght / maxEffectAmount) + 1
+                        sumResultArg = None
+                        for precond100 in slice.precondition:
+                            if precond100[0] == 'SumResult-result':
+                                sumResultArg = precond100[2]
+                                break
+                        for count in range(1, int(sAmount)):
+                            ac = ActionStruct("{0}-{1}-{2}".format(a, idx, count))
+                            startFrom = 0
+                            for subCounter in range(maxEffectAmount):
+                                if len(slice.effect) == startFrom : break
+                                if containVar(slice.effect[startFrom], sumResultArg) :
+                                    startFrom += 1
+                                ac.effect.append(slice.effect[startFrom])
+                                del(slice.effect[startFrom])
+                            arr.insert(idx+count, ac)
+                            splittedAction[a][ac.name] = ac
+                        if loopCondition: break
+
 
             #fill correct parameters
             for idx, slice in enumerate(arr):
@@ -240,7 +271,7 @@ class ActionSplitter():
                             slice.parameters.append(parameters[pIdx+1])   # -
                             slice.parameters.append(parameters[pIdx+2])   # type
                 # print(slice)
-            
+
             # export usefull parameters(variables) for next sliced action sequence
             for idx, slice in enumerate(arr):
                 # print(slice.name,"has parameters", repr(slice.parameters))
@@ -287,10 +318,10 @@ class ActionSplitter():
                     predicateList.append(predicateDeclaration)
                     # print("adding line", sliceEffectAppend, "to", slice.name)
                     slice.effectAppend.append(sliceEffectAppend)                            # full predicate
-                    sliceNext.preconditionPrepend.append(sliceNextPreconditionPrepend)      # full predicate   
+                    sliceNext.preconditionPrepend.append(sliceNextPreconditionPrepend)      # full predicate
                     sliceNext.effectAppend.append("(not %s)" % list_to_lisp(sliceNextPreconditionPrepend))
-                    allGeneratedExports.append(sliceNextPreconditionPrepend)         
-            
+                    allGeneratedExports.append(sliceNextPreconditionPrepend)
+
             # close the snake first with last
             wa = ["working-{0}".format(a)]
             arr[0].effectAppend.append(wa)
@@ -330,16 +361,16 @@ class ActionSplitter():
             # print(an)
             if an in splittedAction:
                 combined_actions += [str(x) for x in splittedAction[an].values()]
-            else: 
+            else:
                 # TODO HERE: append to every precondition (not (poodle-split-math-in-progress))
                 if len(splittedAction): self.all_actions[an].precondition.insert(0,f"({POODLE_SPLIT_MATH_LOCK_PREDICATE_NAME})")
                 combined_actions.append(str(self.all_actions[an]))
 
         domainStr = \
         """(define (domain {dom_name})
-            
+
             {orig_requirements}
-            
+
             {orig_types}
 
             {predicates}
@@ -358,16 +389,16 @@ class ActionSplitter():
             actions='\n'.join(combined_actions)
         )
         return domainStr
-    
+
     def unsplit_plan(self, plan_split):
         loAllActions = {k.lower():v for k,v in self.all_actions.items()}
         loSplitActions = {k2.lower():v2 for k2,v2 in ({k: v for d in self.splitted_actions.values() for k, v in d.items()}).items()}
         lplan = [p.replace("(","").replace(")","").split() \
             for p in plan_split.split("\n") if not p.startswith(";")]
-        if not lplan: 
+        if not lplan:
             print("NO PLAN")
             return plan_split
-        if not lplan[0]: 
+        if not lplan[0]:
             print("NO PLAN 2")
             return plan_split
         us_plan = []
@@ -375,7 +406,7 @@ class ActionSplitter():
         collecting_action = ""
         action_num = 9999999999
         for plannedAct in lplan:
-            if plannedAct: 
+            if plannedAct:
                 print("PLANNED_ACT", plannedAct)
                 action_name_lower = plannedAct[0]
                 objectNames = plannedAct[1:]
