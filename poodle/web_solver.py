@@ -6,8 +6,9 @@ import os.path
 import subprocess
 import time
 import re
+import urllib
 import sys
-import base64 
+import base64
 import string
 import logging
 import random
@@ -18,6 +19,7 @@ from poodle import pddlSplitter
 import requests
 
 POODLE_STATS = False
+DEFAULT_HOST_PORT = "http://localhost:16009"
 
 
 log = logging.getLogger()
@@ -82,22 +84,23 @@ def kill_task_by_id(id):
     # print("kill? ...")
     if id in storage:
         print("KILLING PROCESS !!!!!")
-        proc = storage[id]['proc'] 
+        proc = storage[id]['proc']
         pid = proc.pid
         os.killpg(os.getpgid(pid), signal.SIGTERM)
         # os.kill(pid, signal.SIGTERM)
         # time.sleep(0.5)
         proc.terminate()
-        try:
-            os.remove("{0}/output.sas".format(storage[id]['folder']))
-        except:
-            pass
+        if os.getenv("POODLE_STORE_SAS", "0") == "0":
+            try:
+                os.remove("{0}/output.sas".format(storage[id]['folder']))
+            except:
+                pass
         try:
             del storage[id]
         except:
             pass
         return SOLVER_KILLED_STATUS
-    return SOLVER_UNKNOWN_STATUS  
+    return SOLVER_UNKNOWN_STATUS
 
 def killing_threat(id):
     while 1:
@@ -107,8 +110,8 @@ def killing_threat(id):
         elif int(time.time() - storage[id]['check_time']) > SOLVER_MAX_TIME :
             kill_task_by_id(id)
             return 0
-            
-          
+
+
 
 def working_threat(id):
     if id in storage:
@@ -120,7 +123,7 @@ def working_threat(id):
             print(line)
             fd.write(line)
             fd.flush()
-            std_out.append(line) 
+            std_out.append(line)
             if line.find('search exit code:') != -1:
                 retcode = line.rstrip("\n").split()[3]
             log.info(line.rstrip("\n"))
@@ -128,11 +131,14 @@ def working_threat(id):
         # fd.write("".join(std_out))
         # fd.flush()
         fd.close()
-                
-        if retcode == "0" :
-            storage[id]['status'] = SOLVER_DONE_STATUS
-        else: 
-            storage[id]['status'] = SOLVER_ERROR_STATUS   
+
+        try:
+            if retcode == "0" :
+                storage[id]['status'] = SOLVER_DONE_STATUS
+            else:
+                storage[id]['status'] = SOLVER_ERROR_STATUS
+        except KeyError:
+            pass
 
 
 @app.route('/solve', methods=['GET', 'POST'])
@@ -142,23 +148,23 @@ def solve():
         domain = crypt(SOLVER_KEY, request.form.get("d"))#base64.b64decode()
         problem = crypt(SOLVER_KEY, request.form.get("p"))#base64.b64decode()
         pddl_name = crypt(SOLVER_KEY, request.form.get("n"))
-        
+
         counter = 0
         try:
             with open("./.counter", "r") as fd:
                 counter = int(fd.read())
         except:
             counter = 0
- 
+
         counter += 1
         with open("./.counter", "w") as fd:
             fd.write(str(counter))
-        
+
 
         rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(20))
-        while rnd in storage : 
+        while rnd in storage :
             rnd = ''.join(random.choice(string.ascii_lowercase) for i in range(20))
-            
+
         folder_name = "./out/{0:05d}_{1}_{2}_{3}".format(counter, pddl_name, str(datetime.date.today()),rnd)
         os.makedirs(folder_name)
 
@@ -175,28 +181,28 @@ def solve():
             fd.write(str(domain_new))
         with open("{0}/domain_orig.pddl".format(folder_name), "w+") as fd:
             fd.write(str(domain))
-        
+
         if (POODLE_STATS or os.getenv("POODLE_STATS", "0") == "1") and \
                         os.getenv("POODLE_DEBUG", "0") == "0" and \
                             not "-xsens-L" in problem:
             pfx = str(int(time.time()))+"_"+rnd+"_"
             send_task_async(pfx+"problem.pddl", "{0}/problem_orig.pddl".format(folder_name))
             send_task_async(pfx+"domain.pddl", "{0}/domain_orig.pddl".format(folder_name))
-            
+
         max_time = 90000
-        runscript = os.getenv("PYTHON", "python")+' ./fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=lmcount(lm_rhw(reasonable_orders=true))" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=folder_name, maxtime=max_time)        
+        runscript = os.getenv("PYTHON", "python")+' ./fast-downward.py --plan-file "{folder}/out.plan" --sas-file {folder}/output.sas {folder}/domain.pddl {folder}/problem.pddl --evaluator "hff=ff()" --evaluator "hlm=lmcount(lm_rhw(reasonable_orders=true))" --search "lazy_wastar(list(hff, hlm), preferred = list(hff, hlm), w = 5, max_time={maxtime})"'.format(folder=folder_name, maxtime=max_time)
         proc = subprocess.Popen(runscript, shell=True, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, preexec_fn=os.setsid)
         storage[rnd] = {'proc': proc, 'folder': folder_name, 'status': SOLVER_PROCESSING_STATUS, 'check_time': time.time(), "splitter": asplitter}
-        
+
         thread = Thread(target = working_threat, args = [rnd])
         thread.start()
-        
+
         thread = Thread(target = killing_threat, args = [rnd])
         thread.start()
 
         response_text = rnd
-            
-        response = make_response(crypt(SOLVER_KEY, response_text))    
+
+        response = make_response(crypt(SOLVER_KEY, response_text))
         response.set_cookie('CH_SESS', 'NULL')
         response.headers.set('Content-Type', 'text/plain')
         return response
@@ -212,18 +218,18 @@ def solve():
 
 def check_status_by_id(id):
     if id in storage:
-        storage[id]['check_time'] = time.time() 
-        return storage[id]['status'] 
+        storage[id]['check_time'] = time.time()
+        return storage[id]['status']
     return SOLVER_UNKNOWN_STATUS
 
 @app.route('/check', methods=['GET', 'POST'])
 def check():
     if request.method == 'POST':
         pddl_task_id = crypt(SOLVER_KEY, request.form.get("id"))
-        
+
         result = check_status_by_id(pddl_task_id)
-        
-        response = make_response(crypt(SOLVER_KEY, result))    
+
+        response = make_response(crypt(SOLVER_KEY, result))
         response.headers.set('Content-Type', 'text/plain')
         return response
     return ''
@@ -232,10 +238,10 @@ def check():
 def kill():
     if request.method == 'POST':
         pddl_task_id = crypt(SOLVER_KEY, request.form.get("id"))
-        
+
         result = kill_task_by_id(pddl_task_id)
-        
-        response = make_response(crypt(SOLVER_KEY, result))    
+
+        response = make_response(crypt(SOLVER_KEY, result))
         response.headers.set('Content-Type', 'text/plain')
         return response
     return SOLVER_UNKNOWN_STATUS
@@ -246,7 +252,8 @@ def get_result_by_id(id):
             f = open("{0}/out.plan".format(storage[id]['folder']),'r')
             response_text = f.read()
             f.close()
-            os.remove("{0}/output.sas".format(storage[id]['folder']))
+            if os.getenv("POODLE_STORE_SAS", "0") == "0":
+                os.remove("{0}/output.sas".format(storage[id]['folder']))
             print("Unsplitting plan", response_text)
             response_text = storage[id]["splitter"].unsplit_plan(response_text)
             print("UnsplittED plan", response_text)
@@ -259,10 +266,10 @@ def get_result_by_id(id):
 def result():
     if request.method == 'POST':
         pddl_task_id = crypt(SOLVER_KEY, request.form.get("id"))
-        
+
         result = get_result_by_id(pddl_task_id)
-        
-        response = make_response(crypt(SOLVER_KEY, result))    
+
+        response = make_response(crypt(SOLVER_KEY, result))
         response.headers.set('Content-Type', 'text/plain')
         return response
     return SOLVER_UNKNOWN_STATUS
@@ -281,14 +288,15 @@ by sharing generated PDDL problem files? y/n")
         else:
             allow_stats = False
             open(os.path.expanduser("~/.poodlerc"), "w+").write("stats=no")
-    
+
     global POODLE_STATS
     POODLE_STATS = allow_stats
 
     assert os.path.isfile("./fast-downward.py"), \
-        """Fast-downward installation not found in current 
+        """Fast-downward installation not found in current
     directory. Please `cd` into fast-downward installation folder
     and make sure fast-downward.py is present"""
+    hinfo = urllib.parse.urlparse(os.getenv("POODLE_SOLVER_URL", DEFAULT_HOST_PORT))
     debug = True
     app.debug = debug
-    app.run(host='127.0.0.1', port=16009, debug=True, use_reloader=False)
+    app.run(host=hinfo.hostname, port=hinfo.port, debug=True, use_reloader=False)

@@ -72,8 +72,9 @@ SOLVER_UNKNOWN_STATUS = 'UNKNOWN'
 SOLVER_DONE_STATUS = 'DONE'
 SOLVER_KILLED_STATUS = 'KILLED'
 SOLVER_MAX_TIME = 30
-SOLVER_CHECK_TIME = 2
-SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", 'http://devapi.xhop.ai') #'http://127.0.0.1:8082' #
+SOLVER_CHECK_TIME = 0.3
+DEFAULT_POODLE_SOLVER = 'https://solver1.criticalhop.com'
+SOLVER_URL = os.environ.get("POODLE_SOLVER_URL", DEFAULT_POODLE_SOLVER) #'http://127.0.0.1:8082' #
 
 def crypt(key, data):
     return data
@@ -2221,7 +2222,7 @@ class Problem:
         return retcode
 
     def run(self, url = SOLVER_URL, timeout=SOLVER_MAX_TIME):
-        if url == SOLVER_URL:
+        if url == DEFAULT_POODLE_SOLVER:
             import socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             result = sock.connect_ex(('127.0.0.1',16009))
