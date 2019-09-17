@@ -2,20 +2,16 @@
 
 ![PyPI - Status](https://img.shields.io/pypi/status/poodle) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![PyPI version](https://badge.fury.io/py/poodle.svg)](https://badge.fury.io/py/poodle) [![Build Status](https://travis-ci.org/criticalhop/poodle.svg?branch=master)](https://travis-ci.org/criticalhop/poodle)
 
-Poodle is the Python - to - AI Planning compiler and automated programming framework in early stage of development.
+Poodle is the Python-to-PDDL compiler and automated programming framework in early stage of development.
 
-# The Dream
+# Rationale
 
-*Imagine if you could tell the computer how the result should look like, <br/>
-and computer automatically figures out the algorithm for you.*
-
-*Imagine that if the algorithm is obvious you could still write it in imperative way <br/>
-and computer understands it and makes use of it to reach the result faster.*
+[PDDL](https://en.wikipedia.org/wiki/Planning_Domain_Definition_Language) is a widely-used language to describe [AI planning](https://en.wikipedia.org/wiki/Automated_planning_and_scheduling) [domains](http://www.cs.toronto.edu/~sheila/2542/w09/A1/introtopddl2.pdf). The applications include various [robotic planning problems](https://kcl-planning.github.io/ROSPlan/), scheduling, [logistics](https://github.com/pellierd/pddl4j/wiki/Logistics:-a-simple-running-example) and [manufacturing](https://ocharles.org.uk/posts/2018-12-25-fast-downward.html) optimization, writing intelligent agents in [computer games](https://www.researchgate.net/publication/228724581_Real-Time_Planning_for_Video-Games_A_Purpose_for_PDDL), real-time decision making, and even automated unix administration [[1]](https://www.youtube.com/watch?v=2veFbpiQv4k) [[2]](http://www.aiai.ed.ac.uk/project/oplan/oplan/applications.html). AI planning, and specifically model-based planning can be explained as a problem-solving method where the software developer describes (models) a problem rather than codes the algorithm to solve the problem - which is radically different from how the conventional software development is done today.
 
 # Quickstart
 
 ```shell
-$ pip install poodle # need Python 3.7+
+$ pip install poodle # needs Python 3.7+
 ```
 
 Let's say you have:
@@ -59,13 +55,6 @@ print(xschedule(methods=[world, hello], space=[w], goal=lambda:w.said==True))
 ```
 
 # Overview
-## The Idea
-
-<p align="center"> <img src="doc/img/science-and-magic.png" width="640"/> </p>
-
-> Recently we have discovered that Python code can be translated into AI planning task in a consistent and composable way, and that the planner can then figure out the solution from an imperatively-incomplete program using accelerated state space exploration, with the result as usable as an ordinary Python program.
-
-> We believe that the future of programming is in the fusion of human and AI. In the future, the developer's job will only be to optimize the program so that it fits into computer's capacity, by adding heuristics as needed. Everything else will be done by the computer itself: figuring out glue code for APIs and SDKs, adding error handling, creating abstraction plumbing from user intent to implemetation specifics, and also deployment, operation, etc.
 
 ## Introduction
 
