@@ -2,7 +2,7 @@
 
 ![PyPI - Status](https://img.shields.io/pypi/status/poodle) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![PyPI version](https://badge.fury.io/py/poodle.svg)](https://badge.fury.io/py/poodle) [![Build Status](https://travis-ci.org/criticalhop/poodle.svg?branch=master)](https://travis-ci.org/criticalhop/poodle)
 
-Poodle is the Python - to - AI Planning compiler and automated programming framework.
+Poodle is the Python - to - AI Planning compiler and automated programming framework in early stage of development.
 
 # The Dream
 
@@ -277,9 +277,13 @@ If you would like to support development of AI planners, we kindly ask you to op
 
 # Contacts
 
-Poodle is developed by [CriticalHop](https://criticalhop.com), a team of dedicated AI planning engineers. If you have any questions, feel free to open a [github issue](https://github.com/criticalhop/poodle/issues) and chat with @grandrew and the team at `##poodle` on [freenode](https://freenode.net/).
+Poodle is maintained by [CriticalHop](https://criticalhop.com), a team of dedicated AI planning engineers. If you have any questions, feel free to open a [github issue](https://github.com/criticalhop/poodle/issues) and chat with @grandrew and the team at `##poodle` on [freenode](https://freenode.net/).
 
-If you are interested in joining the project, or wish to use the enterprise edition please write us at info@criticalhop.com or reach out directly to me at andrew@criticalhop.com or [@Andrew_Gree](https://twitter.com/Andrew_Gree) on twitter.
+Poodle is a very large project and will not be possible without community support. Translating full Python into planning domain and writing a fast solver that understands itself is absolutely wild idea that one day may become an important step towards the the Artificial General Intelligence. So we are committed to Open Source and welcome any help.
+
+If you are interested in joining the project, please write us at info@criticalhop.com or reach out directly to me at andrew@criticalhop.com or [@Andrew_Gree](https://twitter.com/Andrew_Gree) on twitter.
+
+We do have plans on creating commercial hosted service to support the project but as of today the main focus of CriticalHop team is delivering [kubectl-val](https://github.com/criticalhop/kubectl-val), the AI-powered kubernetes configuration validation software. 
 
 -- 
 Andrew Gree and the team
