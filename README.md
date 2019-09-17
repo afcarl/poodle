@@ -60,6 +60,8 @@ print(xschedule(methods=[world, hello], space=[w], goal=lambda:w.said==True))
 # -> "Hello, World!"
 ```
 
+This will run the code on a hosted solver. To run a local solver, please scroll down to *Installation* section.
+
 # Overview
 
 ## Introduction
@@ -269,6 +271,24 @@ export POODLE_SOLVER_URL=http://localhost:8082
 ## Problem sharing
 
 If you would like to support development of AI planners, we kindly ask you to opt-in for sharing of anonymized PDDL problem data sets. This will help us to continuously improve result waiting times for everyone in the community. To enable this, please set `POODLE_STATS=1` environment variable when launching `poodleserver`. Your privacy is our highest priority, therefore we only collect generated anonymized PDDL data-sets.
+
+# Developing
+
+Poodle development is set up with `tox` and `poetry`. To run all tests locally, compile [fast-downward](http://www.fast-downward.org/) in a folder named `downward` near your poodle clone, then do
+
+```shell
+POODLE_SOLVER_URL=http://localhost:12345 tox
+```
+
+Where `12345` is the port of your choosing. This command will run local solver and all tests sequentially. You may then use `poetry` to manage your local installation. 
+
+The correct folder structure for poodle development is:
+
+```
+poodle-dev/
+    downward/ -> Fast-Downward installation
+    poodle/   -> Poodle repository clone
+```
 
 # Contacts
 
