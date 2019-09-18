@@ -395,8 +395,8 @@ def deduplicate_equals(l_preconditions):
     while deduplicate_equals_one(l_preconditions): pass
 
 def is_internall_call():
-    return getouterframes(inspect.currentframe())[2].filename ==\
-                                                os.path.abspath(__file__)
+    return os.path.basename(getouterframes(inspect.currentframe())[2].filename).replace(".pyc", "").replace(".py", "") ==\
+                                        os.path.basename(os.path.abspath(__file__)).replace(".pyc", "").replace(".py", "")
 
 
 
@@ -1537,7 +1537,8 @@ class Object(metaclass=BaseObjectMeta):
         global _problem_compilation
         if not hasattr(self, "__imaginary__"): self.__imaginary__ = False
         if _effect_compilation and not self.__imaginary__ and not is_internall_call():
-            raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead.")
+            # raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead. %s %s" % (os.path.basename(getouterframes(inspect.currentframe())[2].filename), os.path.basename(os.path.abspath(__file__))))
+            raise AssertionError("Object instantiation is prohibited in effect. Use Imaginary instead. %s %s")
         self.__unlock_setter = True
         name = None
         self._class_variable = gen_var(self.__class__.__name__, prefix="")

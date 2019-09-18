@@ -9,3 +9,4 @@ build/
 .vscode
 poodle.egg-info
 .pytest_cache/*
+setup.py
