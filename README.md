@@ -2,20 +2,22 @@
 
 ![PyPI - Status](https://img.shields.io/pypi/status/poodle) [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause) [![PyPI version](https://badge.fury.io/py/poodle.svg)](https://badge.fury.io/py/poodle) [![Build Status](https://travis-ci.org/criticalhop/poodle.svg?branch=master)](https://travis-ci.org/criticalhop/poodle)
 
-Poodle is the Python - to - AI Planning compiler and automated programming framework in early stage of development.
+Poodle is the Python-to-PDDL compiler and automated programming framework in early stage of development.
 
-# The Dream
+# Rationale
 
-*Imagine if you could tell the computer how the result should look like, <br/>
-and computer automatically figures out the algorithm for you.*
+[PDDL](https://en.wikipedia.org/wiki/Planning_Domain_Definition_Language) is a widely-used language to describe [AI planning](https://en.wikipedia.org/wiki/Automated_planning_and_scheduling) [domains](http://www.cs.toronto.edu/~sheila/2542/w09/A1/introtopddl2.pdf). The applications include various [robotic planning problems](https://kcl-planning.github.io/ROSPlan/), scheduling, [logistics](https://github.com/pellierd/pddl4j/wiki/Logistics:-a-simple-running-example) and [manufacturing](https://ocharles.org.uk/posts/2018-12-25-fast-downward.html) optimization, writing intelligent agents in [computer games](https://www.researchgate.net/publication/228724581_Real-Time_Planning_for_Video-Games_A_Purpose_for_PDDL), real-time decision making, and even automated unix administration [[1]](https://www.youtube.com/watch?v=2veFbpiQv4k) [[2]](http://www.aiai.ed.ac.uk/project/oplan/oplan/applications.html). AI planning, and specifically model-based planning can be explained as a problem-solving method where the software developer describes (models) a problem rather than codes the algorithm to solve the problem - which is radically different from how the conventional software development is practically-always done today. Not having to invent and code the algorithm has obvious benefits: developer productivity goes to extremes, you can write software with humanly-impossible complexity of algorithms, any tasks that require combining actions into meaningful chains can now be automated.
 
-*Imagine that if the algorithm is obvious you could still write it in imperative way <br/>
-and computer understands it and makes use of it to reach the result faster.*
+But despite these extreme gains, AI planning-based software is virtually nonexistent. And there are reasons why imperative programming is so popular and logic programming is not. Imperative programming has much lower barrier of entry. Realistically the majority of problems are much easier to code in a "usual" imperative way rather than modeling the full domain. The tooling, ecosystem, coding paradigms, and the language itself are much more polished and well-designed. Finally, many software libraries and components where written and are readily available in imperative programming languages. 
+
+Poodle aims to change that. The goal is to create a "native merge" of Python and model-based planning. This means that the developer will have an option to either write the algorithm or to describe the problem and let the AI figure out the algorithm - with the result as usable in both options. The goal is to develop all the necessary tooling to enable full-scale production use of AI planning in real-world computing tasks - building on the top of a strong foundation created by Python community.
+
+Translating full Python programs into planning domain enables the use of efficient search methods to compose pre-built Python libraries into new algorithms. And developer always gets an alternative to use the code imperatively - whenever she desires to switch.   
 
 # Quickstart
 
 ```shell
-$ pip install poodle # need Python 3.7+
+$ pip install poodle # needs Python 3.7+
 ```
 
 Let's say you have:
@@ -58,14 +60,9 @@ print(xschedule(methods=[world, hello], space=[w], goal=lambda:w.said==True))
 # -> "Hello, World!"
 ```
 
+This will run the code on a hosted solver. To run a local solver, please scroll down to *Installation* section.
+
 # Overview
-## The Idea
-
-<p align="center"> <img src="doc/img/science-and-magic.png" width="640"/> </p>
-
-> Recently we have discovered that Python code can be translated into AI planning task in a consistent and composable way, and that the planner can then figure out the solution from an imperatively-incomplete program using accelerated state space exploration, with the result as usable as an ordinary Python program.
-
-> We believe that the future of programming is in the fusion of human and AI. In the future, the developer's job will only be to optimize the program so that it fits into computer's capacity, by adding heuristics as needed. Everything else will be done by the computer itself: figuring out glue code for APIs and SDKs, adding error handling, creating abstraction plumbing from user intent to implemetation specifics, and also deployment, operation, etc.
 
 ## Introduction
 
@@ -274,6 +271,24 @@ export POODLE_SOLVER_URL=http://localhost:8082
 ## Problem sharing
 
 If you would like to support development of AI planners, we kindly ask you to opt-in for sharing of anonymized PDDL problem data sets. This will help us to continuously improve result waiting times for everyone in the community. To enable this, please set `POODLE_STATS=1` environment variable when launching `poodleserver`. Your privacy is our highest priority, therefore we only collect generated anonymized PDDL data-sets.
+
+# Developing
+
+Poodle development is set up with `tox` and `poetry`. To run all tests locally, compile [fast-downward](http://www.fast-downward.org/) in a folder named `downward` near your poodle clone, then do
+
+```shell
+POODLE_SOLVER_URL=http://localhost:12345 tox
+```
+
+Where `12345` is the port of your choosing. This command will run local solver and all tests sequentially. You may then use `poetry` to manage your local installation. 
+
+The correct folder structure for poodle development is:
+
+```
+poodle-dev/
+    downward/ -> Fast-Downward installation
+    poodle/   -> Poodle repository clone
+```
 
 # Contacts
 
