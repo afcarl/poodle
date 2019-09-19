@@ -323,15 +323,15 @@ class ActionSplitter():
                     allGeneratedExports.append(sliceNextPreconditionPrepend)
             
             # enumerate actions here
-            # currentActionName = ""
-            # counter = 0
-            # for aa in arr:
-            #     if currentActionName != aa.name.split('-')[0]:
-            #         counter = 0
-            #         currentActionName = aa.name.split('-')[0]
-            #     print("{0} --- {1} {2}".format(currentActionName, counter, aa.name))
-            #     aa.name = "{0}-{1}".format(currentActionName, counter)
-            #     counter += 1
+            currentActionName = ""
+            counter = 0
+            for aa in arr:
+                if currentActionName != aa.name.split('-')[0]:
+                    counter = 0
+                    currentActionName = aa.name.split('-')[0]
+                print("{0} --- {1} {2}".format(currentActionName, counter, aa.name))
+                aa.name = "{0}-{1}".format(currentActionName, counter)
+                counter += 1
             # close the snake first with last
             wa = ["working-{0}".format(a)]
             arr[0].effectAppend.append(wa)
