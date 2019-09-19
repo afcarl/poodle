@@ -175,12 +175,14 @@ class ActionSplitter():
         unsplittableAction = action
         action = splittableAction
         splittedAction = {}
+        splittedActionNew={}
         #sliceOfAction = ActionStruct()
         #split actions
         for a in action:
             # print(a, ": ", action[a].precondition,'\n')
             tmpAction = action[a]
             splittedAction[a] = {}
+            splittedActionNew[a] = {}
             counter=0
             sliceOfAction = ActionStruct("{0}-{1}".format(a, counter))
             for p in tmpAction.precondition:
@@ -323,15 +325,16 @@ class ActionSplitter():
                     allGeneratedExports.append(sliceNextPreconditionPrepend)
             
             # enumerate actions here
-            # currentActionName = ""
-            # counter = 0
-            # for aa in arr:
-            #     if currentActionName != aa.name.split('-')[0]:
-            #         counter = 0
-            #         currentActionName = aa.name.split('-')[0]
-            #     print("{0} --- {1} {2}".format(currentActionName, counter, aa.name))
-            #     aa.name = "{0}-{1}".format(currentActionName, counter)
-            #     counter += 1
+            currentActionName = ""
+            counter = 0
+            for aa in arr:
+                if currentActionName != aa.name.split('-')[0]:
+                    counter = 0
+                    currentActionName = aa.name.split('-')[0]
+                # print("{0} --- {1} {2}".format(currentActionName, counter, aa.name))
+                aa.name = "{0}-{1}".format(currentActionName, counter)
+                counter += 1
+                splittedActionNew[a][aa.name] = aa
             # close the snake first with last
             wa = ["working-{0}".format(a)]
             arr[0].effectAppend.append(wa)
@@ -364,6 +367,7 @@ class ActionSplitter():
 
         ldata = data # .asList()
 
+        splittedAction = splittedActionNew
         self.splitted_actions = splittedAction
 
         combined_actions = []
